@@ -1,5 +1,7 @@
 # InertialHaptics Engine: Kinetic Feedback System
 
+> **🚧 Future Roadmap:** This engine is currently in the conceptual design phase. It outlines our ambition to add high-fidelity tactile feedback to the InertialSaber OS in future releases.
+
 The **InertialHaptics Engine** is the third sensory pillar of InertialSaber OS. It translates the internal tension of the plasma and the kinetic energy of movement into physical vibrations felt in the user's hands.
 
 ## 1. Functional Philosophy
