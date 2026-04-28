@@ -1,6 +1,6 @@
 # esp-idf-inertial-saber (InertialSaber OS)
 
-**InertialSaber OS** is a high-performance, open-source operating system for lightsabers, specifically engineered for the ESP32 family (S3/C6). Unlike legacy systems that rely on pre-recorded animations or simple angular speed, InertialSaber OS utilizes a **Native Physics Engine** to deliver an organic, high-fidelity experience driven by real-time kinetic data.
+**InertialSaber OS** is a high-performance, open-source operating system for lightsabers, specifically engineered for the ESP32 family (S3/C6). InertialSaber OS utilizes a **Native Physics Engine** to deliver an organic, high-fidelity experience driven by real-time kinetic data.
 
 ## 🚀 The Core Philosophy: "Inertial Logic"
 

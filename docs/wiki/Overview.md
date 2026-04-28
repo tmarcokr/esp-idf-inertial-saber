@@ -26,7 +26,7 @@ The core of the system is the **Kinetic Parser**. It transforms raw IMU data int
 ## 3. The Core Engines
 
 ### InertialSwing (Audio)
-Unlike legacy "SmoothSwing" systems that only look at angular speed, InertialSwing uses **Linear Kinetic Energy**. This allows the saber to react to thrusts, steps, and subtle movements that don't involve rotation.
+InertialSwing uses **Linear Kinetic Energy**. This allows the saber to react to thrusts, steps, and subtle movements that don't involve rotation.
 - *Key Document:* [InertialSwing Specification](./InertialSwing.md)
 - *Interactive Demo:* [🎮 Play Swing Simulation](../system_definition/InertialSwing_Simulation.html)
 
