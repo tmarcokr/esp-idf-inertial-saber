@@ -42,3 +42,5 @@ While the engines handle continuous responses, the **SaberAction System** handle
 
 ## 5. Performance Focus
 By using **Compiled Profiles** and an **Action Bus** architecture, InertialSaber OS avoids the overhead of complex file parsing during operation, making it ideal for the limited but efficient resources of the ESP32.
+
+<!-- Trigger wiki sync -->
