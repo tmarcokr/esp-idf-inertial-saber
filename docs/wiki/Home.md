@@ -27,12 +27,12 @@ The core of the system is the **Kinetic Parser**. It transforms raw IMU data int
 
 ### InertialSwing (Audio)
 InertialSwing uses **Linear Kinetic Energy**. This allows the saber to react to thrusts, steps, and subtle movements that don't involve rotation.
-- *Key Document:* [InertialSwing Specification](./InertialSwing.md)
+- *Key Document:* [InertialSwing Specification](InertialSwing)
 - *Interactive Demo:* [🎮 Play Swing Simulation](../system_definition/InertialSwing_Simulation.html)
 
 ### InertialLight (Visual)
 Calculates color in HSB space. It simulates a dynamic plasma blade that "heats up" (thermal bleed) and "ruptures" (burst) based on physical stress.
-- *Key Document:* [InertialLight Specification](./InertialLight.md)
+- *Key Document:* [InertialLight Specification](InertialLight)
 - *Interactive Demo:* [🎮 Play Light Simulation](../system_definition/InertialLight_Simulation.html)
 
 ## 4. Event Management: The Action Bus
