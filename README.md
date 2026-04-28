@@ -38,7 +38,7 @@ A high-performance configuration model. Profiles are compiled C++ classes that e
 ## 📑 Documentation Index (Wiki)
 
 Explore the technical depth of InertialSaber OS:
-1. [**System Overview**](./docs/wiki/Overview.md) - The "Big Picture" and data flow.
+1. [**System Overview**](./docs/wiki/Home.md) - The "Big Picture" and data flow.
 2. [**Kinetic Metrics**](./docs/wiki/KineticMetrics.md) - Understanding Energy, Overload, and Angle.
 3. [**Audio Specification**](./docs/wiki/InertialSwing.md) - Deep dive into the InertialSwing Engine.
 4. [**Visual Specification**](./docs/wiki/InertialLight.md) - Deep dive into the InertialLight Engine.
