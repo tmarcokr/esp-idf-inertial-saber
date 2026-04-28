@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InertialSwing Engine Simulator v1.0</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --accent-color: #00e5ff;
+            --danger-color: #ff3d00;
+            --success-color: #00e676;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .simulator-card {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h2 { text-align: center; color: var(--accent-color); margin-top: 0; }
+
+        .control-group { margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.9rem; }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: var(--accent-color);
+        }
+
+        .visual-area {
+            height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #111;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #saber-visual {
+            width: 150px;
+            height: 6px;
+            background: var(--accent-color);
+            box-shadow: 0 0 15px var(--accent-color);
+            border-radius: 3px;
+            transform-origin: center;
+            transition: transform 0.1s ease-out;
+        }
+
+        .meter-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.2rem; }
+        
+        .progress-container {
+            background: #444;
+            height: 12px;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-color);
+            transition: width 0.05s linear;
+        }
+
+        #overload-bar { background: linear-gradient(90deg, #ff9100, var(--danger-color)); }
+
+        .btn-burst {
+            width: 100%;
+            padding: 0.8rem;
+            background-color: var(--danger-color);
+            border: none;
+            color: white;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .btn-burst:active { transform: scale(0.95); }
+
+        .status-badge {
+            text-align: center;
+            padding: 0.3rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: #444;
+            margin-top: 1rem;
+        }
+
+        .burst-flash {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @keyframes flashAnim {
+            0% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="simulator-card">
+    <h2>InertialSwing Engine v1.0</h2>
+    
+    <div class="visual-area">
+        <div id="saber-visual"></div>
+        <div id="flash" class="burst-flash"></div>
+    </div>
+
+    <div class="control-group">
+        <label>Energía Total (Fuerza G): <span id="val-g">0.0</span> G</label>
+        <input type="range" id="input-g" min="0" max="8" step="0.1" value="0">
+    </div>
+
+    <div class="control-group">
+        <label>Ángulo de la Hoja: <span id="val-angle">0</span>°</label>
+        <input type="range" id="input-angle" min="-90" max="90" step="1" value="0">
+    </div>
+
+    <div class="meter-label"><span>Mezcla SwingL (Grave)</span><span id="val-l">0%</span></div>
+    <div class="progress-container"><div id="bar-l" class="progress-bar"></div></div>
+
+    <div class="meter-label"><span>Mezcla SwingH (Agudo)</span><span id="val-h">0%</span></div>
+    <div class="progress-container"><div id="bar-h" class="progress-bar"></div></div>
+
+    <div class="meter-label"><span>Inertial Overload (Acumulador)</span><span id="val-tank">0%</span></div>
+    <div class="progress-container"><div id="overload-bar" class="progress-bar"></div></div>
+
+    <button class="btn-burst" onclick="triggerBurst()">GESTO BRUSCO (LATIGAZO)</button>
+
+    <div id="status" class="status-badge">ESTADO: CALMA</div>
+</div>
+
+<script>
+    // Parámetros de configuración
+    let tank = 0;
+    const fillRate = 0.8; // Ajustado para el simulador
+    const drainRate = 1.2;
+    const overloadThreshold = 3.5;
+
+    // Elementos DOM
+    const inputG = document.getElementById('input-g');
+    const inputAngle = document.getElementById('input-angle');
+    const barL = document.getElementById('bar-l');
+    const barH = document.getElementById('bar-h');
+    const barOverload = document.getElementById('overload-bar');
+    const saber = document.getElementById('saber-visual');
+    const flash = document.getElementById('flash');
+
+    function update() {
+        const g = parseFloat(inputG.value);
+        const angleDeg = parseInt(inputAngle.value);
+        const angleRad = angleDeg * (Math.PI / 180);
+
+        // Actualizar textos
+        document.getElementById('val-g').innerText = g.toFixed(1);
+        document.getElementById('val-angle').innerText = angleDeg;
+        saber.style.transform = `rotate(${-angleDeg}deg)`;
+
+        // 1. Volumen Maestro (0.5G a 4.0G)
+        const volMaestro = Math.max(0, Math.min(1, (g - 0.5) / (4.0 - 0.5)));
+
+        // 2. Inertial Crossfade (Mix Base)
+        const mixBase = Math.max(0, Math.min(1, (g - 2.0) / (4.0 - 2.0)));
+
+        // 3. Gravity Tonal Modulator
+        const modGravedad = Math.sin(angleRad) * 0.2;
+        const mixFinal = Math.max(0, Math.min(1, mixBase + modGravedad));
+
+        // 4. Salida por Canal
+        const volL = (volMaestro * (1 - mixFinal)) * 100;
+        const volH = (volMaestro * mixFinal) * 100;
+
+        barL.style.width = volL + "%";
+        barH.style.width = volH + "%";
+        document.getElementById('val-l').innerText = Math.round(volL) + "%";
+        document.getElementById('val-h').innerText = Math.round(volH) + "%";
+
+        // 5. Lógica del Tanque (Inertial Overload)
+        if (g > overloadThreshold) {
+            tank += (g - overloadThreshold) * fillRate;
+        } else {
+            tank -= drainRate;
+        }
+
+        if (tank < 0) tank = 0;
+        if (tank >= 100) {
+            doBurst();
+            tank = 0;
+        }
+
+        barOverload.style.width = tank + "%";
+        document.getElementById('val-tank').innerText = Math.round(tank) + "%";
+
+        // 6. Estado
+        let statusText = "ESTADO: CALMA";
+        if (g >= 0.5 && g < 2.0) statusText = "ESTADO: MOVIMIENTO (ZONA L)";
+        if (g >= 2.0 && g < 4.0) statusText = "ESTADO: MOVIMIENTO (TRANSICIÓN)";
+        if (g >= 4.0) statusText = "ESTADO: MOVIMIENTO (ZONA H)";
+        document.getElementById('status').innerText = statusText;
+    }
+
+    function doBurst() {
+        flash.style.animation = 'none';
+        flash.offsetHeight; // trigger reflow
+        flash.style.animation = 'flashAnim 0.4s ease-out';
+    }
+
+    function triggerBurst() {
+        inputG.value = 7.5;
+        setTimeout(() => { if(inputG.value == 7.5) inputG.value = 0; }, 150);
+    }
+
+    // Bucle de actualización (simulando 60fps para fluidez del tanque)
+    setInterval(update, 16);
+</script>
+
+</body>
+</html>

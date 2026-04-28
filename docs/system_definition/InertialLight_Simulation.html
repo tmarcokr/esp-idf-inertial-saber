@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Rotura de Plasma (HSB)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+        }
+        .container {
+            background-color: #2a2a2a;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+        }
+        .color-boxes {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+        }
+        .box-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .color-box {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid #fff;
+            margin-bottom: 15px;
+            transition: background-color 0.1s;
+        }
+        input[type="range"] {
+            width: 80%;
+            margin: 20px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        /* Clase para la animación del destello */
+        .flash {
+            box-shadow: 0 0 50px 20px currentColor;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>InertialLight: Rotura de Plasma</h2>
+    
+    <label for="hueSlider">Tono Base (BaseHue): <span id="hueValue">240</span>°</label>
+    <input type="range" id="hueSlider" min="0" max="360" value="240">
+
+    <div class="color-boxes">
+        <div class="box-wrapper">
+            <div id="baseColorBox" class="color-box" style="background-color: hsl(240, 100%, 50%);"></div>
+            <strong>Color Base</strong>
+        </div>
+        <div class="box-wrapper">
+            <div id="burstColorBox" class="color-box" style="background-color: hsl(60, 100%, 50%); color: hsl(60, 100%, 50%);"></div>
+            <strong>Color de Destello</strong>
+            <span id="burstValue">60°</span>
+        </div>
+    </div>
+
+    <button id="simularBtn">⚡ Simular Rotura de Plasma ⚡</button>
+</div>
+
+<script>
+    const hueSlider = document.getElementById('hueSlider');
+    const hueValue = document.getElementById('hueValue');
+    const burstValue = document.getElementById('burstValue');
+    const baseColorBox = document.getElementById('baseColorBox');
+    const burstColorBox = document.getElementById('burstColorBox');
+    const simularBtn = document.getElementById('simularBtn');
+
+    // Función para actualizar los colores basados en el slider
+    function updateColors() {
+        let baseHue = parseInt(hueSlider.value);
+        // Matemática del color complementario
+        let burstHue = (baseHue + 180) % 360;
+
+        hueValue.textContent = baseHue;
+        burstValue.textContent = burstHue + "°";
+
+        // En CSS, para lograr un brillo puro en HSL, la Luminosidad es 50%
+        baseColorBox.style.backgroundColor = `hsl(${baseHue}, 100%, 50%)`;
+        
+        let burstColor = `hsl(${burstHue}, 100%, 50%)`;
+        burstColorBox.style.backgroundColor = burstColor;
+        burstColorBox.style.color = burstColor; // Usado para el shadow
+    }
+
+    // Evento al mover el slider
+    hueSlider.addEventListener('input', updateColors);
+
+    // Evento del botón de simulación
+    simularBtn.addEventListener('click', () => {
+        // Añadir clase para hacer brillar el color de destello
+        burstColorBox.classList.add('flash');
+        
+        // Quitar el efecto después de 150ms (simulando el BurstDuration)
+        setTimeout(() => {
+            burstColorBox.classList.remove('flash');
+        }, 150);
+    });
+
+    // Inicializar colores al cargar
+    updateColors();
+</script>
+
+</body>
+</html>
