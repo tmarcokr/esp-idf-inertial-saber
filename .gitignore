@@ -16,3 +16,4 @@ __pycache__/
 # Private/Specialized Agent Skills
 .agents/skills/proffieOS-expert/
 .agents/skills/saber-product-owner/
+.agents/rules/00-private-rules.md

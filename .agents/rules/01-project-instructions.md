@@ -18,11 +18,6 @@ You are prohibited from modifying or proposing code changes without first execut
 - **Pre-requisite for Action**: Every tool call that modifies the filesystem (`replace`, `write_file`) or proposes a solution MUST be preceded by `activate_skill`. 
 - **Definition of Failure**: Any code produced without the active context of a specialized Skill is considered a protocol violation and a technical failure.
 - **Skill Gating**: 
-<<<<<<< HEAD
-    - `proffieOS-expert`: Mandatory for any technical consultation regarding legacy lightsaber standards (SmoothSwing, ProffieOS logic).
-    - `saber-product-owner`: Mandatory for defining new functional requirements or writing system documentation.
-=======
->>>>>>> template/main
     - `ESP32_Expert`: Mandatory for ANY code logic or refactoring.
     - `Hardware_Specialist`: Mandatory BEFORE any GPIO, Strapping pin, or Peripheral assignment.
     - `Quality_Auditor`: Mandatory for ANY PR submission or final task delivery.
@@ -34,13 +29,8 @@ You are prohibited from modifying or proposing code changes without first execut
 - If the user asks to "validate hardware", read `skill_hardware_validation.md`.
 
 ## 3. General Project Context
-<<<<<<< HEAD
-- **Target Microcontrollers**: High-performance ESP32-S3 or ESP32-C6 for InertialSaber OS.
-- **Documentation**: System specifications and datasheets are located in `.agents/docs/` and `docs/system_definition/`. Always consult them when dealing with hardware or motion algorithms.
-=======
 - **Target Microcontrollers**: Generic ESP-IDF project (ESP32, ESP32-S3, ESP32-C6).
 - **Documentation**: Datasheets are located in `.agents/docs/`. Always consult them when dealing with hardware.
->>>>>>> template/main
 
 ## 4. Git Governance & Safety Protocols (Hard Rules)
 - **Main Branch Protection**: Direct commits to `main` or `master` are STRICTLY PROHIBITED. Every change MUST happen in a `feature/` branch followed by a Pull Request.
