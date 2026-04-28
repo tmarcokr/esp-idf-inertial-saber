@@ -1,9 +1,6 @@
 idf_component_register(
-    SRCS "main.cpp" 
-         "samples/helloworld/HelloWorldSample.cpp"
-    INCLUDE_DIRS "." 
-                 "samples"
-                 "samples/helloworld"
+    SRCS "main.cpp"
+    INCLUDE_DIRS "."
 )
 
 # Force C++20 for all source files
