@@ -1,14 +1,14 @@
 # Wiki Navigation
 
-*   [System Overview](./Home.md)
+*   [System Overview](Home)
 *   **Core Engines:**
-    *   [InertialSwing Engine](./InertialSwing.md)
-    *   [InertialLight Engine](./InertialLight.md)
-    *   [SaberAction Bus](./SaberAction.md)
+    *   [InertialSwing Engine](InertialSwing)
+    *   [InertialLight Engine](InertialLight)
+    *   [SaberAction Bus](SaberAction)
 *   **Architecture:**
-    *   [Profile System](./Profiles.md)
-    *   [Kinetic Metrics](./KineticMetrics.md)
-    *   [Kinetic Effects](./KineticEffects.md)
-    *   [Kinetic Gestures](./KineticGestures.md)
+    *   [Profile System](Profiles)
+    *   [Kinetic Metrics](KineticMetrics)
+    *   [Kinetic Effects](KineticEffects)
+    *   [Kinetic Gestures](KineticGestures)
 *   **Roadmap:**
-    *   [InertialHaptics Engine (Future)](./InertialHaptics.md)
+    *   [InertialHaptics Engine (Future)](InertialHaptics)
