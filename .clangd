@@ -6,7 +6,6 @@ CompileFlags:
 
   Remove: 
     - "-fno-shrink-wrap"
-    - "-fno-shrink-warp"
     - "-fstrict-volatile-bitfields"
     - "-fno-tree-switch-conversion"
     - "-march=*"
