@@ -21,6 +21,7 @@ You are prohibited from modifying or proposing code changes without first execut
     - `ESP32_Expert`: Mandatory for ANY code logic or refactoring.
     - `Hardware_Specialist`: Mandatory BEFORE any GPIO, Strapping pin, or Peripheral assignment.
     - `Quality_Auditor`: Mandatory for ANY PR submission or final task delivery.
+    - `cpp-components-expert`: Mandatory when creating, modifying, or integrating any module from the `components/` directory.
 
 ### When to Use Workflows (Read from `.agents/workflows/`):
 - For Git operations (branches, PRs, squashing), read the corresponding `git_*` workflow file.
