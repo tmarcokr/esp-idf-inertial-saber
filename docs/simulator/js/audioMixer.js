@@ -8,15 +8,15 @@ export class AudioMixer {
         
         // Define all sound files
         this.soundFiles = {
-            hum: ['sound/Proffie/hum.wav'],
-            swingL: Array.from({length: 3}, (_, i) => `sound/Proffie/swingl/swingl${i+1}.wav`),
-            swingH: Array.from({length: 3}, (_, i) => `sound/Proffie/swingh/swingh${i+1}.wav`),
-            poweron: Array.from({length: 4}, (_, i) => `sound/Proffie/out/out${i+1}.wav`),
-            poweroff: Array.from({length: 2}, (_, i) => `sound/Proffie/in/in${i+1}.wav`),
-            burst: Array.from({length: 16}, (_, i) => `sound/Proffie/swng/swng${i+1}.wav`),
-            blaster: Array.from({length: 8}, (_, i) => `sound/Proffie/blst/blst${i+1}.wav`),
-            drag: ['sound/Proffie/drag/drag1.wav'],
-            enddrag: Array.from({length: 8}, (_, i) => `sound/Proffie/enddrag/enddrag${i+1}.wav`)
+            hum: ['sound/InertialFont/hum.wav'],
+            swingL: Array.from({length: 3}, (_, i) => `sound/InertialFont/swingl/swingl${i+1}.wav`),
+            swingH: Array.from({length: 3}, (_, i) => `sound/InertialFont/swingh/swingh${i+1}.wav`),
+            poweron: Array.from({length: 4}, (_, i) => `sound/InertialFont/out/out${i+1}.wav`),
+            poweroff: Array.from({length: 2}, (_, i) => `sound/InertialFont/in/in${i+1}.wav`),
+            burst: Array.from({length: 16}, (_, i) => `sound/InertialFont/swng/swng${i+1}.wav`),
+            blaster: Array.from({length: 8}, (_, i) => `sound/InertialFont/blst/blst${i+1}.wav`),
+            drag: ['sound/InertialFont/drag/drag1.wav'],
+            enddrag: Array.from({length: 8}, (_, i) => `sound/InertialFont/enddrag/enddrag${i+1}.wav`)
         };
 
         this.currentVolumes = {
