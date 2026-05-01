@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InertialSaber 3D Web Simulator</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Import Three.js -->
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <!-- UI Overlay -->
+    <div id="ui-layer">
+        <div class="panel">
+            <h2>Inertial Engine Telemetry</h2>
+            
+            <div class="metric">
+                <label>Energy (G-Force): <span id="val-g">0.0</span> G</label>
+                <div class="bar-container"><div id="bar-g" class="bar bg-blue"></div></div>
+            </div>
+            
+            <div class="metric">
+                <label>Blade Angle: <span id="val-angle">0</span>°</label>
+            </div>
+            
+            <div class="metric">
+                <label>Inertial Overload Tank: <span id="val-tank">0</span>%</label>
+                <div class="bar-container"><div id="bar-tank" class="bar bg-orange"></div></div>
+            </div>
+            
+            <div class="metric">
+                <label>Hum Vol: <span id="val-hum">0</span>%</label>
+                <div class="bar-container"><div id="bar-hum" class="bar" style="background-color: #888;"></div></div>
+            </div>
+            
+            <div class="metric">
+                <label>Swing L Vol: <span id="val-swingL">0</span>%</label>
+                <div class="bar-container"><div id="bar-swingL" class="bar" style="background-color: #4CAF50;"></div></div>
+            </div>
+            
+            <div class="metric">
+                <label>Swing H Vol: <span id="val-swingH">0</span>%</label>
+                <div class="bar-container"><div id="bar-swingH" class="bar" style="background-color: #f44336;"></div></div>
+            </div>
+            
+            <div class="metric">
+                <label>Engine State:</label>
+                <div id="val-state" class="badge">CALM</div>
+            </div>
+        </div>
+        
+        <div class="panel controls">
+            <h3>Visual Setup</h3>
+            <label>Base Hue (0-360)</label>
+            <input type="range" id="input-hue" min="0" max="360" value="200">
+            
+            <div style="margin-top: 15px;">
+                <p class="instruction">🖱️ <b>Click & Drag</b> to swing the saber.</p>
+                <p class="instruction">⚡ Move fast to trigger Plasma Rupture!</p>
+            </div>
+        </div>
+
+        <div class="panel controls" style="margin-top: 15px;">
+            <h3>Kinetic Effects</h3>
+            <button id="btn-power" class="action-btn">Power ON</button>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button id="btn-blaster" class="action-btn secondary" disabled>Blaster</button>
+                <button id="btn-drag" class="action-btn secondary" disabled>Drag (Hold)</button>
+            </div>
+            <button id="btn-overload" class="action-btn danger" style="margin-top: 10px;" disabled>Force Overload</button>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
