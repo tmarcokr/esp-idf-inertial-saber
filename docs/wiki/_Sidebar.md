@@ -1,6 +1,8 @@
 # Wiki Navigation
 
 *   [System Overview](Home)
+*   **Tools & Simulation:**
+    *   [Interactive 3D Simulator](https://tmarcokr.github.io/esp-idf-inertial-saber/)
 *   **Core Engines:**
     *   [InertialSwing Engine](InertialSwing)
     *   [InertialLight Engine](InertialLight)
