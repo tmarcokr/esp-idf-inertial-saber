@@ -155,12 +155,49 @@ void SaberActionBus::drainInputQueue() {
     }
 }
 
-void SaberActionBus::applyStagedMotion() {
+void SaberActionBus::loadStagedMotionToPacket() {
     m_packet.KineticEnergy = m_stagedEnergy;
     m_packet.AxisRotation[0] = m_stagedRotation[0];
     m_packet.AxisRotation[1] = m_stagedRotation[1];
     m_packet.AxisRotation[2] = m_stagedRotation[2];
     m_packet.OrientationVector = m_stagedOrientation;
+}
+
+void SaberActionBus::filterStagedMotionWarmUp() {
+    if (m_packet.timestamp_ms < Platform::kSensorGracePeriodMs) {
+        m_packet.KineticEnergy = 0.0f;
+        m_packet.AxisRotation[0] = 0.0f;
+        m_packet.AxisRotation[1] = 0.0f;
+        m_packet.AxisRotation[2] = 0.0f;
+        m_packet.OrientationVector = 90.0f + Platform::kOrientationOffsetDeg;
+    }
+}
+
+void SaberActionBus::filterStagedMotionStabilization() {
+    if (m_packet.KineticEnergy < Platform::kKineticEnergyDeadbandG) {
+        m_packet.KineticEnergy = 0.0f;
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        if (std::abs(m_packet.AxisRotation[i]) < Platform::kRotationDeadbandDps) {
+            m_packet.AxisRotation[i] = 0.0f;
+        }
+    }
+}
+
+void SaberActionBus::filterStagedMotionOrientation() {
+    float correctedAngle = m_packet.OrientationVector - Platform::kOrientationOffsetDeg;
+    if (correctedAngle > 90.0f) correctedAngle = 90.0f;
+    if (correctedAngle < -90.0f) correctedAngle = -90.0f;
+    
+    m_packet.OrientationVector = correctedAngle / 90.0f;
+}
+
+void SaberActionBus::applyStagedMotion() {
+    loadStagedMotionToPacket();
+    filterStagedMotionWarmUp();
+    filterStagedMotionStabilization();
+    filterStagedMotionOrientation();
 }
 
 } // namespace InertialSaber::Core

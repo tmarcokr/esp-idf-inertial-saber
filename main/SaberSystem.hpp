@@ -57,6 +57,7 @@ private:
     void registerDemoEffects();
     void setupButtonAdapter();
 
+    static void IRAM_ATTR imuIsrHandler(void* arg);
     static void imuAdapterTask(void* arg);
     void imuLoop();
 };

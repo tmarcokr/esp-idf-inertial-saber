@@ -69,6 +69,23 @@ esp_err_t SaberSystem::start() {
         return ESP_FAIL;
     }
 
+    // ── IMU Interrupt Configuration ──
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << kImuInt),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_POSEDGE,
+    };
+    gpio_config(&io_conf);
+    
+    // Install ISR service (ignoring INVALID_STATE if already installed by GpioButton)
+    esp_err_t isr_err = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+    if (isr_err != ESP_OK && isr_err != ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "Failed to install GPIO ISR service: %s", esp_err_to_name(isr_err));
+    }
+    gpio_isr_handler_add(kImuInt, imuIsrHandler, this);
+
     ESP_LOGI(TAG, "InertialSaber OS active — all systems nominal");
     return ESP_OK;
 }
@@ -98,6 +115,17 @@ void SaberSystem::setupButtonAdapter() {
     });
 }
 
+void SaberSystem::imuIsrHandler(void* arg) {
+    auto* sys = static_cast<SaberSystem*>(arg);
+    BaseType_t highTaskWoken = pdFALSE;
+    if (sys->m_imuTaskHandle != nullptr) {
+        vTaskNotifyGiveFromISR(sys->m_imuTaskHandle, &highTaskWoken);
+        if (highTaskWoken == pdTRUE) {
+            portYIELD_FROM_ISR();
+        }
+    }
+}
+
 void SaberSystem::imuAdapterTask(void* arg) {
     auto* sys = static_cast<SaberSystem*>(arg);
     sys->imuLoop();
@@ -109,6 +137,10 @@ void SaberSystem::imuLoop() {
     vTaskDelay(pdMS_TO_TICKS(100));
 
     while (true) {
+        // Wait for DMP interrupt notification. Timeout 20ms acts as a fallback
+        // in case the INT pulse is missed, stuck, or the hardware wire is disconnected.
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(20));
+
         auto data = m_imu.readData();
         if (data) {
             auto linAccel = data->getLinearAcceleration();
@@ -125,13 +157,10 @@ void SaberSystem::imuLoop() {
             };
 
             auto angles = data->getEulerAngles();
-            // Pitch in radians → degrees for OrientationVector
-            float orientation = angles.pitch * (180.0f / M_PI);
+            float orientation = angles.roll * (180.0f / M_PI);
 
             m_bus.updateMotion(energy, rotation, orientation);
         }
-
-        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 

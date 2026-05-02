@@ -31,7 +31,7 @@ public:
     }
 
     void Run() override {
-        ESP_LOGI(TAG, "E=%.2fG  R=[%.0f, %.0f, %.0f]  A=%.1f°",
+        ESP_LOGI(TAG, "E=%.2fG  R=[%.0f, %.0f, %.0f]  A=%.2f",
                  m_cachedPacket.KineticEnergy,
                  m_cachedPacket.AxisRotation[0],
                  m_cachedPacket.AxisRotation[1],

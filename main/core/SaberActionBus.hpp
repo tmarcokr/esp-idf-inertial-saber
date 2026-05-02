@@ -108,6 +108,10 @@ private:
     void busLoop();
     void drainInputQueue();
     void applyStagedMotion();
+    void loadStagedMotionToPacket();
+    void filterStagedMotionWarmUp();
+    void filterStagedMotionStabilization();
+    void filterStagedMotionOrientation();
 };
 
 } // namespace InertialSaber::Core
