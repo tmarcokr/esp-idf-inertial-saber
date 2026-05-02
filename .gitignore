@@ -12,8 +12,3 @@ dependencies.lock
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Private/Specialized Agent Skills
-.agents/skills/proffieOS-expert/
-.agents/skills/saber-product-owner/
-.agents/rules/00-private-rules.md
