@@ -38,7 +38,7 @@ struct SaberDataPacket {
     /// Angular velocity across XYZ axes in degrees per second.
     float AxisRotation[3] = {0.0f, 0.0f, 0.0f};
     
-    /// Downward gravity alignment (-1.0 to 1.0) where 1.0 is pointing straight down.
+    /// Vertical alignment (-1.0 to 1.0) where 1.0 is pointing straight UP and -1.0 is straight DOWN.
     float OrientationVector = 0.0f;
 
     /// Current charge level of the physics accumulator (0.0f to 1.0f).
