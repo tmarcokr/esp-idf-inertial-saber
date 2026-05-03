@@ -31,12 +31,14 @@ public:
     }
 
     void Run() override {
-        ESP_LOGI(TAG, "E=%.2fG  R=[%.0f, %.0f, %.0f]  A=%.2f",
+        ESP_LOGI(TAG, "E=%.2fG  R=[%.0f, %.0f, %.0f]  A=%.2f  OL=%.2f B=%d",
                  m_cachedPacket.KineticEnergy,
                  m_cachedPacket.AxisRotation[0],
                  m_cachedPacket.AxisRotation[1],
                  m_cachedPacket.AxisRotation[2],
-                 m_cachedPacket.OrientationVector);
+                 m_cachedPacket.OrientationVector,
+                 m_cachedPacket.TanqueOverload,
+                 m_cachedPacket.OverloadBurst);
     }
 
 private:

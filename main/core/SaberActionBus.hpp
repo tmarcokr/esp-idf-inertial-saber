@@ -116,7 +116,13 @@ private:
     void filterStagedMotionWarmUp();
     void filterStagedMotionStabilization();
     void filterStagedMotionOrientation();
-    void computeTanqueOverload(float dtSec);
+    void computeTanqueOverload();
+    float calculateDeltaTimeSec();
+    bool isOverloadInCooldown() const;
+    void resetOverloadState();
+    void chargeOrDrainOverload(float dtSec);
+    void clampOverloadLevel();
+    void evaluateOverloadBurst();
 };
 
 } // namespace InertialSaber::Core

@@ -29,6 +29,7 @@ esp_err_t SaberActionBus::start() {
     }
 
     m_running = true;
+    m_lastLoopTimeUs = esp_timer_get_time();
 
     BaseType_t result = xTaskCreatePinnedToCore(
         busTaskEntry,
@@ -126,7 +127,6 @@ void SaberActionBus::busTaskEntry(void* arg) {
 }
 
 void SaberActionBus::busLoop() {
-    m_lastLoopTimeUs = esp_timer_get_time();
     while (m_running) {
         ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(Platform::kBusTimeoutMs));
 
@@ -134,14 +134,10 @@ void SaberActionBus::busLoop() {
             break;
         }
 
-        int64_t nowUs = esp_timer_get_time();
-        float dtSec = static_cast<float>(nowUs - m_lastLoopTimeUs) / 1000000.0f;
-        m_lastLoopTimeUs = nowUs;
-
         m_packet.timestamp_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
         applyStagedMotion();
-        computeTanqueOverload(dtSec);
+        computeTanqueOverload();
         drainInputQueue();
 
         for (auto& effect : m_effects) {
@@ -208,37 +204,59 @@ void SaberActionBus::applyStagedMotion() {
     filterStagedMotionOrientation();
 }
 
-void SaberActionBus::computeTanqueOverload(float dtSec) {
-    m_packet.OverloadBurst = false;
+void SaberActionBus::computeTanqueOverload() {
+    float dtSec = calculateDeltaTimeSec();
 
-    // Check cooldown
-    if (m_packet.timestamp_ms - m_lastBurstTimeMs < Platform::kOverloadBurstCooldownMs) {
-        m_tanqueLevel = 0.0f;
-        m_packet.TanqueOverload = 0.0f;
+    if (isOverloadInCooldown()) {
+        resetOverloadState();
         return;
     }
 
-    // Charging/Draining logic
+    chargeOrDrainOverload(dtSec);
+    clampOverloadLevel();
+    evaluateOverloadBurst();
+}
+
+float SaberActionBus::calculateDeltaTimeSec() {
+    int64_t nowUs = esp_timer_get_time();
+    float dtSec = static_cast<float>(nowUs - m_lastLoopTimeUs) / 1000000.0f;
+    m_lastLoopTimeUs = nowUs;
+    return dtSec;
+}
+
+bool SaberActionBus::isOverloadInCooldown() const {
+    return (m_packet.timestamp_ms - m_lastBurstTimeMs) < Platform::kOverloadBurstCooldownMs;
+}
+
+void SaberActionBus::resetOverloadState() {
+    m_tanqueLevel = 0.0f;
+    m_packet.TanqueOverload = 0.0f;
+    m_packet.OverloadBurst = false;
+}
+
+void SaberActionBus::chargeOrDrainOverload(float dtSec) {
     if (m_packet.KineticEnergy > Platform::kOverloadChargeThresholdG) {
         m_tanqueLevel += Platform::kOverloadChargeRatePerSec * dtSec;
     } else {
         m_tanqueLevel -= Platform::kOverloadDrainRatePerSec * dtSec;
     }
+}
 
-    // Clamp
+void SaberActionBus::clampOverloadLevel() {
     if (m_tanqueLevel < 0.0f) {
         m_tanqueLevel = 0.0f;
     } else if (m_tanqueLevel > 1.0f) {
         m_tanqueLevel = 1.0f;
     }
+}
 
-    // Burst trigger
+void SaberActionBus::evaluateOverloadBurst() {
+    m_packet.OverloadBurst = false;
     if (m_tanqueLevel >= 1.0f) {
         m_packet.OverloadBurst = true;
         m_lastBurstTimeMs = m_packet.timestamp_ms;
-        m_tanqueLevel = 0.0f; // Reset after burst
+        m_tanqueLevel = 0.0f;
     }
-
     m_packet.TanqueOverload = m_tanqueLevel;
 }
 
