@@ -41,11 +41,11 @@ constexpr float kOrientationOffsetDeg = 0.0f;
 
 // Overload Mechanics Default Thresholds
 /// Minimum G-Force required to start filling the TanqueOverload accumulator
-constexpr float kOverloadChargeThresholdG = 3.5f;
+constexpr float kOverloadChargeThresholdG = 1.0f;
 /// How much the TanqueOverload fills per second while swinging above the threshold
-constexpr float kOverloadChargeRatePerSec = 0.5f;
+constexpr float kOverloadChargeRatePerSec = 2.0f;
 /// How much the TanqueOverload drains per second when the saber is resting
-constexpr float kOverloadDrainRatePerSec = 1.0f;
+constexpr float kOverloadDrainRatePerSec = 0.5f;
 /// Minimum time in milliseconds between triggered Overload bursts
 constexpr uint32_t kOverloadBurstCooldownMs = 1500;
 
