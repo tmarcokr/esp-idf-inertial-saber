@@ -6,25 +6,25 @@
 namespace InertialSaber::Effects {
 
 /**
- * @brief Discrete log effect to test the TanqueOverload accumulator burst.
+ * @brief Discrete log effect to test the Inertial Overload accumulator burst.
  * Prints a bright yellow warning to the serial monitor when triggered.
  */
-class OverloadBurstLogEffect final : public Core::InertialEffect {
+class InertialBurstLogEffect final : public Core::InertialEffect {
 public:
-    OverloadBurstLogEffect() {
+    InertialBurstLogEffect() {
         Priority = 1;
     }
 
     bool Test(const Core::SaberDataPacket& packet) override {
-        return packet.OverloadBurst;
+        return packet.InertialBurst;
     }
 
     void Run() override {
-        ESP_LOGW(TAG, "⚡ ===== OVERLOAD BURST TRIGGERED! ===== ⚡");
+        ESP_LOGW(TAG, "⚡ ===== INERTIAL BURST TRIGGERED! ===== ⚡");
     }
 
 private:
-    static constexpr const char* TAG = "OverloadLog";
+    static constexpr const char* TAG = "InertialLog";
 };
 
 } // namespace InertialSaber::Effects

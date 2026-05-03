@@ -39,14 +39,14 @@ constexpr float kRotationDeadbandDps = 15.0f;
 /// Calibration offset for the blade orientation angle in degrees
 constexpr float kOrientationOffsetDeg = 0.0f;
 
-// Overload Mechanics Default Thresholds
-/// Minimum G-Force required to start filling the TanqueOverload accumulator
-constexpr float kOverloadChargeThresholdG = 1.0f;
-/// How much the TanqueOverload fills per second while swinging above the threshold
-constexpr float kOverloadChargeRatePerSec = 2.0f;
-/// How much the TanqueOverload drains per second when the saber is resting
-constexpr float kOverloadDrainRatePerSec = 0.5f;
-/// Minimum time in milliseconds between triggered Overload bursts
-constexpr uint32_t kOverloadBurstCooldownMs = 1500;
+// Inertial Overload Mechanics Default Thresholds
+/// Minimum G-Force required to start filling the Inertial Overload accumulator
+constexpr float kInertialOverloadThresholdG = 1.0f;
+/// How much the Inertial Overload fills per second while swinging above the threshold
+constexpr float kInertialOverloadChargeRate = 2.0f;
+/// How much the Inertial Overload drains per second when the saber is resting
+constexpr float kInertialOverloadDrainRate = 0.5f;
+/// Minimum time in milliseconds between triggered Inertial Bursts
+constexpr float kInertialBurstCooldownMs = 1500.0f;
 
 } // namespace InertialSaber::Core::Platform

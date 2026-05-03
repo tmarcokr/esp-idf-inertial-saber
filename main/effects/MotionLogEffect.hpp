@@ -37,8 +37,8 @@ public:
                  m_cachedPacket.AxisRotation[1],
                  m_cachedPacket.AxisRotation[2],
                  m_cachedPacket.OrientationVector,
-                 m_cachedPacket.TanqueOverload,
-                 m_cachedPacket.OverloadBurst);
+                 m_cachedPacket.InertialOverload,
+                 m_cachedPacket.InertialBurst);
     }
 
 private:

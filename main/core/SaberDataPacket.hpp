@@ -41,11 +41,11 @@ struct SaberDataPacket {
     /// Vertical alignment (-1.0 to 1.0) where 1.0 is pointing straight UP and -1.0 is straight DOWN.
     float OrientationVector = 0.0f;
 
-    /// Current charge level of the physics accumulator (0.0f to 1.0f).
-    float TanqueOverload = 0.0f;
+    /// Virtual inertia accumulator (0.0f to 1.0f).
+    float InertialOverload = 0.0f;
     
-    /// True for exactly one cycle when TanqueOverload reaches 1.0f.
-    bool OverloadBurst = false;
+    /// True for exactly one cycle when InertialOverload reaches 1.0f.
+    bool InertialBurst = false;
 
     /// Array of input peripheral states (buttons, switches).
     std::array<InputDescriptor, Platform::kMaxInputs> inputs{};

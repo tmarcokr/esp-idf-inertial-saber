@@ -2,7 +2,7 @@
 
 #include "ButtonActionEffect.hpp"
 #include "MotionLogEffect.hpp"
-#include "OverloadBurstLogEffect.hpp"
+#include "InertialBurstLogEffect.hpp"
 
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -94,7 +94,7 @@ esp_err_t SaberSystem::start() {
 void SaberSystem::registerDemoEffects() {
     m_bus.registerEffect(std::make_unique<Effects::MotionLogEffect>(500));
     m_bus.registerEffect(std::make_unique<Effects::ButtonActionEffect>(kMainBtnInputId));
-    m_bus.registerEffect(std::make_unique<Effects::OverloadBurstLogEffect>());
+    m_bus.registerEffect(std::make_unique<Effects::InertialBurstLogEffect>());
     ESP_LOGI(TAG, "Demo effects registered");
 }
 

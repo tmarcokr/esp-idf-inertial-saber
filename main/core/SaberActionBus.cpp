@@ -137,7 +137,7 @@ void SaberActionBus::busLoop() {
         m_packet.timestamp_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
         applyStagedMotion();
-        computeTanqueOverload();
+        computeInertialOverload();
         drainInputQueue();
 
         for (auto& effect : m_effects) {
@@ -204,17 +204,17 @@ void SaberActionBus::applyStagedMotion() {
     filterStagedMotionOrientation();
 }
 
-void SaberActionBus::computeTanqueOverload() {
+void SaberActionBus::computeInertialOverload() {
     float dtSec = calculateDeltaTimeSec();
 
-    if (isOverloadInCooldown()) {
-        resetOverloadState();
+    if (isInertialOverloadInCooldown()) {
+        resetInertialOverloadState();
         return;
     }
 
-    chargeOrDrainOverload(dtSec);
-    clampOverloadLevel();
-    evaluateOverloadBurst();
+    chargeOrDrainInertialOverload(dtSec);
+    clampInertialOverloadLevel();
+    evaluateInertialBurst();
 }
 
 float SaberActionBus::calculateDeltaTimeSec() {
@@ -224,40 +224,40 @@ float SaberActionBus::calculateDeltaTimeSec() {
     return dtSec;
 }
 
-bool SaberActionBus::isOverloadInCooldown() const {
-    return (m_packet.timestamp_ms - m_lastBurstTimeMs) < Platform::kOverloadBurstCooldownMs;
+bool SaberActionBus::isInertialOverloadInCooldown() const {
+    return (m_packet.timestamp_ms - m_lastBurstTimeMs) < Platform::kInertialBurstCooldownMs;
 }
 
-void SaberActionBus::resetOverloadState() {
-    m_tanqueLevel = 0.0f;
-    m_packet.TanqueOverload = 0.0f;
-    m_packet.OverloadBurst = false;
+void SaberActionBus::resetInertialOverloadState() {
+    m_overloadLevel = 0.0f;
+    m_packet.InertialOverload = 0.0f;
+    m_packet.InertialBurst = false;
 }
 
-void SaberActionBus::chargeOrDrainOverload(float dtSec) {
-    if (m_packet.KineticEnergy > Platform::kOverloadChargeThresholdG) {
-        m_tanqueLevel += Platform::kOverloadChargeRatePerSec * dtSec;
+void SaberActionBus::chargeOrDrainInertialOverload(float dtSec) {
+    if (m_packet.KineticEnergy > Platform::kInertialOverloadThresholdG) {
+        m_overloadLevel += Platform::kInertialOverloadChargeRate * dtSec;
     } else {
-        m_tanqueLevel -= Platform::kOverloadDrainRatePerSec * dtSec;
+        m_overloadLevel -= Platform::kInertialOverloadDrainRate * dtSec;
     }
 }
 
-void SaberActionBus::clampOverloadLevel() {
-    if (m_tanqueLevel < 0.0f) {
-        m_tanqueLevel = 0.0f;
-    } else if (m_tanqueLevel > 1.0f) {
-        m_tanqueLevel = 1.0f;
+void SaberActionBus::clampInertialOverloadLevel() {
+    if (m_overloadLevel < 0.0f) {
+        m_overloadLevel = 0.0f;
+    } else if (m_overloadLevel > 1.0f) {
+        m_overloadLevel = 1.0f;
     }
 }
 
-void SaberActionBus::evaluateOverloadBurst() {
-    m_packet.OverloadBurst = false;
-    if (m_tanqueLevel >= 1.0f) {
-        m_packet.OverloadBurst = true;
+void SaberActionBus::evaluateInertialBurst() {
+    m_packet.InertialBurst = false;
+    if (m_overloadLevel >= 1.0f) {
+        m_packet.InertialBurst = true;
         m_lastBurstTimeMs = m_packet.timestamp_ms;
-        m_tanqueLevel = 0.0f;
+        m_overloadLevel = 0.0f;
     }
-    m_packet.TanqueOverload = m_tanqueLevel;
+    m_packet.InertialOverload = m_overloadLevel;
 }
 
 } // namespace InertialSaber::Core
