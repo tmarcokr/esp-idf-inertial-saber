@@ -1,6 +1,7 @@
 #include "SaberActionBus.hpp"
 
 #include "esp_log.h"
+#include "esp_timer.h"
 
 #include <algorithm>
 #include <cstring>
@@ -125,6 +126,7 @@ void SaberActionBus::busTaskEntry(void* arg) {
 }
 
 void SaberActionBus::busLoop() {
+    m_lastLoopTimeUs = esp_timer_get_time();
     while (m_running) {
         ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(Platform::kBusTimeoutMs));
 
@@ -132,9 +134,15 @@ void SaberActionBus::busLoop() {
             break;
         }
 
-        applyStagedMotion();
-        drainInputQueue();
+        int64_t nowUs = esp_timer_get_time();
+        float dtSec = static_cast<float>(nowUs - m_lastLoopTimeUs) / 1000000.0f;
+        m_lastLoopTimeUs = nowUs;
+
         m_packet.timestamp_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+
+        applyStagedMotion();
+        computeTanqueOverload(dtSec);
+        drainInputQueue();
 
         for (auto& effect : m_effects) {
             if (effect->Test(m_packet)) {
@@ -198,6 +206,40 @@ void SaberActionBus::applyStagedMotion() {
     filterStagedMotionWarmUp();
     filterStagedMotionStabilization();
     filterStagedMotionOrientation();
+}
+
+void SaberActionBus::computeTanqueOverload(float dtSec) {
+    m_packet.OverloadBurst = false;
+
+    // Check cooldown
+    if (m_packet.timestamp_ms - m_lastBurstTimeMs < Platform::kOverloadBurstCooldownMs) {
+        m_tanqueLevel = 0.0f;
+        m_packet.TanqueOverload = 0.0f;
+        return;
+    }
+
+    // Charging/Draining logic
+    if (m_packet.KineticEnergy > Platform::kOverloadChargeThresholdG) {
+        m_tanqueLevel += Platform::kOverloadChargeRatePerSec * dtSec;
+    } else {
+        m_tanqueLevel -= Platform::kOverloadDrainRatePerSec * dtSec;
+    }
+
+    // Clamp
+    if (m_tanqueLevel < 0.0f) {
+        m_tanqueLevel = 0.0f;
+    } else if (m_tanqueLevel > 1.0f) {
+        m_tanqueLevel = 1.0f;
+    }
+
+    // Burst trigger
+    if (m_tanqueLevel >= 1.0f) {
+        m_packet.OverloadBurst = true;
+        m_lastBurstTimeMs = m_packet.timestamp_ms;
+        m_tanqueLevel = 0.0f; // Reset after burst
+    }
+
+    m_packet.TanqueOverload = m_tanqueLevel;
 }
 
 } // namespace InertialSaber::Core

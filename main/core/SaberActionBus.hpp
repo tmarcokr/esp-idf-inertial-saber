@@ -99,6 +99,10 @@ private:
     std::vector<std::unique_ptr<InertialEffect>> m_effects;
     SaberDataPacket m_packet{};
 
+    float m_tanqueLevel = 0.0f;
+    uint32_t m_lastBurstTimeMs = 0;
+    int64_t m_lastLoopTimeUs = 0;
+
     // Atomic-safe motion staging area written by updateMotion()
     volatile float m_stagedEnergy = 0.0f;
     volatile float m_stagedRotation[3] = {0.0f, 0.0f, 0.0f};
@@ -112,6 +116,7 @@ private:
     void filterStagedMotionWarmUp();
     void filterStagedMotionStabilization();
     void filterStagedMotionOrientation();
+    void computeTanqueOverload(float dtSec);
 };
 
 } // namespace InertialSaber::Core

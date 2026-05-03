@@ -36,6 +36,9 @@ struct SaberDataPacket {
     float AxisRotation[3] = {0.0f, 0.0f, 0.0f};
     float OrientationVector = 0.0f;
 
+    float TanqueOverload = 0.0f;
+    bool OverloadBurst = false;
+
     std::array<InputDescriptor, Platform::kMaxInputs> inputs{};
 
     uint32_t timestamp_ms = 0;

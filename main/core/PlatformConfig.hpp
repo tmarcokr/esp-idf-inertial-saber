@@ -26,4 +26,10 @@ constexpr float kKineticEnergyDeadbandG = 0.25f;
 constexpr float kRotationDeadbandDps = 15.0f;
 constexpr float kOrientationOffsetDeg = 0.0f; // Reset for new axis
 
+// Overload Mechanics Default Thresholds
+constexpr float kOverloadChargeThresholdG = 3.5f;
+constexpr float kOverloadChargeRatePerSec = 0.5f;
+constexpr float kOverloadDrainRatePerSec = 1.0f;
+constexpr uint32_t kOverloadBurstCooldownMs = 1500;
+
 } // namespace InertialSaber::Core::Platform
