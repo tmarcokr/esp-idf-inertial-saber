@@ -9,8 +9,9 @@ This is the magnitude of the linear acceleration vector acting on the hilt. It r
 - **Calculation:** `sqrt(accel_x^2 + accel_y^2 + accel_z^2) - 1.0` (Gravity subtracted).
 - **Range:** 0.0 (Rest) to 16.0+ (Intense swing).
 - **Usage:** Controls volume (InertialSwing) and flicker intensity (InertialLight).
+*(For implementation examples, see the [InertialSwing](InertialSwing.md) and [InertialLight](InertialLight.md) engines).*
 
-## 2. TanqueOverload (Integrated Inertia)
+## 2. Inertial Overload (Integrated Inertia)
 A virtual accumulator that represents the "stress" placed on the plasma containment. It requires sustained, high-energy movement to fill.
 
 - **Range:** 0.0 to 1.0 (Full).
@@ -18,6 +19,7 @@ A virtual accumulator that represents the "stress" placed on the plasma containm
     - **Charging:** Fills when `EnergiaTotal > Threshold` (e.g., 3.5G).
     - **Draining:** Empties quickly when energy drops below the threshold.
 - **Usage:** Triggers **Inertial Bursts** (Sound) and **Plasma Ruptures** (Light) at 1.0.
+*(For the detailed physics integration logic, see the [Inertial Overload Specification](InertialOverload.md)).*
 
 ## 3. BladeAngle (Spatial Orientation)
 The tilt of the blade relative to the horizon, derived from gravity vector analysis.
@@ -27,6 +29,7 @@ The tilt of the blade relative to the horizon, derived from gravity vector analy
     - **0°:** Blade horizontal.
     - **-90°:** Tip pointing straight down.
 - **Usage:** Tonal modulation of audio and breathing frequency of the light engine.
+*(For gravity modulation formulas, see [InertialSwing](InertialSwing.md) and [InertialLight](InertialLight.md)).*
 
 ## 4. Derived Vectors (Rotation Speed)
 While the system prioritizes linear energy, the angular velocity (deg/s) from the Gyroscope is used for fine-tuning stability and secondary triggers.

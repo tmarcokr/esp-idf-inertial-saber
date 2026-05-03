@@ -27,6 +27,8 @@ The bus distributes a unified data packet in each update cycle. This packet cont
 | `KineticEnergy` | `float` | Total G-Force calculated by the inertia engine. |
 | `AxisRotation` | `float[3]` | Angular velocity on X, Y, Z axes (deg/s). |
 | `OrientationVector` | `float` | Blade inclination angle relative to gravity. |
+| `InertialOverload` | `float` | Accumulator charge level (0.0 to 1.0) based on sustained movement. |
+| `InertialBurst` | `bool` | True for a single cycle when InertialOverload hits 1.0. |
 
 ### 2.2. Interface Descriptors (Input Data)
 The packet carries an **array of `InputDescriptor`** structs, indexed by input ID (Button 0...N). This allows multiple physical buttons to be evaluated simultaneously by any effect. The initial deployment uses a single button; the array is sized for future expansion (2-3 buttons).

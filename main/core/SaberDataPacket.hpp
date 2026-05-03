@@ -32,12 +32,25 @@ struct InputDescriptor {
  * copy, guaranteeing deterministic evaluation order.
  */
 struct SaberDataPacket {
+    /// Absolute linear acceleration magnitude in Gs (gravity subtracted).
     float KineticEnergy = 0.0f;
+    
+    /// Angular velocity across XYZ axes in degrees per second.
     float AxisRotation[3] = {0.0f, 0.0f, 0.0f};
+    
+    /// Vertical alignment (-1.0 to 1.0) where 1.0 is pointing straight UP and -1.0 is straight DOWN.
     float OrientationVector = 0.0f;
 
+    /// Virtual inertia accumulator (0.0f to 1.0f).
+    float InertialOverload = 0.0f;
+    
+    /// True for exactly one cycle when InertialOverload reaches 1.0f.
+    bool InertialBurst = false;
+
+    /// Array of input peripheral states (buttons, switches).
     std::array<InputDescriptor, Platform::kMaxInputs> inputs{};
 
+    /// FreeRTOS system time in milliseconds at the start of this bus cycle.
     uint32_t timestamp_ms = 0;
 };
 

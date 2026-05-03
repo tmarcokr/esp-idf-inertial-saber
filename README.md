@@ -6,7 +6,7 @@
 
 The system is built on the principle that a lightsaber should feel like a contained column of plasma reacting to physical laws. Every sound, flash, and vibration is a direct mathematical result of:
 - **Linear Kinetic Energy (G-Force)**
-- **Integrated Inertia (Overload Tank)**
+- **Inertial Overload & Burst (Kinetic Accumulation)**
 - **Gravitational Orientation (Spatial Awareness)**
 
 ## 🛠️ System Architecture
@@ -14,19 +14,22 @@ The system is built on the principle that a lightsaber should feel like a contai
 InertialSaber OS is modular and extensible, organized into specialized engines and management systems:
 
 ### 1. [InertialSwing Engine](./docs/wiki/InertialSwing.md)
-The audio core. It replaces standard "swing sounds" with a physics-based mixer that calculates volume and tonal balance based on the kinetic energy applied to the hilt. It features **Inertial Overload** for explosive sound bursts during intense maneuvers.
+The audio core. It replaces standard "swing sounds" with a physics-based mixer that calculates volume and tonal balance based on the kinetic energy applied to the hilt.
 
 ### 2. [InertialLight Engine](./docs/wiki/InertialLight.md)
 The visual core. Working in HSB (Hue, Saturation, Brightness) space, it simulates plasma behavior. From the "Live Breathing" pulse at rest to the "Thermal Bleed" (whitening) during high-speed movement and "Plasma Rupture" flashes.
 
-### 3. [SaberAction System (The Action Bus)](./docs/wiki/SaberAction.md)
+### 3. [Inertial Overload Accumulator](./docs/wiki/InertialOverload.md)
+The "Inertia Tank". A physics-driven accumulator that tracks sustained movement intensity. Once fully charged, it triggers high-priority **Inertial Bursts**, creating a bridge between continuous motion and explosive climax events.
+
+### 4. [SaberAction System (The Action Bus)](./docs/wiki/SaberAction.md)
 The asynchronous event dispatcher. It processes sensor data at high frequency (~800Hz) and evaluates active `InertialEffects` (impacts, thrusts, etc.) based on prioritized physical triggers.
 
-### 4. [InertialHaptics Engine](./docs/wiki/InertialHaptics.md)
-The tactile core. It uses real-time low-frequency synthesis to simulate plasma mass, friction, and recoil, providing a high-fidelity physical connection between the user and the OS.
+### 5. [InertialHaptics Engine](./docs/wiki/InertialHaptics.md)
+The tactile core. It uses real-time low-frequency synthesis to simulate plasma mass, friction, and recoil.
 
-### 5. [InertialProfile System](./docs/wiki/Profiles.md)
-A high-performance configuration model. Profiles are compiled C++ classes that encapsulate specific physics definitions and effect collections, ensuring near-zero latency compared to traditional file-parsing systems.
+### 6. [InertialProfile System](./docs/wiki/Profiles.md)
+A high-performance configuration model. Profiles are compiled C++ classes that encapsulate specific physics definitions and effect collections.
 
 ## 📂 Project Structure
 
@@ -40,13 +43,14 @@ A high-performance configuration model. Profiles are compiled C++ classes that e
 Explore the technical depth of InertialSaber OS:
 1. [**System Overview**](./docs/wiki/Home.md) - The "Big Picture" and data flow.
 2. [**Kinetic Metrics**](./docs/wiki/KineticMetrics.md) - Understanding Energy, Overload, and Angle.
-3. [**Audio Specification**](./docs/wiki/InertialSwing.md) - Deep dive into the InertialSwing Engine.
-4. [**Visual Specification**](./docs/wiki/InertialLight.md) - Deep dive into the InertialLight Engine.
-5. [**Haptic Specification**](./docs/wiki/InertialHaptics.md) - Deep dive into the InertialHaptics Engine.
-6. [**Kinetic Effects**](./docs/wiki/KineticEffects.md) - Discrete events and HSB modifiers.
-7. [**Kinetic Gestures**](./docs/wiki/KineticGestures.md) - Touchless operation and IMU patterns.
-8. [**Profiles & Configuration**](./docs/wiki/Profiles.md) - How to define saber identities.
-9. [**Action Bus & Effects**](./docs/wiki/SaberAction.md) - Event processing and trigger logic.
+3. [**Inertial Overload**](./docs/wiki/InertialOverload.md) - Detailed physics of the accumulation tank.
+4. [**Audio Specification**](./docs/wiki/InertialSwing.md) - Deep dive into the InertialSwing Engine.
+5. [**Visual Specification**](./docs/wiki/InertialLight.md) - Deep dive into the InertialLight Engine.
+6. [**Haptic Specification**](./docs/wiki/InertialHaptics.md) - Deep dive into the InertialHaptics Engine.
+7. [**Kinetic Effects**](./docs/wiki/KineticEffects.md) - Discrete events and HSB modifiers.
+8. [**Kinetic Gestures**](./docs/wiki/KineticGestures.md) - Touchless operation and IMU patterns.
+9. [**Profiles & Configuration**](./docs/wiki/Profiles.md) - How to define saber identities.
+10. [**Action Bus & Effects**](./docs/wiki/SaberAction.md) - Event processing and trigger logic.
 
 
 ---
