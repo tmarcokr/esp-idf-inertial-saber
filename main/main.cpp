@@ -1,9 +1,13 @@
 #include "SaberSystem.hpp"
 
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h" // IWYU pragma: keep
+#include "freertos/task.h"
 
 extern "C" void app_main(void) {
     static const char* TAG = "Main";
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
 
     static InertialSaber::SaberSystem system;
 
