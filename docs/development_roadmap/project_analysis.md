@@ -15,7 +15,7 @@ This document is the **single source of truth** for the development roadmap. It 
 - **Target platform**: ESP32-C6 (single-core, SD-only audio). S3 optimization is deferred to Phase 6.
 - The infrastructure layer (bus, packet, adapters, hardware components) is **100% complete**.
 - The core physics layer (Kinetic Energy, Orientation, and Inertial Overload) is **100% complete**.
-- The application layer (engines, effects, profiles, gestures) is **partially complete (~20%)**.
+- The application layer (engines, effects, profiles, gestures) is **partially complete (~40%)**.
 
 ### Required Reading (in order)
 Before starting any implementation work, read the following:
@@ -41,6 +41,11 @@ Before starting any implementation work, read the following:
    - `main/SaberSystem.cpp` — hardware init and adapter tasks
 5. **Component spec** (for Phase 6 only):
    - `docs/development_roadmap/component_spec_memory_vfs.md` — MemoryVfs VFS driver
+
+### Local Development Rules
+1. **Local Git Review**: Before pushing or uploading changes to git, the user must review them locally.
+2. **Ignored/Untracked Files Protection**: Do not modify files that are not in version control (or are excluded) without the user's explicit permission. If a change is needed, suggest it to the user for evaluation.
+   - For the full list of excluded files, consult the `.gitignore` in the repository root and the `.git/info/exclude` file (local exclusions).
 
 ### Reading Order for This Document
 | Section | What it tells you |
@@ -141,7 +146,7 @@ graph TD
 | Component | Wiki Spec | Gap Description |
 |:---|:---|:---|
 | **InertialSwing Engine** | `docs/wiki/InertialSwing.md` | Complete. `InertialSwingEffect` handles Crossfade, Gravity, Inertial Burst, and Zero-Volume Swap. Tuned for proper MAX98357A mixing. |
-| **InertialLight Engine** | `docs/wiki/InertialLight.md` | HSB visual engine (Live Breathing, Thermal Excitation, Plasma Rupture) is fully specified but not implemented. |
+| **InertialLight Engine** | `docs/wiki/InertialLight.md` | Complete. `InertialLightEffect` implements Live Breathing, Thermal Excitation (saturation drain), and Plasma Rupture via `InertialBladeEffect` atomic bridge to SmartLed Engine. |
 | **InertialHaptics Engine** | `docs/wiki/InertialHaptics.md` | Conceptual/roadmap only. No component or bus integration. |
 | **Kinetic Effects** | `docs/wiki/KineticEffects.md` | None of the 5 effects (Clash, Blaster, Drag, Lockup, Stab) are implemented as `InertialEffect` classes. |
 | **Kinetic Gestures** | `docs/wiki/KineticGestures.md` | None of the gesture patterns (Axis Twist, Kinetic Thrust, Gravity Retrieval, Force Push) are implemented. |
@@ -167,7 +172,7 @@ graph TD
  
  Engines
  ├── InertialSwing (Audio)  ████████████████  100%
- ├── InertialLight (Visual) ░░░░░░░░░░░░░░░░    0%
+ ├── InertialLight (Visual) ████████████████  100%
  └── InertialHaptics        ░░░░░░░░░░░░░░░░    0%  (roadmap)
  
  Domain Logic
@@ -263,7 +268,7 @@ graph LR
 | # | Task | Status |
 |:--|:-----|:-------|
 | 3 | Implement `InertialSwing` Flow Modulator (Crossfade + Gravity + Inertial Burst + SD Swapper) | ✅ Complete |
-| 4 | Implement `InertialLight` Flow Modulator (Breathing + Thermal Excitation + Plasma Rupture) | ░░ Not Started |
+| 4 | Implement `InertialLight` Flow Modulator (Breathing + Thermal Excitation + Plasma Rupture) | ✅ Complete |
 
 ### Phase 3 — System State Management
 > **Goal**: Add power state and the profile loading mechanism.
@@ -425,3 +430,4 @@ Tasks:
 | 2026-05-03 | Phase 1 | **Phase 1 Complete**. Inertial Overload accumulator implemented and validated on breadboard. |
 | 2026-05-03 | Branding | Standardized all legacy "TanqueOverload" terms to **Inertial Overload & Burst** in code, wiki, and roadmap. |
 | 2026-05-10 | Phase 2 | **Phase 2 Audio Complete**. InertialSwing Flow Modulator implemented, hardware buttons integrated, and I2S/mixer tuning adjusted for dynamic range. |
+| 2026-05-10 | Phase 2 | **Phase 2 Visual Complete**. InertialLight Flow Modulator implemented with InertialBladeEffect atomic bridge. All 3 wiki visual states functional (Breathing, Thermal Excitation, Plasma Rupture). |

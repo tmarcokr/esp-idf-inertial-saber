@@ -1,7 +1,9 @@
 #pragma once
 
 #include "AudioEngine.hpp"
+#include "Engine.hpp"
 #include "GpioButton.hpp"
+#include "InertialLightEffect.hpp"
 #include "InertialSwingEffect.hpp"
 #include "Mpu6050.hpp"
 #include "SaberActionBus.hpp"
@@ -25,63 +27,69 @@ namespace InertialSaber {
  */
 class SaberSystem {
 public:
-    SaberSystem();
-    ~SaberSystem();
+  SaberSystem();
+  ~SaberSystem();
 
-    SaberSystem(const SaberSystem&) = delete;
-    SaberSystem& operator=(const SaberSystem&) = delete;
+  SaberSystem(const SaberSystem &) = delete;
+  SaberSystem &operator=(const SaberSystem &) = delete;
 
-    /**
-     * @brief Initialize all hardware, register effects, and start the bus.
-     * @return ESP_OK on success.
-     */
-    [[nodiscard]] esp_err_t start();
+  /**
+   * @brief Initialize all hardware, register effects, and start the bus.
+   * @return ESP_OK on success.
+   */
+  [[nodiscard]] esp_err_t start();
 
 private:
-    // ── Pin assignments (matching PoC wiring) ──
-    static constexpr gpio_num_t kImuSda  = GPIO_NUM_22;
-    static constexpr gpio_num_t kImuScl  = GPIO_NUM_23;
-    static constexpr gpio_num_t kImuInt  = GPIO_NUM_21;
-    static constexpr gpio_num_t kMainBtn = GPIO_NUM_9;
+  // ── Pin assignments (matching PoC wiring) ──
+  static constexpr gpio_num_t kImuSda = GPIO_NUM_22;
+  static constexpr gpio_num_t kImuScl = GPIO_NUM_23;
+  static constexpr gpio_num_t kImuInt = GPIO_NUM_21;
+  static constexpr gpio_num_t kMainBtn = GPIO_NUM_9;
 
-    // ── SD Card SPI pins ──
-    static constexpr gpio_num_t kSdMiso = GPIO_NUM_4;
-    static constexpr gpio_num_t kSdMosi = GPIO_NUM_11;
-    static constexpr gpio_num_t kSdSck  = GPIO_NUM_7;
-    static constexpr gpio_num_t kSdCs   = GPIO_NUM_10;
+  // ── SD Card SPI pins ──
+  static constexpr gpio_num_t kSdMiso = GPIO_NUM_4;
+  static constexpr gpio_num_t kSdMosi = GPIO_NUM_11;
+  static constexpr gpio_num_t kSdSck = GPIO_NUM_7;
+  static constexpr gpio_num_t kSdCs = GPIO_NUM_10;
 
-    // ── I2S / MAX98357A pins ──
-    static constexpr gpio_num_t kI2sBclk   = GPIO_NUM_18;
-    static constexpr gpio_num_t kI2sWs     = GPIO_NUM_19;
-    static constexpr gpio_num_t kI2sDout   = GPIO_NUM_20;
-    static constexpr gpio_num_t kI2sSdMode = GPIO_NUM_1;
+  // ── I2S / MAX98357A pins ──
+  static constexpr gpio_num_t kI2sBclk = GPIO_NUM_18;
+  static constexpr gpio_num_t kI2sWs = GPIO_NUM_19;
+  static constexpr gpio_num_t kI2sDout = GPIO_NUM_20;
+  static constexpr gpio_num_t kI2sSdMode = GPIO_NUM_1;
 
-    static constexpr uint8_t kMainBtnInputId = 0;
-    static constexpr const char* kFontBasePath = "/sdcard/InertialFont";
+  // ── SmartLed pins ──
+  static constexpr gpio_num_t kLedData = GPIO_NUM_0;
+  static constexpr uint16_t kNumLeds = 5;
 
-    // ── Hardware ──
-    Espressif::Wrappers::Sensors::Mpu6050 m_imu;
-    Espressif::Wrappers::GpioButton m_mainButton;
-    std::unique_ptr<Espressif::Wrappers::SdCard> m_sdCard;
-    std::unique_ptr<Espressif::Wrappers::Audio::AudioEngine> m_audioEngine;
+  static constexpr uint8_t kMainBtnInputId = 0;
+  static constexpr const char *kFontBasePath = "/sdcard/InertialFont";
 
-    // ── Core ──
-    Core::SaberActionBus m_bus;
+  // ── Hardware ──
+  Espressif::Wrappers::Sensors::Mpu6050 m_imu;
+  Espressif::Wrappers::GpioButton m_mainButton;
+  std::unique_ptr<Espressif::Wrappers::SdCard> m_sdCard;
+  std::unique_ptr<Espressif::Wrappers::Audio::AudioEngine> m_audioEngine;
+  std::unique_ptr<Espressif::Wrappers::SmartLed::Engine> m_ledEngine;
 
-    // ── IMU adapter task ──
-    TaskHandle_t m_imuTaskHandle = nullptr;
+  // ── Core ──
+  Core::SaberActionBus m_bus;
 
-    // ── Button state tracking ──
-    Core::InputDescriptor m_btnState{};
+  // ── IMU adapter task ──
+  TaskHandle_t m_imuTaskHandle = nullptr;
 
-    [[nodiscard]] esp_err_t initSdCard();
-    [[nodiscard]] esp_err_t initAudioEngine();
-    void registerEffects();
-    void setupButtonAdapter();
+  // ── Button state tracking ──
+  Core::InputDescriptor m_btnState{};
 
-    static void IRAM_ATTR imuIsrHandler(void* arg);
-    static void imuAdapterTask(void* arg);
-    void imuLoop();
+  [[nodiscard]] esp_err_t initSdCard();
+  [[nodiscard]] esp_err_t initAudioEngine();
+  [[nodiscard]] esp_err_t initLedEngine();
+  void registerEffects();
+  void setupButtonAdapter();
+
+  static void IRAM_ATTR imuIsrHandler(void *arg);
+  static void imuAdapterTask(void *arg);
+  void imuLoop();
 };
 
 } // namespace InertialSaber
