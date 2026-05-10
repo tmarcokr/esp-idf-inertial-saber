@@ -145,6 +145,7 @@ void SaberActionBus::busLoop() {
                 effect->Run();
             }
         }
+        m_packet.inputs = {};
     }
 
     ESP_LOGI(TAG, "Bus task exiting");

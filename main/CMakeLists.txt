@@ -2,8 +2,9 @@ idf_component_register(
     SRCS "main.cpp"
          "SaberSystem.cpp"
          "core/SaberActionBus.cpp"
+         "effects/InertialSwingEffect.cpp"
     INCLUDE_DIRS "." "core" "effects"
-    REQUIRES mpu6050 gpio_button
+    REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card
 )
 
 # Force C++20 for all source files
