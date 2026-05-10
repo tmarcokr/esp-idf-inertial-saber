@@ -37,6 +37,11 @@ esp_err_t SaberSystem::start() {
   if (err != ESP_OK)
     return err;
 
+  // ── SmartLed Engine ──
+  err = initLedEngine();
+  if (err != ESP_OK)
+    return err;
+
   // ── IMU ──
   err = m_imu.initialize();
   if (err != ESP_OK) {
@@ -142,6 +147,23 @@ esp_err_t SaberSystem::initAudioEngine() {
   return ESP_OK;
 }
 
+esp_err_t SaberSystem::initLedEngine() {
+  m_ledEngine = std::make_unique<Espressif::Wrappers::SmartLed::Engine>(
+      kLedData, kNumLeds);
+  esp_err_t err = m_ledEngine->init();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "SmartLed init failed: %s", esp_err_to_name(err));
+    return err;
+  }
+  m_ledEngine->setGlobalBrightness(255);
+  // Target 100 FPS for responsive HSB changes
+  m_ledEngine->setTargetFps(100);
+  m_ledEngine->start();
+  ESP_LOGI(TAG, "SmartLed Engine ready (%d LEDs on GPIO %d)", kNumLeds,
+           kLedData);
+  return ESP_OK;
+}
+
 void SaberSystem::registerEffects() {
   Effects::SwingFontConfig fontConfig{
       .basePath = kFontBasePath,
@@ -149,17 +171,22 @@ void SaberSystem::registerEffects() {
       .swingPairCount = Core::Platform::kFontSwingPairCount,
       .burstCount = Core::Platform::kFontBurstCount};
 
-  auto swingEffect = std::make_unique<Effects::InertialSwingEffect>(
-      *m_audioEngine, fontConfig);
+  auto swingEffect = std::make_unique<Effects::InertialSwingEffect>(*m_audioEngine, fontConfig);
   auto *swingPtr = swingEffect.get();
-
   m_bus.registerEffect(std::move(swingEffect));
-  m_bus.registerEffect(
-      std::make_unique<Effects::PowerToggleEffect>(*swingPtr, kMainBtnInputId));
-//   m_bus.registerEffect(std::make_unique<Effects::MotionLogEffect>(500));
-//   m_bus.registerEffect(std::make_unique<Effects::InertialBurstLogEffect>());
 
-  ESP_LOGI(TAG, "Effects registered: InertialSwing, PowerToggle, MotionLog, BurstLog");
+  auto lightEffect = std::make_unique<Effects::InertialLightEffect>(*m_ledEngine);
+  auto *lightPtr = lightEffect.get();
+  m_bus.registerEffect(std::move(lightEffect));
+
+  m_bus.registerEffect(
+      std::make_unique<Effects::PowerToggleEffect>(*swingPtr, *lightPtr, kMainBtnInputId));
+
+  //   m_bus.registerEffect(std::make_unique<Effects::MotionLogEffect>(500));
+  //   m_bus.registerEffect(std::make_unique<Effects::InertialBurstLogEffect>());
+
+  ESP_LOGI(TAG,
+           "Effects registered: InertialSwing, InertialLight, PowerToggle");
 }
 
 void SaberSystem::setupButtonAdapter() {

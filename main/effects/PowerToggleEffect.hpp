@@ -2,6 +2,7 @@
 
 #include "InertialEffect.hpp"
 #include "InertialSwingEffect.hpp"
+#include "InertialLightEffect.hpp"
 
 #include "esp_log.h"
 
@@ -17,8 +18,8 @@ namespace InertialSaber::Effects {
  */
 class PowerToggleEffect final : public Core::InertialEffect {
 public:
-  PowerToggleEffect(InertialSwingEffect &swing, uint8_t buttonId)
-      : m_swing(swing), m_buttonId(buttonId) {
+  PowerToggleEffect(InertialSwingEffect &swing, InertialLightEffect &light, uint8_t buttonId)
+      : m_swing(swing), m_light(light), m_buttonId(buttonId) {
     Priority = 3;
   }
 
@@ -44,9 +45,11 @@ public:
   void Run() override {
     if (m_isOn) {
       m_swing.activate();
+      m_light.activate();
       ESP_LOGI(TAG, "Saber ON");
     } else {
       m_swing.deactivate();
+      m_light.deactivate();
       ESP_LOGI(TAG, "Saber OFF");
     }
   }
@@ -54,6 +57,7 @@ public:
 private:
   static constexpr const char *TAG = "PowerToggle";
   InertialSwingEffect &m_swing;
+  InertialLightEffect &m_light;
   uint8_t m_buttonId;
   bool m_isOn = false;
 };

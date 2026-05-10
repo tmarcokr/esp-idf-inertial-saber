@@ -77,4 +77,16 @@ constexpr uint8_t kFontSwingPairCount = 3;
 /// Number of burst one-shot files (swng1-N)
 constexpr uint8_t kFontBurstCount = 16;
 
+// InertialLight Engine Thresholds (See: docs/wiki/InertialLight.md)
+/// Breathing cycles per second when horizontal
+constexpr float kLightIdleBaseFreq = 1.0f;
+/// Depth of the oscillator in Idle state (0.0–1.0)
+constexpr float kLightIdlePulseDepth = 0.15f;
+/// How much saturation is lost at 100% Overload
+constexpr float kLightMaxThermalBleed = 0.80f;
+/// Chaos in brightness introduced by G-forces
+constexpr float kLightFlickerIntensity = 0.20f;
+/// Visual duration of the Plasma Rupture flash in milliseconds
+constexpr uint32_t kLightBurstDurationMs = 150;
+
 } // namespace InertialSaber::Core::Platform
