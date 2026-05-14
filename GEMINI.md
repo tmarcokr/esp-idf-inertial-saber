@@ -4,6 +4,7 @@
 **Stop.** Before performing any analysis or action, you **MUST** execute `read_file` on:
 - `.agents/rules/01-project-instructions.md` (Global)
 - `.agents/rules/00-private-rules.md` (Local/Private)
+- `docs/development_roadmap/project_analysis.md` (Project Analysis)
 
 This is a foundational requirement of the ecosystem template. These files contain your mandatory identity, communication protocols, and the logic for autonomous skill activation. Failure to load these rules will result in an incorrect execution state.
 
@@ -11,3 +12,11 @@ This is a foundational requirement of the ecosystem template. These files contai
 
 ## 🏗️ Project-Specific Overrides
 InertialSaber (esp-idf-inertial-saber) is a high-performance, open-source operating system for lightsabers based on the ESP-IDF framework. It is designed for ultra-low latency motion processing, high-fidelity audio mixing, and advanced visual effects on the ESP32 family of microcontrollers.
+
+## 🛑 Critical Development Rules
+
+Before contributing or modifying this project, the following rules **MUST** be strictly observed:
+
+1. **Review Before Push:** Before pushing any changes to GitHub, it is mandatory to ask the user to review the changes.
+2. **SDKConfig Tracking:** If any line of the `sdkconfig` is modified, it is mandatory to document the change in [`docs/wiki/sdkconfig_overrides.md`](./docs/wiki/sdkconfig_overrides.md).
+3. **Components Immutability:** It is **strictly forbidden** to change any line of code within the `components/**` directory.
