@@ -165,7 +165,7 @@ esp_err_t SaberSystem::initLedEngine() {
 }
 
 void SaberSystem::registerEffects() {
-  Effects::SwingFontConfig fontConfig{
+  Effects::InertialSwing::SwingFontConfig fontConfig{
       .basePath = kFontBasePath,
       .humCount = Core::Platform::kFontHumCount,
       .swingPairCount = Core::Platform::kFontSwingPairCount,

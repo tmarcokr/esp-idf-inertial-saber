@@ -1,9 +1,7 @@
-#include "InertialSwingEffect.hpp"
+#include "inertial_swing/InertialSwingEffect.hpp"
 #include "PlatformConfig.hpp"
 
 #include "esp_log.h"
-#include "esp_random.h"
-
 #include <algorithm>
 #include <cmath>
 
@@ -14,27 +12,26 @@ using Espressif::Wrappers::Audio::INVALID_CHANNEL;
 
 InertialSwingEffect::InertialSwingEffect(
     Espressif::Wrappers::Audio::AudioEngine& engine,
-    const SwingFontConfig& fontConfig)
+    const InertialSwing::SwingFontConfig& fontConfig)
     : m_engine(engine)
-    , m_fontConfig(fontConfig) {
+    , m_audioProvider(fontConfig) {
     Priority = 0;
 }
 
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
 
-    m_currentPairIndex = randomInRange(m_fontConfig.swingPairCount);
+    m_chHum = m_engine.play(m_audioProvider.provideHumPath(), true, kHumBaseVolume);
+    
+    auto paths = m_audioProvider.provideSwingPaths();
+    m_chSwingL = m_engine.play(paths.low, true, 0);
+    m_chSwingH = m_engine.play(paths.high, true, 0);
 
-    m_chHum = m_engine.play(buildHumPath(), true, kHumBaseVolume);
-    m_chSwingL = m_engine.play(buildSwingLPath(m_currentPairIndex), true, 0);
-    m_chSwingH = m_engine.play(buildSwingHPath(m_currentPairIndex), true, 0);
-
-    m_needsSwap = false;
-    m_wasMoving = false;
+    m_swapper.reset();
 
     m_active.store(true);
     ESP_LOGI(TAG, "Activated — pair %u, hum=%d, swL=%d, swH=%d",
-             m_currentPairIndex, m_chHum, m_chSwingL, m_chSwingH);
+             m_audioProvider.getCurrentPairIndex(), m_chHum, m_chSwingL, m_chSwingH);
 }
 
 void InertialSwingEffect::deactivate() {
@@ -81,7 +78,10 @@ void InertialSwingEffect::Run() {
     applySwingVolumes(masterVolume, finalMix);
     applyHumDucking(masterVolume);
     handleInertialBurst();
-    handleSwapperStateMachine(masterVolume);
+    
+    if (m_swapper.evaluateSwap(masterVolume, m_timestampMs)) {
+        executeSwap();
+    }
 }
 
 float InertialSwingEffect::computeMasterVolume() const {
@@ -111,12 +111,11 @@ void InertialSwingEffect::applySwingVolumes(float masterVolume, float finalMix) 
         auto humVol = static_cast<uint16_t>(kHumBaseVolume * std::max(0.0f, 1.0f - masterVolume * kHumMaxDucking));
         ESP_LOGI(TAG, "KE:%.2f | MV:%.2f | Mix:%.2f | L:%u H:%u | Hum:%u | OL:%.2f | Pair:%u",
                  m_kineticEnergy, masterVolume, finalMix,
-                 volL, volH, humVol, m_inertialOverload, m_currentPairIndex);
+                 volL, volH, humVol, m_inertialOverload, m_audioProvider.getCurrentPairIndex());
     }
 }
 
 void InertialSwingEffect::applyHumDucking(float masterVolume) {
-
     float duckingAmount = masterVolume * kHumMaxDucking;
     float humRatio = std::max(0.0f, 1.0f - duckingAmount);
     auto humVol = static_cast<uint16_t>(kHumBaseVolume * humRatio);
@@ -125,80 +124,26 @@ void InertialSwingEffect::applyHumDucking(float masterVolume) {
 }
 
 void InertialSwingEffect::handleInertialBurst() {
-    if (!m_inertialBurst || m_fontConfig.burstCount == 0) return;
+    if (!m_inertialBurst || m_audioProvider.getConfig().burstCount == 0) return;
 
-    uint8_t fileIndex = randomInRange(m_fontConfig.burstCount);
-    m_engine.play(buildBurstPath(fileIndex), false, kMaxVolume14bit);
+    m_engine.play(m_audioProvider.provideBurstPath(), false, kMaxVolume14bit);
 
-    ESP_LOGI(TAG, "Inertial Burst — playing swng%u", fileIndex + 1);
-}
-
-void InertialSwingEffect::handleSwapperStateMachine(float masterVolume) {
-    if (masterVolume > Core::Platform::kSwingSwapMinVolume) {
-        m_needsSwap = true;
-    }
-
-    bool isMoving = masterVolume > 0.0f;
-
-    if (isMoving) {
-        m_wasMoving = true;
-        m_lastMovementTimeMs = m_timestampMs;
-    } else {
-        if (m_wasMoving) {
-            // Just stopped moving
-            m_wasMoving = false;
-        } else if (m_needsSwap) {
-            // Have been stopped for a while, check cooldown
-            uint32_t idleTime = m_timestampMs - m_lastMovementTimeMs;
-            if (idleTime >= Core::Platform::kSwingSwapCooldownMs) {
-                executeSwap();
-                m_needsSwap = false;
-            }
-        }
-    }
+    ESP_LOGI(TAG, "Inertial Burst triggered");
 }
 
 void InertialSwingEffect::executeSwap() {
-    if (m_fontConfig.swingPairCount <= 1) return;
+    if (m_audioProvider.getConfig().swingPairCount <= 1) return;
 
     if (m_chSwingL != INVALID_CHANNEL) m_engine.stop(m_chSwingL);
     if (m_chSwingH != INVALID_CHANNEL) m_engine.stop(m_chSwingH);
 
-    uint8_t newPair = randomInRange(m_fontConfig.swingPairCount);
-    // Avoid repeating the same pair
-    while (newPair == m_currentPairIndex && m_fontConfig.swingPairCount > 1) {
-        newPair = randomInRange(m_fontConfig.swingPairCount);
-    }
-    m_currentPairIndex = newPair;
+    auto paths = m_audioProvider.provideSwingPaths();
 
-    m_chSwingL = m_engine.play(buildSwingLPath(m_currentPairIndex), true, 0);
-    m_chSwingH = m_engine.play(buildSwingHPath(m_currentPairIndex), true, 0);
+    m_chSwingL = m_engine.play(paths.low, true, 0);
+    m_chSwingH = m_engine.play(paths.high, true, 0);
 
     ESP_LOGI(TAG, "Pair swapped → %u (swL=%d, swH=%d)",
-             m_currentPairIndex, m_chSwingL, m_chSwingH);
-}
-
-
-
-uint8_t InertialSwingEffect::randomInRange(uint8_t count) const {
-    if (count == 0) return 0;
-    return static_cast<uint8_t>(esp_random() % count);
-}
-
-std::string InertialSwingEffect::buildHumPath() const {
-    return m_fontConfig.basePath + "/hum.wav";
-}
-
-std::string InertialSwingEffect::buildSwingLPath(uint8_t pairIndex) const {
-    return m_fontConfig.basePath + "/swingl/swingl" + std::to_string(pairIndex + 1) + ".wav";
-}
-
-std::string InertialSwingEffect::buildSwingHPath(uint8_t pairIndex) const {
-    return m_fontConfig.basePath + "/swingh/swingh" + std::to_string(pairIndex + 1) + ".wav";
-}
-
-std::string InertialSwingEffect::buildBurstPath(uint8_t fileIndex) const {
-    return m_fontConfig.basePath + "/swng/swng" + std::to_string(fileIndex + 1) + ".wav";
+             m_audioProvider.getCurrentPairIndex(), m_chSwingL, m_chSwingH);
 }
 
 } // namespace InertialSaber::Effects

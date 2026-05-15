@@ -4,7 +4,7 @@
 #include "Engine.hpp"
 #include "GpioButton.hpp"
 #include "InertialLightEffect.hpp"
-#include "InertialSwingEffect.hpp"
+#include "inertial_swing/InertialSwingEffect.hpp"
 #include "Mpu6050.hpp"
 #include "SaberActionBus.hpp"
 #include "sd_card.hpp"
