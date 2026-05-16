@@ -1,27 +1,36 @@
 #include "inertial_swing/InertialSwingEffect.hpp"
-#include "PlatformConfig.hpp"
 
 #include "esp_log.h"
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 namespace InertialSaber::Effects {
 
-using namespace Core::Platform;
 using Espressif::Wrappers::Audio::INVALID_CHANNEL;
+
+static InertialSwing::SwingFontConfig buildFontConfig(const Core::InertialDefinition& def) {
+    return {
+        .basePath       = std::string("/sdcard/") + def.profileRoot,
+        .humCount       = def.fontHumCount,
+        .swingPairCount = def.fontSwingPairCount,
+        .burstCount     = def.fontBurstCount,
+    };
+}
 
 InertialSwingEffect::InertialSwingEffect(
     Espressif::Wrappers::Audio::AudioEngine& engine,
-    const InertialSwing::SwingFontConfig& fontConfig)
+    const Core::InertialDefinition& definition)
     : m_engine(engine)
-    , m_audioProvider(fontConfig) {
+    , m_def(definition)
+    , m_audioProvider(buildFontConfig(definition)) {
     Priority = 0;
 }
 
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
 
-    m_chHum = m_engine.play(m_audioProvider.provideHumPath(), true, kHumBaseVolume);
+    m_chHum = m_engine.play(m_audioProvider.provideHumPath(), true, m_def.humBaseVolume);
     
     auto paths = m_audioProvider.provideSwingPaths();
     m_chSwingL = m_engine.play(paths.low, true, 0);
@@ -79,23 +88,24 @@ void InertialSwingEffect::Run() {
     applyHumDucking(masterVolume);
     handleInertialBurst();
     
-    if (m_swapper.evaluateSwap(masterVolume, m_timestampMs)) {
+    if (m_swapper.evaluateSwap(masterVolume, m_timestampMs,
+                               m_def.swingSwapMinVolume, m_def.swingSwapCooldownMs)) {
         executeSwap();
     }
 }
 
 float InertialSwingEffect::computeMasterVolume() const {
-    float range = kSwingMaxThresholdG - kSwingIdleThresholdG;
-    float normalized = (m_kineticEnergy - kSwingIdleThresholdG) / range;
+    float range = m_def.swingMaxThresholdG - m_def.swingIdleThresholdG;
+    float normalized = (m_kineticEnergy - m_def.swingIdleThresholdG) / range;
     return std::clamp(normalized, 0.0f, 1.0f);
 }
 
 float InertialSwingEffect::computeFinalMix() const {
-    float crossfadeRange = kSwingCrossfadeHighG - kSwingCrossfadeLowG;
-    float baseMix = (m_kineticEnergy - kSwingCrossfadeLowG) / crossfadeRange;
+    float crossfadeRange = m_def.swingCrossfadeHighG - m_def.swingCrossfadeLowG;
+    float baseMix = (m_kineticEnergy - m_def.swingCrossfadeLowG) / crossfadeRange;
     baseMix = std::clamp(baseMix, 0.0f, 1.0f);
 
-    float gravityMod = m_orientationVector * kGravityInfluence;
+    float gravityMod = m_orientationVector * m_def.gravityInfluence;
     return std::clamp(baseMix + gravityMod, 0.0f, 1.0f);
 }
 
@@ -108,7 +118,7 @@ void InertialSwingEffect::applySwingVolumes(float masterVolume, float finalMix) 
 
     if (++m_logCounter >= 400) { // ~500ms at 800Hz
         m_logCounter = 0;
-        auto humVol = static_cast<uint16_t>(kHumBaseVolume * std::max(0.0f, 1.0f - masterVolume * kHumMaxDucking));
+        auto humVol = static_cast<uint16_t>(m_def.humBaseVolume * std::max(0.0f, 1.0f - masterVolume * m_def.humMaxDucking));
         ESP_LOGI(TAG, "KE:%.2f | MV:%.2f | Mix:%.2f | L:%u H:%u | Hum:%u | OL:%.2f | Pair:%u",
                  m_kineticEnergy, masterVolume, finalMix,
                  volL, volH, humVol, m_inertialOverload, m_audioProvider.getCurrentPairIndex());
@@ -116,9 +126,9 @@ void InertialSwingEffect::applySwingVolumes(float masterVolume, float finalMix) 
 }
 
 void InertialSwingEffect::applyHumDucking(float masterVolume) {
-    float duckingAmount = masterVolume * kHumMaxDucking;
+    float duckingAmount = masterVolume * m_def.humMaxDucking;
     float humRatio = std::max(0.0f, 1.0f - duckingAmount);
-    auto humVol = static_cast<uint16_t>(kHumBaseVolume * humRatio);
+    auto humVol = static_cast<uint16_t>(m_def.humBaseVolume * humRatio);
 
     m_engine.setChannelVolume(m_chHum, humVol);
 }

@@ -1,10 +1,5 @@
 #include "SaberSystem.hpp"
 
-#include "InertialBurstLogEffect.hpp"
-#include "InertialSwingEffect.hpp"
-#include "MotionLogEffect.hpp"
-#include "PowerToggleEffect.hpp"
-
 #include "esp_log.h"
 #include "esp_timer.h"
 
@@ -59,8 +54,8 @@ esp_err_t SaberSystem::start() {
   }
   ESP_LOGI(TAG, "Button ready (GPIO %d)", kMainBtn);
 
-  // ── Effects ──
-  registerEffects();
+  // ── Profile ──
+  loadProfile();
 
   // ── Bus ──
   err = m_bus.start();
@@ -164,29 +159,9 @@ esp_err_t SaberSystem::initLedEngine() {
   return ESP_OK;
 }
 
-void SaberSystem::registerEffects() {
-  Effects::InertialSwing::SwingFontConfig fontConfig{
-      .basePath = kFontBasePath,
-      .humCount = Core::Platform::kFontHumCount,
-      .swingPairCount = Core::Platform::kFontSwingPairCount,
-      .burstCount = Core::Platform::kFontBurstCount};
-
-  auto swingEffect = std::make_unique<Effects::InertialSwingEffect>(*m_audioEngine, fontConfig);
-  auto *swingPtr = swingEffect.get();
-  m_bus.registerEffect(std::move(swingEffect));
-
-  auto lightEffect = std::make_unique<Effects::InertialLightEffect>(*m_ledEngine);
-  auto *lightPtr = lightEffect.get();
-  m_bus.registerEffect(std::move(lightEffect));
-
-  m_bus.registerEffect(
-      std::make_unique<Effects::PowerToggleEffect>(*swingPtr, *lightPtr, kMainBtnInputId));
-
-  //   m_bus.registerEffect(std::make_unique<Effects::MotionLogEffect>(500));
-  //   m_bus.registerEffect(std::make_unique<Effects::InertialBurstLogEffect>());
-
-  ESP_LOGI(TAG,
-           "Effects registered: InertialSwing, InertialLight, PowerToggle");
+void SaberSystem::loadProfile() {
+  m_profile = std::make_unique<Profiles::InertialDefaultProfile>();
+  m_profile->load(m_bus, *m_audioEngine, *m_ledEngine);
 }
 
 void SaberSystem::setupButtonAdapter() {

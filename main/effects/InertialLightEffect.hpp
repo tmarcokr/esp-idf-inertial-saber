@@ -2,6 +2,7 @@
 
 #include "Engine.hpp"
 #include "InertialBladeEffect.hpp"
+#include "InertialDefinition.hpp"
 #include "InertialEffect.hpp"
 
 #include <cstdint>
@@ -16,7 +17,8 @@ namespace InertialSaber::Effects {
 class InertialLightEffect final : public Core::InertialEffect {
 public:
   explicit InertialLightEffect(
-      Espressif::Wrappers::SmartLed::Engine &ledEngine);
+      Espressif::Wrappers::SmartLed::Engine& ledEngine,
+      const Core::InertialDefinition& definition);
 
   bool Test(const Core::SaberDataPacket &packet) override;
   void Run() override;
@@ -25,11 +27,12 @@ public:
   void deactivate();
 
 private:
-  Espressif::Wrappers::SmartLed::Engine &m_ledEngine;
-  InertialBladeEffect *m_bladeEffect = nullptr;
+  Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
+  const Core::InertialDefinition& m_def;
+  InertialBladeEffect* m_bladeEffect = nullptr;
   bool m_active = false;
 
-  uint16_t m_baseHue = 240;
+  uint16_t m_baseHue;
   float m_kineticEnergy = 0.0f;
   float m_orientationVector = 0.0f;
   float m_inertialOverload = 0.0f;
