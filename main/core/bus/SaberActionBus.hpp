@@ -1,8 +1,8 @@
 #pragma once
 
-#include "InertialEffect.hpp"
-#include "PlatformConfig.hpp"
-#include "SaberDataPacket.hpp"
+#include "../interfaces/InertialEffect.hpp"
+#include "../config/PlatformConfig.hpp"
+#include "../models/SaberDataPacket.hpp"
 
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"

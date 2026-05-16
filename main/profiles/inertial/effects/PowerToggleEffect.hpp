@@ -1,7 +1,7 @@
 #pragma once
 
-#include "InertialEffect.hpp"
-#include "inertial_swing/InertialSwingEffect.hpp"
+#include "interfaces/InertialEffect.hpp"
+#include "InertialSwingEffect.hpp"
 #include "InertialLightEffect.hpp"
 
 #include "esp_log.h"

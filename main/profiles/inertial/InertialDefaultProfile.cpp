@@ -1,7 +1,7 @@
 #include "profiles/inertial/InertialDefaultProfile.hpp"
 #include "InertialLightEffect.hpp"
 #include "PowerToggleEffect.hpp"
-#include "inertial_swing/InertialSwingEffect.hpp"
+#include "InertialSwingEffect.hpp"
 
 #include "esp_log.h"
 

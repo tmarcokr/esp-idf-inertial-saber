@@ -2,8 +2,8 @@
 
 #include "Engine.hpp"
 #include "InertialBladeEffect.hpp"
-#include "InertialDefinition.hpp"
-#include "InertialEffect.hpp"
+#include "models/InertialDefinition.hpp"
+#include "interfaces/InertialEffect.hpp"
 
 #include <cstdint>
 
@@ -40,6 +40,15 @@ private:
 
   float m_breathPhase = 0.0f;
   uint32_t m_lastTimestampMs = 0;
+  uint32_t m_deltaMs = 0;
+
+  // ── Clean Code Physics Helpers ──
+  void updateBreathPhase();
+  bool isExcited() const;
+  float calculateIdlePulse() const;
+  float calculateThermalBleed() const;
+  float calculatePlasmaFlicker() const;
+  void triggerPlasmaRuptureOverlay();
 };
 
 } // namespace InertialSaber::Effects
