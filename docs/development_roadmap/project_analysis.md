@@ -177,7 +177,7 @@ graph TD
  
  Domain Logic
  ├── Inertial Overload      ████████████████  100%
- ├── InertialProfile         ░░░░░░░░░░░░░░░░    0%
+ ├── InertialProfile         ████████████████  100%
  ├── InertialDefinition      ████████████████  100% (Centralized to PlatformConfig)
  ├── Kinetic Effects (5)     ░░░░░░░░░░░░░░░░    0%
  ├── Kinetic Gestures (4)    ░░░░░░░░░░░░░░░░    0%
@@ -276,7 +276,7 @@ graph LR
 | # | Task | Status |
 |:--|:-----|:-------|
 | 5 | Implement Power State Machine (OFF → IGNITING → ON → RETRACTING → OFF) | ░░ Not Started |
-| 6 | Implement `InertialProfile` container (load/unload, default `SithLord` profile) | ░░ Not Started |
+| 6 | Implement `InertialProfile` container (load/unload, default `inertial` profile) | ✅ Complete |
 
 ### Phase 4 — Kinetic Effects Catalog
 > **Goal**: Implement the 5 discrete effects from the wiki specification.
@@ -431,3 +431,4 @@ Tasks:
 | 2026-05-03 | Branding | Standardized all legacy "TanqueOverload" terms to **Inertial Overload & Burst** in code, wiki, and roadmap. |
 | 2026-05-10 | Phase 2 | **Phase 2 Audio Complete**. InertialSwing Flow Modulator implemented, hardware buttons integrated, and I2S/mixer tuning adjusted for dynamic range. |
 | 2026-05-10 | Phase 2 | **Phase 2 Visual Complete**. InertialLight Flow Modulator implemented with InertialBladeEffect atomic bridge. All 3 wiki visual states functional (Breathing, Thermal Excitation, Plasma Rupture). |
+| 2026-05-16 | Phase 3 | **InertialProfile Architecture Complete**. Implemented `InertialProfile` container and `InertialDefinition` POD for centralized configuration. Refactored Audio and Visual engines for dependency injection. Created default `inertial` profile. |
