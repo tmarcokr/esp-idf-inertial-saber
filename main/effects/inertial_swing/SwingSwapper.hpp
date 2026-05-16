@@ -17,7 +17,12 @@ public:
      * @param timestampMs Current time in milliseconds.
      * @return True if an audio swap should be executed.
      */
-    [[nodiscard]] bool evaluateSwap(float masterVolume, uint32_t timestampMs);
+    /**
+     * @param swapMinVolume Minimum master volume required to arm a swap.
+     * @param swapCooldownMs Minimum idle time in ms before the swap fires.
+     */
+    [[nodiscard]] bool evaluateSwap(float masterVolume, uint32_t timestampMs,
+                                    float swapMinVolume, uint32_t swapCooldownMs);
 
     /**
      * @brief Resets the internal state machine.

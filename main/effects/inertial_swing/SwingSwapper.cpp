@@ -1,10 +1,10 @@
 #include "SwingSwapper.hpp"
-#include "PlatformConfig.hpp"
 
 namespace InertialSaber::Effects::InertialSwing {
 
-bool SwingSwapper::evaluateSwap(float masterVolume, uint32_t timestampMs) {
-    if (masterVolume > Core::Platform::kSwingSwapMinVolume) {
+bool SwingSwapper::evaluateSwap(float masterVolume, uint32_t timestampMs,
+                                float swapMinVolume, uint32_t swapCooldownMs) {
+    if (masterVolume > swapMinVolume) {
         m_needsSwap = true;
     }
 
@@ -18,7 +18,7 @@ bool SwingSwapper::evaluateSwap(float masterVolume, uint32_t timestampMs) {
             m_wasMoving = false;
         } else if (m_needsSwap) {
             uint32_t idleTime = timestampMs - m_lastMovementTimeMs;
-            if (idleTime >= Core::Platform::kSwingSwapCooldownMs) {
+            if (idleTime >= swapCooldownMs) {
                 m_needsSwap = false;
                 return true;
             }

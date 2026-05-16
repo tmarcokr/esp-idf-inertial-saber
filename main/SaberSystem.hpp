@@ -3,11 +3,11 @@
 #include "AudioEngine.hpp"
 #include "Engine.hpp"
 #include "GpioButton.hpp"
-#include "InertialLightEffect.hpp"
-#include "inertial_swing/InertialSwingEffect.hpp"
+#include "InertialProfile.hpp"
 #include "Mpu6050.hpp"
 #include "SaberActionBus.hpp"
 #include "sd_card.hpp"
+#include "profiles/inertial/InertialDefaultProfile.hpp"
 
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
@@ -63,7 +63,6 @@ private:
   static constexpr uint16_t kNumLeds = 5;
 
   static constexpr uint8_t kMainBtnInputId = 0;
-  static constexpr const char *kFontBasePath = "/sdcard/InertialFont";
 
   // ── Hardware ──
   Espressif::Wrappers::Sensors::Mpu6050 m_imu;
@@ -74,6 +73,7 @@ private:
 
   // ── Core ──
   Core::SaberActionBus m_bus;
+  std::unique_ptr<Core::InertialProfile> m_profile;
 
   // ── IMU adapter task ──
   TaskHandle_t m_imuTaskHandle = nullptr;
@@ -84,7 +84,7 @@ private:
   [[nodiscard]] esp_err_t initSdCard();
   [[nodiscard]] esp_err_t initAudioEngine();
   [[nodiscard]] esp_err_t initLedEngine();
-  void registerEffects();
+  void loadProfile();
   void setupButtonAdapter();
 
   static void IRAM_ATTR imuIsrHandler(void *arg);

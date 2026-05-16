@@ -1,5 +1,4 @@
 #include "InertialLightEffect.hpp"
-#include "PlatformConfig.hpp"
 
 #include "SmartLedTypes.hpp"
 #include "effects/Flash.hpp"
@@ -17,8 +16,12 @@ namespace InertialSaber::Effects {
 
 using namespace Espressif::Wrappers::SmartLed;
 
-InertialLightEffect::InertialLightEffect(Engine &ledEngine)
-    : m_ledEngine(ledEngine) {
+InertialLightEffect::InertialLightEffect(
+    Engine& ledEngine,
+    const Core::InertialDefinition& definition)
+    : m_ledEngine(ledEngine)
+    , m_def(definition)
+    , m_baseHue(definition.bladeBaseHue) {
   Priority = 0;
 }
 
@@ -61,7 +64,7 @@ bool InertialLightEffect::Test(const Core::SaberDataPacket &packet) {
 
   float angleRad = m_orientationVector * (static_cast<float>(M_PI) / 180.0f);
   float freq =
-      Core::Platform::kLightIdleBaseFreq + (std::sin(angleRad) * 0.5f);
+      m_def.lightIdleBaseFreq + (std::sin(angleRad) * 0.5f);
   m_breathPhase +=
       (static_cast<float>(delta) / 1000.0f) * freq * 2.0f *
       static_cast<float>(M_PI);
@@ -88,12 +91,12 @@ void InertialLightEffect::Run() {
   if (!isExcited) {
     // See: wiki/InertialLight.md §3.1
     float pulse = (std::sin(m_breathPhase) + 1.0f) / 2.0f;
-    brightness = (1.0f - Core::Platform::kLightIdlePulseDepth) +
-                 (pulse * Core::Platform::kLightIdlePulseDepth);
+    brightness = (1.0f - m_def.lightIdlePulseDepth) +
+                 (pulse * m_def.lightIdlePulseDepth);
   } else {
     // See: wiki/InertialLight.md §3.2
     saturation =
-        1.0f - (m_inertialOverload * Core::Platform::kLightMaxThermalBleed);
+        1.0f - (m_inertialOverload * m_def.lightMaxThermalBleed);
 
     uint32_t rng = esp_random();
     float r = static_cast<float>(rng) / static_cast<float>(UINT32_MAX);
@@ -104,7 +107,7 @@ void InertialLightEffect::Run() {
 
     brightness = std::clamp(
         1.0f -
-            std::abs(noise * Core::Platform::kLightFlickerIntensity),
+            std::abs(noise * m_def.lightFlickerIntensity),
         0.8f, 1.0f);
   }
 
@@ -117,7 +120,7 @@ void InertialLightEffect::Run() {
     uint16_t burstHue = (m_baseHue + 180) % 360;
     Color burstColor = hsvToRgb(burstHue, 255, 255);
     m_ledEngine.pushOverlay(std::make_unique<Flash>(
-        burstColor, Core::Platform::kLightBurstDurationMs, 0, 1));
+        burstColor, m_def.lightBurstDurationMs, 0, 1));
   }
 }
 

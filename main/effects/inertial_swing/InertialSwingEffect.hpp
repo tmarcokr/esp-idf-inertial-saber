@@ -1,5 +1,6 @@
 #pragma once
 
+#include "InertialDefinition.hpp"
 #include "InertialEffect.hpp"
 #include "AudioEngine.hpp"
 #include "inertial_swing/AudioPathProvider.hpp"
@@ -20,7 +21,7 @@ namespace InertialSaber::Effects {
 class InertialSwingEffect final : public Core::InertialEffect {
 public:
     InertialSwingEffect(Espressif::Wrappers::Audio::AudioEngine& engine,
-                        const InertialSwing::SwingFontConfig& fontConfig);
+                        const Core::InertialDefinition& definition);
 
     /**
      * @brief Start audio playback: hum loop + initial random swing pair at volume 0.
@@ -46,6 +47,7 @@ private:
     static constexpr uint16_t kMaxVolume14bit = 16384;
 
     Espressif::Wrappers::Audio::AudioEngine& m_engine;
+    const Core::InertialDefinition& m_def;
     InertialSwing::AudioPathProvider m_audioProvider;
     InertialSwing::SwingSwapper m_swapper;
     
