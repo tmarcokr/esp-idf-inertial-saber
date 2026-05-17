@@ -1,6 +1,6 @@
 #pragma once
 
-#include "InertialProfile.hpp"
+#include "interfaces/InertialProfile.hpp"
 
 namespace InertialSaber::Profiles {
 

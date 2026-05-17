@@ -1,13 +1,20 @@
 idf_component_register(
     SRCS "main.cpp"
-         "SaberSystem.cpp"
-         "core/SaberActionBus.cpp"
-         "effects/inertial_swing/AudioPathProvider.cpp"
-         "effects/inertial_swing/SwingSwapper.cpp"
-         "effects/inertial_swing/InertialSwingEffect.cpp"
-         "effects/InertialLightEffect.cpp"
+         "system/SaberSystem.cpp"
+         "system/adapters/ImuAdapter.cpp"
+         "system/adapters/InputAdapter.cpp"
+         "system/hardware/SdHardware.cpp"
+         "system/hardware/AudioHardware.cpp"
+         "system/hardware/LedHardware.cpp"
+         "system/hardware/ImuHardware.cpp"
+         "system/hardware/ButtonHardware.cpp"
+         "core/bus/SaberActionBus.cpp"
+         "core/effects/inertial_engine/audio/SwingSwapper.cpp"
+         "core/effects/inertial_engine/audio/InertialSwingEffect.cpp"
+         "core/effects/inertial_engine/visual/InertialLightEffect.cpp"
+         "core/effects/inertial_engine/audio/AudioPathProvider.cpp"
          "profiles/inertial/InertialDefaultProfile.cpp"
-    INCLUDE_DIRS "." "core" "effects" "effects/inertial_swing" "profiles"
+    INCLUDE_DIRS "." "core" "core/effects" "core/effects/inertial_engine/audio" "core/effects/inertial_engine/visual" "profiles/inertial/effects" "profiles"
     REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led
 )
 

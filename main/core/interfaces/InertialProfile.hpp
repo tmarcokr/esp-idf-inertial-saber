@@ -2,8 +2,8 @@
 
 #include "AudioEngine.hpp"
 #include "Engine.hpp"
-#include "InertialDefinition.hpp"
-#include "SaberActionBus.hpp"
+#include "../models/InertialDefinition.hpp"
+#include "../bus/SaberActionBus.hpp"
 
 namespace InertialSaber::Effects {
     class InertialSwingEffect;

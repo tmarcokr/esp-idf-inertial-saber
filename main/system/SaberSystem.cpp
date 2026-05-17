@@ -1,0 +1,42 @@
+#include "SaberSystem.hpp"
+#include "esp_log.h"
+
+namespace InertialSaber::System {
+
+static constexpr const char *TAG = "SaberSystem";
+
+SaberSystem::SaberSystem() {}
+
+esp_err_t SaberSystem::start() {
+  ESP_LOGI(TAG, "Initializing InertialSaber OS Hardware...");
+
+  esp_err_t err;
+  
+  if ((err = m_sdHardware.init()) != ESP_OK) return err;
+  if ((err = m_audioHardware.init()) != ESP_OK) return err;
+  if ((err = m_ledHardware.init()) != ESP_OK) return err;
+  if ((err = m_imuHardware.init()) != ESP_OK) return err;
+  if ((err = m_btnHardware.init()) != ESP_OK) return err;
+
+  ESP_LOGI(TAG, "Starting Adapters...");
+  m_imuAdapter = std::make_unique<Adapters::ImuAdapter>(m_bus, *m_imuHardware.getMpu());
+  if ((err = m_imuAdapter->start()) != ESP_OK) return err;
+
+  m_inputAdapter = std::make_unique<Adapters::InputAdapter>(m_bus, *m_btnHardware.getButton());
+  if ((err = m_inputAdapter->start()) != ESP_OK) return err;
+
+  ESP_LOGI(TAG, "Loading Profile...");
+  m_profile = std::make_unique<Profiles::InertialDefaultProfile>();
+  m_profile->load(m_bus, *m_audioHardware.getEngine(), *m_ledHardware.getEngine());
+
+  ESP_LOGI(TAG, "Starting Action Bus...");
+  if ((err = m_bus.start()) != ESP_OK) {
+    ESP_LOGE(TAG, "Bus start failed");
+    return err;
+  }
+
+  ESP_LOGI(TAG, "InertialSaber OS active — all systems nominal");
+  return ESP_OK;
+}
+
+} // namespace InertialSaber::System

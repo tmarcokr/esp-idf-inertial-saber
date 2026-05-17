@@ -1,4 +1,4 @@
-#include "inertial_swing/InertialSwingEffect.hpp"
+#include "InertialSwingEffect.hpp"
 
 #include "esp_log.h"
 #include <algorithm>

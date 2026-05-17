@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PlatformConfig.hpp"
+#include "../config/PlatformConfig.hpp"
 
 #include <array>
 #include <cstdint>

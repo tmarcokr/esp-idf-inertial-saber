@@ -1,10 +1,10 @@
 #pragma once
 
-#include "InertialDefinition.hpp"
-#include "InertialEffect.hpp"
+#include "models/InertialDefinition.hpp"
+#include "interfaces/InertialEffect.hpp"
 #include "AudioEngine.hpp"
-#include "inertial_swing/AudioPathProvider.hpp"
-#include "inertial_swing/SwingSwapper.hpp"
+#include "AudioPathProvider.hpp"
+#include "SwingSwapper.hpp"
 
 #include <atomic>
 #include <cstdint>
