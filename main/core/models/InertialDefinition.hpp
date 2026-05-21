@@ -18,17 +18,14 @@ namespace InertialSaber::Core {
  */
 struct InertialDefinition {
 
-    // ── Identity ────────────────────────────────────────────────────────────
     const char* profileName;   ///< Human-readable profile identifier.
     const char* profileRoot;   ///< Root path on SD relative to /sdcard/ (e.g. "profiles/inertial/").
 
-    // ── Inertial Overload Accumulator ────────────────────────────────────────
     float overloadThresholdG;  ///< Minimum G-Force to start charging the accumulator.
     float overloadChargeRate;  ///< Accumulator fill rate per second above threshold.
     float overloadDrainRate;   ///< Accumulator drain rate per second at rest.
     float burstCooldownMs;     ///< Minimum milliseconds between successive Inertial Bursts.
 
-    // ── InertialSwing Audio ──────────────────────────────────────────────────
     float    swingIdleThresholdG;   ///< Below this G-Force, swing volume is zero.
     float    swingMaxThresholdG;    ///< At or above this G-Force, swing volume is at maximum.
     float    swingCrossfadeLowG;    ///< Below this G-Force, SwingL dominates the tonal balance.
@@ -39,12 +36,14 @@ struct InertialDefinition {
     uint32_t swingSwapCooldownMs;   ///< Minimum idle time before a new swing pair can load.
     float    swingSwapMinVolume;    ///< Minimum master volume required to trigger a pair swap.
 
-    // ── InertialSwing Font File Counts ───────────────────────────────────────
     uint8_t fontHumCount;          ///< Number of hum.wav files in the font directory.
     uint8_t fontSwingPairCount;    ///< Number of swingL/H pairs.
     uint8_t fontBurstCount;        ///< Number of burst one-shot files (swng1–N).
+    uint8_t fontInCount;           ///< Number of power-on sound files (in/in1.wav … inN.wav).
+    uint8_t fontOutCount;          ///< Number of power-off sound files (out/out1.wav … outN.wav).
+    uint32_t ignitionDurationMs;   ///< Duration of the blade ignition sequence in milliseconds.
+    uint32_t retractionDurationMs; ///< Duration of the blade retraction sequence in milliseconds.
 
-    // ── InertialLight Visual ─────────────────────────────────────────────────
     uint16_t bladeBaseHue;         ///< Blade colour hue (HSB, 0–359). Blue = 240.
     float    lightIdleBaseFreq;    ///< Breathing cycles per second when horizontal.
     float    lightIdlePulseDepth;  ///< Oscillator depth in idle state (0.0–1.0).

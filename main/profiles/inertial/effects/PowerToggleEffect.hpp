@@ -1,65 +1,68 @@
 #pragma once
 
 #include "interfaces/InertialEffect.hpp"
-#include "InertialSwingEffect.hpp"
-#include "InertialLightEffect.hpp"
+#include <cstdint>
+#include <string>
 
-#include "esp_log.h"
+namespace InertialSaber::Core {
+struct InertialDefinition;
+struct SaberDataPacket;
+}
+namespace InertialSaber::Effects {
+class InertialSwingEffect;
+class InertialLightEffect;
+}
+namespace Espressif::Wrappers::Audio {
+class AudioEngine;
+}
+namespace Espressif::Wrappers::SmartLed {
+class Engine;
+}
 
 namespace InertialSaber::Effects {
 
 /**
- * @brief System-level effect that toggles InertialSwing on button click.
- *
- * Priority 3 (System). Fires on a single short press (< 300ms) of the
- * configured button. Activates or deactivates the InertialSwing engine.
- * This is a temporary bridge until the Phase 3 Power State Machine
- * replaces it with proper ignition/retraction sequencing.
+ * @brief Sequenced ignition and retraction effect with synchronized audio and visual.
  */
 class PowerToggleEffect final : public Core::InertialEffect {
 public:
-  PowerToggleEffect(InertialSwingEffect &swing, InertialLightEffect &light, uint8_t buttonId)
-      : m_swing(swing), m_light(light), m_buttonId(buttonId) {
-    Priority = 3;
-  }
+    PowerToggleEffect(
+        InertialSwingEffect&                    swing,
+        InertialLightEffect&                    light,
+        Espressif::Wrappers::Audio::AudioEngine& audio,
+        Espressif::Wrappers::SmartLed::Engine&  ledEngine,
+        const Core::InertialDefinition&         definition,
+        uint8_t                                 buttonId);
 
-  bool Test(const Core::SaberDataPacket &packet) override {
-    if (m_buttonId >= Core::Platform::kMaxInputs)
-      return false;
-
-    const auto &input = packet.inputs[m_buttonId];
-    using State = Core::InputDescriptor::State;
-
-    bool clicked =
-        (input.current == State::RELEASED && input.previous != State::IDLE &&
-         input.holdDuration_ms < 300);
-
-    if (clicked) {
-      m_isOn = !m_isOn; // Toggle internal state
-      return true;
-    }
-
-    return false;
-  }
-
-  void Run() override {
-    if (m_isOn) {
-      m_swing.activate();
-      m_light.activate();
-      ESP_LOGI(TAG, "Saber ON");
-    } else {
-      m_swing.deactivate();
-      m_light.deactivate();
-      ESP_LOGI(TAG, "Saber OFF");
-    }
-  }
+    bool Test(const Core::SaberDataPacket& packet) override;
+    void Run() override;
 
 private:
-  static constexpr const char *TAG = "PowerToggle";
-  InertialSwingEffect &m_swing;
-  InertialLightEffect &m_light;
-  uint8_t m_buttonId;
-  bool m_isOn = false;
+    enum class State : uint8_t {
+        IDLE_OFF,
+        IGNITING,
+        IDLE_ON,
+        RETRACTING
+    };
+
+    void beginIgnition();
+    void tickIgnition();
+    void beginRetraction();
+    void tickRetraction();
+
+    [[nodiscard]] std::string buildPath(const char* subAndPrefix, uint8_t index) const;
+
+    InertialSwingEffect&                    m_swing;
+    InertialLightEffect&                    m_light;
+    Espressif::Wrappers::Audio::AudioEngine& m_audio;
+    Espressif::Wrappers::SmartLed::Engine&  m_ledEngine;
+    const Core::InertialDefinition&         m_def;
+    uint8_t                                 m_buttonId;
+
+    State    m_state = State::IDLE_OFF;
+    bool     m_pendingTransition = false;
+    bool     m_enginesStarted = false;
+    uint32_t m_sequenceStartMs = 0;
 };
 
 } // namespace InertialSaber::Effects
