@@ -1,3 +1,7 @@
+---
+description: Signal the start of a new task and re-evaluate core instructions with a clean context.
+---
+
 # Workflow: Fresh Start
 
 ## Objective

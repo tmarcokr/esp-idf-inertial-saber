@@ -1,3 +1,7 @@
+---
+description: Squash multiple local commits into a single cohesive commit before opening a Pull Request.
+---
+
 # 🚀 Workflow: Squash Commits (Interactive Rebase)
 
 Use this workflow to clean up your commit history (e.g., combining multiple "WIP" or "wp" commits into a single cohesive functional commit) before submitting a Pull Request to `main` (or `master`).

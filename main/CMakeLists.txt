@@ -14,6 +14,9 @@ idf_component_register(
          "core/effects/inertial_engine/visual/InertialLightEffect.cpp"
          "core/effects/inertial_engine/audio/AudioPathProvider.cpp"
          "profiles/inertial/InertialDefaultProfile.cpp"
+         "profiles/inertial/effects/BladeIgniteSweep.cpp"
+         "profiles/inertial/effects/BladeRetractSweep.cpp"
+         "profiles/inertial/effects/PowerToggleEffect.cpp"
     INCLUDE_DIRS "." "core" "core/effects" "core/effects/inertial_engine/audio" "core/effects/inertial_engine/visual" "profiles/inertial/effects" "profiles"
     REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led
 )
