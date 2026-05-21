@@ -2,6 +2,7 @@
 #include "InertialLightEffect.hpp"
 #include "PowerToggleEffect.hpp"
 #include "InertialSwingEffect.hpp"
+#include "BlasterEffect.hpp"
 
 #include "esp_log.h"
 
@@ -35,6 +36,9 @@ static const Core::InertialDefinition kDefinition = {
     .fontOutCount = 4,
     .ignitionDurationMs = 800,
     .retractionDurationMs = 500,
+    .fontBlasterCount = 8,
+    .blasterLedCount = 3,
+    .blasterDurationMs = 250,
 
     .bladeBaseHue = 240,
     .lightIdleBaseFreq = 1.0f,
@@ -64,11 +68,15 @@ void InertialDefaultProfile::load(
   lightEffect = lightFx.get();
   bus.registerEffect(std::move(lightFx));
 
-  bus.registerEffect(
-      std::make_unique<Effects::PowerToggleEffect>(
-          *swingEffect, *lightEffect, audio, led, kDefinition, 0));
+  auto powerFx = std::make_unique<Effects::PowerToggleEffect>(
+      *swingEffect, *lightEffect, audio, led, kDefinition, 0);
+  auto &powerRef = *powerFx;
+  bus.registerEffect(std::move(powerFx));
 
-  ESP_LOGI(TAG, "Profile '%s' loaded — 3 effects registered",
+  bus.registerEffect(std::make_unique<Effects::BlasterEffect>(
+      powerRef, audio, led, kDefinition, 0));
+
+  ESP_LOGI(TAG, "Profile '%s' loaded — 4 effects registered",
            kDefinition.profileName);
 }
 

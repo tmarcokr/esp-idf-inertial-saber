@@ -32,7 +32,7 @@ PowerToggleEffect::PowerToggleEffect(
     const Core::InertialDefinition &definition, uint8_t buttonId)
     : m_swing(swing), m_light(light), m_audio(audio), m_ledEngine(ledEngine),
       m_def(definition), m_buttonId(buttonId) {
-  Priority = 3;
+  Priority = 1;
 }
 
 bool PowerToggleEffect::Test(const Core::SaberDataPacket &packet) {
@@ -44,17 +44,40 @@ bool PowerToggleEffect::Test(const Core::SaberDataPacket &packet) {
     return true;
   }
 
+  if (m_state != State::IDLE_ON) {
+    m_lastClickTimeMs = 0;
+    m_hasLastClick = false;
+  }
+
   const auto &input = packet.inputs[m_buttonId];
   using InputState = Core::InputDescriptor::State;
 
-  const bool clicked =
-      (input.current == InputState::RELEASED &&
-       input.previous != InputState::IDLE && input.holdDuration_ms < 300);
-
-  if (clicked) {
-    m_pendingTransition = true;
-    return true;
+  if (m_state == State::IDLE_OFF) {
+    const bool clicked = (input.current == InputState::RELEASED &&
+                          input.previous != InputState::IDLE &&
+                          input.holdDuration_ms < 500);
+    if (clicked) {
+      m_pendingTransition = true;
+      return true;
+    }
+  } else if (m_state == State::IDLE_ON) {
+    const bool clicked = (input.current == InputState::RELEASED &&
+                          input.previous != InputState::IDLE &&
+                          input.holdDuration_ms < 500);
+    if (clicked) {
+      const uint32_t now = nowMs();
+      if (m_hasLastClick && (now - m_lastClickTimeMs) <= 500) {
+        m_lastClickTimeMs = 0;
+        m_hasLastClick = false;
+        m_pendingTransition = true;
+        return true;
+      } else {
+        m_lastClickTimeMs = now;
+        m_hasLastClick = true;
+      }
+    }
   }
+
   return false;
 }
 
@@ -146,6 +169,10 @@ std::string PowerToggleEffect::buildPath(const char *subAndPrefix,
                                          uint8_t index) const {
   return std::string("/sdcard/") + m_def.profileRoot + subAndPrefix +
          std::to_string(index + 1) + ".wav";
+}
+
+bool PowerToggleEffect::isActive() const {
+  return m_state == State::IDLE_ON;
 }
 
 } // namespace InertialSaber::Effects
