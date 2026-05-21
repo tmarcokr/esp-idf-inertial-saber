@@ -43,6 +43,9 @@ struct InertialDefinition {
     uint8_t fontOutCount;          ///< Number of power-off sound files (out/out1.wav … outN.wav).
     uint32_t ignitionDurationMs;   ///< Duration of the blade ignition sequence in milliseconds.
     uint32_t retractionDurationMs; ///< Duration of the blade retraction sequence in milliseconds.
+    uint8_t fontBlasterCount;      ///< Number of blaster sound files.
+    uint16_t blasterLedCount;      ///< Number of LEDs to light up for the blaster block.
+    uint32_t blasterDurationMs;    ///< Duration of the blaster block visual effect in milliseconds.
 
     uint16_t bladeBaseHue;         ///< Blade colour hue (HSB, 0–359). Blue = 240.
     float    lightIdleBaseFreq;    ///< Breathing cycles per second when horizontal.
