@@ -148,11 +148,14 @@ graph TD
 | **InertialSwing Engine** | `docs/wiki/InertialSwing.md` | Complete. `InertialSwingEffect` handles Crossfade, Gravity, Inertial Burst, and Zero-Volume Swap. Tuned for proper MAX98357A mixing. |
 | **InertialLight Engine** | `docs/wiki/InertialLight.md` | Complete. `InertialLightEffect` implements Live Breathing, Thermal Excitation (saturation drain), and Plasma Rupture via `InertialBladeEffect` atomic bridge to SmartLed Engine. |
 | **InertialHaptics Engine** | `docs/wiki/InertialHaptics.md` | Conceptual/roadmap only. No component or bus integration. |
-| **Kinetic Effects** | `docs/wiki/KineticEffects.md` | None of the 5 effects (Clash, Blaster, Drag, Lockup, Stab) are implemented as `InertialEffect` classes. |
+| **Power On/Off state machine** | Wiki SaberAction | **Complete.** `PowerToggleEffect` (Priority 1) implements the full OFF→IGNITING→ON→RETRACTING→OFF state machine. Single-click ignition; double-click retraction. Synchronized audio (`in/`, `out/`) and visual sweeps (`BladeIgniteSweep`, `BladeRetractSweep`). Activates/deactivates both engines. |
+| **KineticImpact (Clash)** | `docs/wiki/KineticEffects.md` | **Complete.** `KineticImpactEffect` (Priority 2) implements physical deceleration drop detection. Triggers random `clsh/*.wav` playback and complementary `BladeClashFlash` visual overlay. |
+| **DeflectionBurst (Blaster)** | `docs/wiki/KineticEffects.md` | **Complete.** `BlasterEffect` (Priority 2) handles single-click trigger when saber is ON. Plays random `blst/` audio and pushes a `BladeBlasterBlock` visual overlay (random-segment white flash). |
+| **FrictionBurn (Drag)** | `docs/wiki/KineticEffects.md` | Not implemented. No `InertialEffect` class exists. |
+| **PlasmaStabilization (Lockup)** | `docs/wiki/KineticEffects.md` | Not implemented. No `InertialEffect` class exists. |
+| **ThrustPiercing (Stab)** | `docs/wiki/KineticEffects.md` | Not implemented. No `InertialEffect` class exists. |
 | **Kinetic Gestures** | `docs/wiki/KineticGestures.md` | None of the gesture patterns (Axis Twist, Kinetic Thrust, Gravity Retrieval, Force Push) are implemented. |
-| **InertialProfile system** | `docs/wiki/Profiles.md` | The `InertialProfile` / `InertialDefinition` classes do not exist. Effects are hard-coded in `registerDemoEffects()`. |
-| **Power On/Off state machine** | Wiki SaberAction | No ignition/retraction system. The saber has no concept of "on" or "off" state. |
-| **Ducking / priority rendering** | Wiki SaberAction §4.1 | Priority is stored in effects, but engines don't exist yet to implement ducking. |
+| **Ducking / priority rendering** | Wiki SaberAction §4.1 | Priority is assigned per effect (PowerToggle=1, Blaster=2), but the engines do not yet implement audio/visual ducking based on priority. |
 
 ---
 
@@ -177,11 +180,11 @@ graph TD
  
  Domain Logic
  ├── Inertial Overload      ████████████████  100%
- ├── InertialProfile         ████████████████  100%
- ├── InertialDefinition      ████████████████  100% (Centralized to PlatformConfig)
- ├── Kinetic Effects (5)     ░░░░░░░░░░░░░░░░    0%
- ├── Kinetic Gestures (4)    ░░░░░░░░░░░░░░░░    0%
- └── Power State Machine     ░░░░░░░░░░░░░░░░    0%
+ ├── InertialProfile        ████████████████  100%
+ ├── InertialDefinition     ████████████████  100% (Centralized to PlatformConfig)
+ ├── Power State Machine    ████████████████  100% (PowerToggleEffect)
+ ├── Kinetic Effects (5)    ████████░░░░░░░░   40% (Blaster, Clash done; Drag, Lockup, Stab pending)
+ └── Kinetic Gestures (4)   ░░░░░░░░░░░░░░░░    0%
 
  Hardware Components
  ├── Mpu6050 (DMP)          ████████████████  100%
@@ -275,7 +278,7 @@ graph LR
 
 | # | Task | Status |
 |:--|:-----|:-------|
-| 5 | Implement Power State Machine (OFF → IGNITING → ON → RETRACTING → OFF) | ░░ Not Started |
+| 5 | Implement Power State Machine (OFF → IGNITING → ON → RETRACTING → OFF) | ✅ Complete |
 | 6 | Implement `InertialProfile` container (load/unload, default `inertial` profile) | ✅ Complete |
 
 ### Phase 4 — Kinetic Effects Catalog
@@ -283,8 +286,8 @@ graph LR
 
 | # | Task | Status |
 |:--|:-----|:-------|
-| 7 | KineticImpactEffect (Clash) — Priority 2 | ░░ Not Started |
-| 8 | DeflectionBurstEffect (Blaster) — Priority 1 | ░░ Not Started |
+| 7 | KineticImpactEffect (Clash) — Priority 2 | ✅ Complete (`KineticImpactEffect` + `BladeClashFlash` overlay) |
+| 8 | DeflectionBurstEffect (Blaster) — Priority 2 | ✅ Complete (`BlasterEffect` + `BladeBlasterBlock` overlay) |
 | 9 | FrictionBurnEffect (Drag) — Priority 1 | ░░ Not Started |
 | 10 | PlasmaStabilizationEffect (Lockup) — Priority 2 | ░░ Not Started |
 | 11 | ThrustPiercingEffect (Stab) — Priority 1 | ░░ Not Started |
@@ -432,3 +435,6 @@ Tasks:
 | 2026-05-10 | Phase 2 | **Phase 2 Audio Complete**. InertialSwing Flow Modulator implemented, hardware buttons integrated, and I2S/mixer tuning adjusted for dynamic range. |
 | 2026-05-10 | Phase 2 | **Phase 2 Visual Complete**. InertialLight Flow Modulator implemented with InertialBladeEffect atomic bridge. All 3 wiki visual states functional (Breathing, Thermal Excitation, Plasma Rupture). |
 | 2026-05-16 | Phase 3 | **InertialProfile Architecture Complete**. Implemented `InertialProfile` container and `InertialDefinition` POD for centralized configuration. Refactored Audio and Visual engines for dependency injection. Created default `inertial` profile. |
+| 2026-05-23 | Phase 3 | **Power State Machine Complete**. `PowerToggleEffect` (Priority 1) implements the full OFF→IGNITING→ON→RETRACTING→OFF state machine with synchronized audio and visual sweep overlays (`BladeIgniteSweep`, `BladeRetractSweep`). Single-click ignition; double-click retraction. |
+| 2026-05-23 | Phase 4 | **Blaster Effect Complete**. `BlasterEffect` (Priority 2) + `BladeBlasterBlock` visual overlay implemented and registered in `InertialDefaultProfile`. Triggered by single-click when saber is active. Phase 3 fully complete; Phase 4 at 1/5 (20%). |
+| 2026-05-23 | Phase 4 | **Clash Effect Complete**. `KineticImpactEffect` (Priority 2) + `BladeClashFlash` visual overlay implemented and registered in `InertialDefaultProfile`. Triggered by a sudden G-force drop (> 8.0G) within a 15ms window when saber is active. Phase 4 at 2/5 (40%). |
