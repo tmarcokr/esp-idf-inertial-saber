@@ -46,6 +46,9 @@ struct InertialDefinition {
     uint8_t fontBlasterCount;      ///< Number of blaster sound files.
     uint16_t blasterLedCount;      ///< Number of LEDs to light up for the blaster block.
     uint32_t blasterDurationMs;    ///< Duration of the blaster block visual effect in milliseconds.
+    uint8_t fontClashCount;        ///< Number of clash sound files (clsh/clsh1.wav … clshN.wav).
+    float clashThresholdG;         ///< Sudden negative spike/deceleration threshold in Gs.
+    uint32_t clashDurationMs;      ///< Duration of the clash flash visual effect in milliseconds.
 
     uint16_t bladeBaseHue;         ///< Blade colour hue (HSB, 0–359). Blue = 240.
     float    lightIdleBaseFreq;    ///< Breathing cycles per second when horizontal.
