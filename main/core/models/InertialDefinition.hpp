@@ -50,6 +50,10 @@ struct InertialDefinition {
     float clashThresholdG;         ///< Sudden negative spike/deceleration threshold in Gs.
     uint32_t clashDurationMs;      ///< Duration of the clash flash visual effect in milliseconds.
 
+    uint8_t fontDragCount;          ///< Number of looping drag sound files (drag/drag*.wav).
+    uint8_t fontDragEndCount;       ///< Number of drag deactivation sound files (enddrag/enddrag*.wav).
+    uint16_t dragLedCount;          ///< Number of LEDs to light up at the tip for the thermal glow.
+
     uint16_t bladeBaseHue;         ///< Blade colour hue (HSB, 0–359). Blue = 240.
     float    lightIdleBaseFreq;    ///< Breathing cycles per second when horizontal.
     float    lightIdlePulseDepth;  ///< Oscillator depth in idle state (0.0–1.0).

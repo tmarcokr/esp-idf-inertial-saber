@@ -27,6 +27,13 @@ esp_err_t InputAdapter::start() {
         m_bus.pushInputEvent(Config::HardwareConfig::kMainBtnInputId, m_btnState);
     });
 
+    m_mainButton.onLongPress(500, [this]() {
+        m_btnState.previous = m_btnState.current;
+        m_btnState.current = Core::InputDescriptor::State::HELD;
+        m_btnState.holdDuration_ms = 500;
+        m_bus.pushInputEvent(Config::HardwareConfig::kMainBtnInputId, m_btnState);
+    });
+
     ESP_LOGI(TAG, "Input Adapter started successfully (GPIO %d)", Config::HardwareConfig::kMainBtn);
     return ESP_OK;
 }
