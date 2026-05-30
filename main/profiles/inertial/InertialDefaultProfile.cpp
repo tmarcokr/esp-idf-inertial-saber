@@ -4,7 +4,7 @@
 #include "InertialSwingEffect.hpp"
 #include "BlasterEffect.hpp"
 #include "KineticImpactEffect.hpp"
-#include "FrictionBurnEffect.hpp"
+#include "DragEffect.hpp"
 
 #include "esp_log.h"
 
@@ -88,7 +88,7 @@ void InertialDefaultProfile::load(
   bus.registerEffect(std::make_unique<Effects::KineticImpactEffect>(
       powerRef, audio, led, kDefinition));
 
-  bus.registerEffect(std::make_unique<Effects::FrictionBurnEffect>(
+  bus.registerEffect(std::make_unique<Effects::DragEffect>(
       powerRef, audio, led, kDefinition, 0));
 
   ESP_LOGI(TAG, "Profile '%s' loaded — 6 effects registered",
