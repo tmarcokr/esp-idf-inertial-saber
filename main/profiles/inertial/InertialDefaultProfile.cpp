@@ -58,57 +58,33 @@ static const Core::InertialDefinition kDefinition = {
 };
 
 
-const Core::InertialDefinition &InertialDefaultProfile::getDefinition() const {
-  return kDefinition;
+InertialDefaultProfile::InertialDefaultProfile() : m_impl(kDefinition) {}
+
+const Core::InertialDefinition &
+InertialDefaultProfile::getDefinition() const {
+  return m_impl.getDefinition();
 }
 
-void InertialDefaultProfile::load(
-    Core::SaberActionBus &bus, Espressif::Wrappers::Audio::AudioEngine &audio,
-    Espressif::Wrappers::SmartLed::Engine &led) {
-  ESP_LOGI(TAG, "Loading profile '%s'", kDefinition.profileName);
-
-  auto swingFx =
-      std::make_unique<Effects::InertialSwingEffect>(audio, kDefinition);
-  swingEffect = swingFx.get();
-  bus.registerEffect(std::move(swingFx));
-
-  auto lightFx =
-      std::make_unique<Effects::InertialLightEffect>(led, kDefinition);
-  lightEffect = lightFx.get();
-  bus.registerEffect(std::move(lightFx));
-
-  auto powerFx = std::make_unique<Effects::PowerToggleEffect>(
-      *swingEffect, *lightEffect, audio, led, kDefinition, 0);
-  auto &powerRef = *powerFx;
-  bus.registerEffect(std::move(powerFx));
-
-  bus.registerEffect(std::make_unique<Effects::BlasterEffect>(
-      powerRef, audio, led, kDefinition, 0));
-
-  bus.registerEffect(std::make_unique<Effects::KineticImpactEffect>(
-      powerRef, audio, led, kDefinition));
-
-  bus.registerEffect(std::make_unique<Effects::DragEffect>(
-      powerRef, audio, led, kDefinition, 0));
-
-  ESP_LOGI(TAG, "Profile '%s' loaded — 6 effects registered",
-           kDefinition.profileName);
+void InertialDefaultProfile::load(Core::SaberActionBus &bus,
+                                 Espressif::Wrappers::Audio::AudioEngine &audio,
+                                 Espressif::Wrappers::SmartLed::Engine &led) {
+  m_impl.load(bus, audio, led);
+  swingEffect = m_impl.swingEffect;
+  lightEffect = m_impl.lightEffect;
 }
 
 void InertialDefaultProfile::unload(Core::SaberActionBus &bus) {
-  ESP_LOGI(TAG, "Unloading profile '%s'", kDefinition.profileName);
-
-  if (swingEffect)
-    swingEffect->deactivate();
-  if (lightEffect)
-    lightEffect->deactivate();
-
-  bus.clearEffects();
-
+  m_impl.unload(bus);
   swingEffect = nullptr;
   lightEffect = nullptr;
+}
 
-  ESP_LOGI(TAG, "Profile '%s' unloaded", kDefinition.profileName);
+Core::InertialProfile::PowerState InertialDefaultProfile::getPowerState() const {
+  return m_impl.getPowerState();
+}
+
+void InertialDefaultProfile::setPowerState(PowerState state) {
+  m_impl.setPowerState(state);
 }
 
 } // namespace InertialSaber::Profiles

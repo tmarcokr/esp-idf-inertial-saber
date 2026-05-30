@@ -1,4 +1,6 @@
 #include "SaberSystem.hpp"
+#include "profiles/ProfileParser.hpp"
+#include "core/effects/inertial_engine/audio/InertialSwingEffect.hpp"
 #include "esp_log.h"
 
 namespace InertialSaber::System {
@@ -8,9 +10,13 @@ static constexpr const char *TAG = "SaberSystem";
 SaberSystem::SaberSystem() {}
 
 esp_err_t SaberSystem::start() {
-  ESP_LOGI(TAG, "Initializing InertialSaber OS Hardware...");
-
   esp_err_t err;
+
+#ifndef NDEBUG
+  if ((err = Profiles::ProfileParser::runSelfTest()) != ESP_OK) return err;
+#endif
+
+  ESP_LOGI(TAG, "Initializing InertialSaber OS Hardware...");
   
   if ((err = m_sdHardware.init()) != ESP_OK) return err;
   if ((err = m_audioHardware.init()) != ESP_OK) return err;
@@ -25,9 +31,16 @@ esp_err_t SaberSystem::start() {
   m_inputAdapter = std::make_unique<Adapters::InputAdapter>(m_bus, *m_btnHardware.getButton());
   if ((err = m_inputAdapter->start()) != ESP_OK) return err;
 
-  ESP_LOGI(TAG, "Loading Profile...");
-  m_profile = std::make_unique<Profiles::InertialDefaultProfile>();
-  m_profile->load(m_bus, *m_audioHardware.getEngine(), *m_ledHardware.getEngine());
+  ESP_LOGI(TAG, "Loading Profiles...");
+  m_profileManager.init();
+  m_profileManager.loadActive(m_bus, *m_audioHardware.getEngine(), *m_ledHardware.getEngine());
+
+  m_btnHardware.getButton()->onLongPress(1500, [this]() {
+    if (m_profileManager.getActiveProfile().getPowerState() != Core::InertialProfile::PowerState::RETRACTED) {
+      return;
+    }
+    m_profileManager.nextProfile(m_bus, *m_audioHardware.getEngine(), *m_ledHardware.getEngine());
+  });
 
   ESP_LOGI(TAG, "Starting Action Bus...");
   if ((err = m_bus.start()) != ESP_OK) {

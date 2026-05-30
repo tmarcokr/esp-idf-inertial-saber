@@ -11,11 +11,13 @@
 This document is the **single source of truth** for the development roadmap. It was created after a deep analysis of the codebase against the project's wiki specifications. All major architectural decisions have been resolved and are documented in **Section 6**.
 
 ### Current Status
-- **Phase 2 (Engine Implementation) is in progress.** Phase 1 is complete.
-- **Target platform**: ESP32-C6 (single-core, SD-only audio). S3 optimization is deferred to Phase 6.
+- **Phase 4 (Kinetic Effects) is partially complete (60%).** Phases 1–3 are complete.
+- Remaining Phase 4 effects (Lockup, Stab) and all Phase 5 gestures are **deferred to the future roadmap**.
+- **Next active phase**: Phase 6 (ESP32-S3 PSRAM optimization).
+- **Target platform**: ESP32-C6 (single-core, SD-only audio). S3 optimization begins in Phase 6.
 - The infrastructure layer (bus, packet, adapters, hardware components) is **100% complete**.
 - The core physics layer (Kinetic Energy, Orientation, and Inertial Overload) is **100% complete**.
-- The application layer (engines, effects, profiles, gestures) is **partially complete (~40%)**.
+- The application layer (engines, effects, profiles) is **functional at 60% of the effects catalog**.
 
 ### Required Reading (in order)
 Before starting any implementation work, read the following:
@@ -151,7 +153,7 @@ graph TD
 | **Power On/Off state machine** | Wiki SaberAction | **Complete.** `PowerToggleEffect` (Priority 1) implements the full OFF→IGNITING→ON→RETRACTING→OFF state machine. Single-click ignition; double-click retraction. Synchronized audio (`in/`, `out/`) and visual sweeps (`BladeIgniteSweep`, `BladeRetractSweep`). Activates/deactivates both engines. |
 | **KineticImpact (Clash)** | `docs/wiki/KineticEffects.md` | **Complete.** `KineticImpactEffect` (Priority 2) implements physical deceleration drop detection. Triggers random `clsh/*.wav` playback and complementary `BladeClashFlash` visual overlay. |
 | **DeflectionBurst (Blaster)** | `docs/wiki/KineticEffects.md` | **Complete.** `BlasterEffect` (Priority 2) handles single-click trigger when saber is ON. Plays random `blst/` audio and pushes a `BladeBlasterBlock` visual overlay (random-segment white flash). |
-| **FrictionBurn (Drag)** | `docs/wiki/KineticEffects.md` | Not implemented. No `InertialEffect` class exists. |
+| **FrictionBurn (Drag)** | `docs/wiki/KineticEffects.md` | **Complete.** `DragEffect` (Priority 1) implements button-hold trigger via `State::HELD` (500ms long-press). Plays random looping `drag/` audio and pushes `BladeDragEffect` thermal tip overlay. On release, stops loop, plays random `enddrag/` one-shot, and fades overlay over 150ms. |
 | **PlasmaStabilization (Lockup)** | `docs/wiki/KineticEffects.md` | Not implemented. No `InertialEffect` class exists. |
 | **ThrustPiercing (Stab)** | `docs/wiki/KineticEffects.md` | Not implemented. No `InertialEffect` class exists. |
 | **Kinetic Gestures** | `docs/wiki/KineticGestures.md` | None of the gesture patterns (Axis Twist, Kinetic Thrust, Gravity Retrieval, Force Push) are implemented. |
@@ -183,7 +185,7 @@ graph TD
  ├── InertialProfile        ████████████████  100%
  ├── InertialDefinition     ████████████████  100% (Centralized to PlatformConfig)
  ├── Power State Machine    ████████████████  100% (PowerToggleEffect)
- ├── Kinetic Effects (5)    ████████░░░░░░░░   40% (Blaster, Clash done; Drag, Lockup, Stab pending)
+ ├── Kinetic Effects (5)    ██████████░░░░░░   60% (Blaster, Clash, Drag done; Lockup, Stab pending)
  └── Kinetic Gestures (4)   ░░░░░░░░░░░░░░░░    0%
 
  Hardware Components
@@ -288,21 +290,22 @@ graph LR
 |:--|:-----|:-------|
 | 7 | KineticImpactEffect (Clash) — Priority 2 | ✅ Complete (`KineticImpactEffect` + `BladeClashFlash` overlay) |
 | 8 | DeflectionBurstEffect (Blaster) — Priority 2 | ✅ Complete (`BlasterEffect` + `BladeBlasterBlock` overlay) |
-| 9 | FrictionBurnEffect (Drag) — Priority 1 | ░░ Not Started |
-| 10 | PlasmaStabilizationEffect (Lockup) — Priority 2 | ░░ Not Started |
-| 11 | ThrustPiercingEffect (Stab) — Priority 1 | ░░ Not Started |
+| 9 | DragEffect (Drag) — Priority 1 | ✅ Complete (`DragEffect` + `BladeDragEffect` overlay) |
+| 10 | PlasmaStabilizationEffect (Lockup) — Priority 2 | 🔮 Deferred (future roadmap) |
+| 11 | ThrustPiercingEffect (Stab) — Priority 1 | 🔮 Deferred (future roadmap) |
 
-### Phase 5 — Kinetic Gestures
+### Phase 5 — Kinetic Gestures (Deferred)
 > **Goal**: Touchless operation via IMU pattern recognition.
+> **Status**: Deferred to future roadmap. Core effects catalog takes priority.
 
 | # | Task | Status |
 |:--|:-----|:-------|
-| 12 | AxisTwistGesture (Ignition/Retraction) | ░░ Not Started |
-| 13 | KineticThrustGesture (Ignition) | ░░ Not Started |
-| 14 | GravityRetrievalGesture (Profile Cycle) | ░░ Not Started |
+| 12 | AxisTwistGesture (Ignition/Retraction) | 🔮 Deferred (future roadmap) |
+| 13 | KineticThrustGesture (Ignition) | 🔮 Deferred (future roadmap) |
+| 14 | GravityRetrievalGesture (Profile Cycle) | 🔮 Deferred (future roadmap) |
 
-### Phase 6 — ESP32-S3 PSRAM Optimization (Deferred)
-> **Goal**: Zero-latency audio on S3 via PSRAM preloading. Not required for C6 functionality.
+### Phase 6 — ESP32-S3 PSRAM Optimization
+> **Goal**: Zero-latency audio on S3 via PSRAM preloading. Next active phase.
 
 | # | Task | Status |
 |:--|:-----|:-------|
@@ -438,3 +441,5 @@ Tasks:
 | 2026-05-23 | Phase 3 | **Power State Machine Complete**. `PowerToggleEffect` (Priority 1) implements the full OFF→IGNITING→ON→RETRACTING→OFF state machine with synchronized audio and visual sweep overlays (`BladeIgniteSweep`, `BladeRetractSweep`). Single-click ignition; double-click retraction. |
 | 2026-05-23 | Phase 4 | **Blaster Effect Complete**. `BlasterEffect` (Priority 2) + `BladeBlasterBlock` visual overlay implemented and registered in `InertialDefaultProfile`. Triggered by single-click when saber is active. Phase 3 fully complete; Phase 4 at 1/5 (20%). |
 | 2026-05-23 | Phase 4 | **Clash Effect Complete**. `KineticImpactEffect` (Priority 2) + `BladeClashFlash` visual overlay implemented and registered in `InertialDefaultProfile`. Triggered by a sudden G-force drop (> 8.0G) within a 15ms window when saber is active. Phase 4 at 2/5 (40%). |
+| 2026-05-25 | Phase 4 | **Drag Effect Complete**. `DragEffect` (Priority 1) + `BladeDragEffect` thermal tip overlay implemented and registered in `InertialDefaultProfile`. Triggered by 500ms button hold when saber is active. Looping `drag/` audio + random `enddrag/` deactivation. `InputAdapter` extended with `onLongPress(500, ...)`. Phase 4 at 3/5 (60%). |
+| 2026-05-25 | Workflow | `effect_create_drag.md` workflow created for replicating drag effects across profiles. |

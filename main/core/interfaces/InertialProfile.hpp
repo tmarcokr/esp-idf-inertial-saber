@@ -29,7 +29,18 @@ namespace InertialSaber::Core {
  */
 class InertialProfile {
 public:
+    enum class PowerState : uint8_t {
+        RETRACTED,
+        IGNITING,
+        IGNITED,
+        RETRACTING
+    };
+
     virtual ~InertialProfile() = default;
+
+    [[nodiscard]] virtual PowerState getPowerState() const { return m_powerState; }
+
+    virtual void setPowerState(PowerState state) { m_powerState = state; }
 
     /**
      * @brief Returns the static definition (physics, audio, visual config) for this profile.
@@ -58,6 +69,9 @@ public:
     // load() and unload(). Null otherwise.
     Effects::InertialSwingEffect* swingEffect = nullptr;
     Effects::InertialLightEffect* lightEffect = nullptr;
+
+protected:
+    PowerState m_powerState = PowerState::RETRACTED;
 };
 
 } // namespace InertialSaber::Core
