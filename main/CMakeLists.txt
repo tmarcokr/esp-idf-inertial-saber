@@ -13,6 +13,10 @@ idf_component_register(
          "core/effects/inertial_engine/audio/InertialSwingEffect.cpp"
          "core/effects/inertial_engine/visual/InertialLightEffect.cpp"
          "core/effects/inertial_engine/audio/AudioPathProvider.cpp"
+         "profiles/ConfigurableProfile.cpp"
+         "profiles/ProfileParser.cpp"
+         "profiles/ProfileLoader.cpp"
+         "profiles/ProfileManager.cpp"
          "profiles/inertial/InertialDefaultProfile.cpp"
          "profiles/inertial/effects/BladeIgniteSweep.cpp"
          "profiles/inertial/effects/BladeRetractSweep.cpp"
@@ -24,7 +28,7 @@ idf_component_register(
          "profiles/inertial/effects/BladeDragEffect.cpp"
          "profiles/inertial/effects/DragEffect.cpp"
     INCLUDE_DIRS "." "core" "core/effects" "core/effects/inertial_engine/audio" "core/effects/inertial_engine/visual" "profiles/inertial/effects" "profiles"
-    REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led
+    REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led json
 )
 
 # Force C++20 for all source files

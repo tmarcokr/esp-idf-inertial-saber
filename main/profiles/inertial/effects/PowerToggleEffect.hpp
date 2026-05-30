@@ -7,6 +7,7 @@
 namespace InertialSaber::Core {
 struct InertialDefinition;
 struct SaberDataPacket;
+class InertialProfile;
 }
 namespace InertialSaber::Effects {
 class InertialSwingEffect;
@@ -27,6 +28,7 @@ namespace InertialSaber::Effects {
 class PowerToggleEffect final : public Core::InertialEffect {
 public:
     PowerToggleEffect(
+        Core::InertialProfile&                  profile,
         InertialSwingEffect&                    swing,
         InertialLightEffect&                    light,
         Espressif::Wrappers::Audio::AudioEngine& audio,
@@ -36,16 +38,10 @@ public:
 
     bool Test(const Core::SaberDataPacket& packet) override;
     void Run() override;
-    [[nodiscard]] bool isActive() const;
+    [[nodiscard]] bool isIgnited() const;
+    [[nodiscard]] bool isRetracted() const;
 
 private:
-    enum class State : uint8_t {
-        IDLE_OFF,
-        IGNITING,
-        IDLE_ON,
-        RETRACTING
-    };
-
     void beginIgnition();
     void tickIgnition();
     void beginRetraction();
@@ -53,6 +49,7 @@ private:
 
     [[nodiscard]] std::string buildPath(const char* subAndPrefix, uint8_t index) const;
 
+    Core::InertialProfile&                  m_profile;
     InertialSwingEffect&                    m_swing;
     InertialLightEffect&                    m_light;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
@@ -60,7 +57,6 @@ private:
     const Core::InertialDefinition&         m_def;
     uint8_t                                 m_buttonId;
 
-    State    m_state = State::IDLE_OFF;
     bool     m_pendingTransition = false;
     bool     m_enginesStarted = false;
     uint32_t m_sequenceStartMs = 0;

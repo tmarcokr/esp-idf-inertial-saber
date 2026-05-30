@@ -2,7 +2,7 @@
 
 #include "core/interfaces/InertialProfile.hpp"
 #include "core/bus/SaberActionBus.hpp"
-#include "profiles/inertial/InertialDefaultProfile.hpp"
+#include "profiles/ProfileManager.hpp"
 
 #include "system/adapters/ImuAdapter.hpp"
 #include "system/adapters/InputAdapter.hpp"
@@ -42,7 +42,7 @@ private:
 
   // ── Core ──
   Core::SaberActionBus m_bus;
-  std::unique_ptr<Core::InertialProfile> m_profile;
+  Profiles::ProfileManager m_profileManager;
 };
 
 } // namespace InertialSaber::System

@@ -31,7 +31,7 @@ BlasterEffect::BlasterEffect(
 }
 
 bool BlasterEffect::Test(const Core::SaberDataPacket &packet) {
-  if (!m_power.isActive()) {
+  if (!m_power.isIgnited()) {
     return false;
   }
   if (m_buttonId >= Core::Platform::kMaxInputs) {

@@ -30,7 +30,7 @@ DragEffect::DragEffect(
 }
 
 bool DragEffect::Test(const Core::SaberDataPacket& packet) {
-    if (!m_power.isActive()) {
+    if (!m_power.isIgnited()) {
         m_triggerMet = false;
         return m_active;
     }

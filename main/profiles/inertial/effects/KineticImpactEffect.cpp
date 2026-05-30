@@ -29,7 +29,7 @@ KineticImpactEffect::KineticImpactEffect(
 }
 
 bool KineticImpactEffect::Test(const Core::SaberDataPacket &packet) {
-    if (!m_power.isActive()) {
+    if (!m_power.isIgnited()) {
         clearKineticEnergyWindow();
         return false;
     }
