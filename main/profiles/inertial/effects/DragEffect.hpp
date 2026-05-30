@@ -23,18 +23,19 @@ class Engine;
 namespace InertialSaber::Effects {
 
 /**
- * @brief Evaluates drag (friction burn) trigger conditions and manages looping sound and LED overlay.
+ * @brief Evaluates blade drag trigger conditions and manages looping sound and LED overlay.
  */
-class FrictionBurnEffect final : public Core::InertialEffect {
+class DragEffect final : public Core::InertialEffect {
 public:
     /**
-     * @brief Construct a new Friction Burn Effect.
+     * @brief Construct a new Drag Effect.
      * @param power Power toggle effect reference.
      * @param audio Audio engine reference.
      * @param ledEngine SmartLed engine reference.
      * @param definition Active inertial definition.
+     * @param buttonId Trigger button identifier.
      */
-    FrictionBurnEffect(
+    DragEffect(
         PowerToggleEffect& power,
         Espressif::Wrappers::Audio::AudioEngine& audio,
         Espressif::Wrappers::SmartLed::Engine& ledEngine,

@@ -80,17 +80,17 @@ The drag overlay class inherits from `Espressif::Wrappers::SmartLed::IEffect` an
 ## Step 5 — Implement the Drag Action Effect
 
 **Files:**
-* `main/profiles/<profile-name>/effects/FrictionBurnEffect.hpp`
-* `main/profiles/<profile-name>/effects/FrictionBurnEffect.cpp`
+* `main/profiles/<profile-name>/effects/DragEffect.hpp`
+* `main/profiles/<profile-name>/effects/DragEffect.cpp`
 
-For most profiles, reuse `main/profiles/inertial/effects/FrictionBurnEffect.hpp/cpp`.
+For most profiles, reuse `main/profiles/inertial/effects/DragEffect.hpp/cpp`.
 
 ### Key Trigger Logic in `Test()`
 
 The drag effect evaluates if the button is pressed and held for more than 500ms (`HELD` event) or released (`RELEASED` event) and manages transitions:
 
 ```cpp
-bool FrictionBurnEffect::Test(const Core::SaberDataPacket &packet) {
+bool DragEffect::Test(const Core::SaberDataPacket &packet) {
     if (!m_power.isActive()) {
         m_triggerMet = false;
         return m_active;
@@ -123,10 +123,10 @@ The `Run()` method compares the pending state with the current state:
 
 **File:** `main/profiles/<profile-name>/<ProfileName>.cpp`
 
-Inside the `load()` method, register the `FrictionBurnEffect` passing the target button ID (e.g. 0):
+Inside the `load()` method, register the `DragEffect` passing the target button ID (e.g. 0):
 
 ```cpp
-bus.registerEffect(std::make_unique<Effects::FrictionBurnEffect>(
+bus.registerEffect(std::make_unique<Effects::DragEffect>(
     powerRef, audio, led, kDefinition, 0));
 ```
 

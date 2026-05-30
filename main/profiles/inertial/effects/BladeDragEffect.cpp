@@ -38,7 +38,6 @@ void BladeDragEffect::render(Canvas& canvas) {
     uint16_t canvasSize = canvas.size();
     uint16_t startIdx = (m_numLeds > m_dragLedCount) ? (m_numLeds - m_dragLedCount) : 0;
 
-    // Linear mapping for color temp gradient from red-orange (cooler) to yellow (hotter) at tip
     for (uint16_t i = startIdx; i < m_numLeds && i < canvasSize; ++i) {
         float factor = 1.0f;
         if (m_dragLedCount > 1) {

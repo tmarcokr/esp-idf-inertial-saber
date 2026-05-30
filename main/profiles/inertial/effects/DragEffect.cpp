@@ -1,4 +1,4 @@
-#include "FrictionBurnEffect.hpp"
+#include "DragEffect.hpp"
 #include "AudioEngine.hpp"
 #include "BladeDragEffect.hpp"
 #include "Engine.hpp"
@@ -13,9 +13,9 @@
 
 namespace InertialSaber::Effects {
 
-static constexpr const char* TAG = "FrictionBurnEffect";
+static constexpr const char* TAG = "DragEffect";
 
-FrictionBurnEffect::FrictionBurnEffect(
+DragEffect::DragEffect(
     PowerToggleEffect& power,
     Espressif::Wrappers::Audio::AudioEngine& audio,
     Espressif::Wrappers::SmartLed::Engine& ledEngine,
@@ -29,7 +29,7 @@ FrictionBurnEffect::FrictionBurnEffect(
     Priority = 1;
 }
 
-bool FrictionBurnEffect::Test(const Core::SaberDataPacket& packet) {
+bool DragEffect::Test(const Core::SaberDataPacket& packet) {
     if (!m_power.isActive()) {
         m_triggerMet = false;
         return m_active;
@@ -49,7 +49,7 @@ bool FrictionBurnEffect::Test(const Core::SaberDataPacket& packet) {
     return m_triggerMet || m_active;
 }
 
-void FrictionBurnEffect::Run() {
+void DragEffect::Run() {
     if (m_triggerMet && !m_active) {
         m_active = true;
 
@@ -90,7 +90,7 @@ void FrictionBurnEffect::Run() {
     }
 }
 
-std::string FrictionBurnEffect::buildPath(const char* subAndPrefix, uint8_t index) const {
+std::string DragEffect::buildPath(const char* subAndPrefix, uint8_t index) const {
     return std::string("/sdcard/") + m_def.profileRoot + subAndPrefix +
            std::to_string(index + 1) + ".wav";
 }

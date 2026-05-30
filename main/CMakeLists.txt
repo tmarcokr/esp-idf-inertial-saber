@@ -22,7 +22,7 @@ idf_component_register(
          "profiles/inertial/effects/BladeClashFlash.cpp"
          "profiles/inertial/effects/KineticImpactEffect.cpp"
          "profiles/inertial/effects/BladeDragEffect.cpp"
-         "profiles/inertial/effects/FrictionBurnEffect.cpp"
+         "profiles/inertial/effects/DragEffect.cpp"
     INCLUDE_DIRS "." "core" "core/effects" "core/effects/inertial_engine/audio" "core/effects/inertial_engine/visual" "profiles/inertial/effects" "profiles"
     REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led
 )
