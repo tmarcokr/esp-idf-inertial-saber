@@ -17,17 +17,17 @@ idf_component_register(
          "profiles/ProfileParser.cpp"
          "profiles/ProfileLoader.cpp"
          "profiles/ProfileManager.cpp"
-         "profiles/inertial/effects/BladeIgniteSweep.cpp"
-         "profiles/inertial/effects/BladeRetractSweep.cpp"
+         "profiles/inertial/overlays/BladeIgniteSweep.cpp"
+         "profiles/inertial/overlays/BladeRetractSweep.cpp"
          "profiles/inertial/effects/PowerToggleEffect.cpp"
-         "profiles/inertial/effects/BladeBlasterBlock.cpp"
+         "profiles/inertial/overlays/BladeBlasterBlock.cpp"
          "profiles/inertial/effects/BlasterEffect.cpp"
-         "profiles/inertial/effects/BladeClashFlash.cpp"
+         "profiles/inertial/overlays/BladeClashFlash.cpp"
          "profiles/inertial/effects/KineticImpactEffect.cpp"
-         "profiles/inertial/effects/BladeDragEffect.cpp"
+         "profiles/inertial/overlays/BladeDragEffect.cpp"
          "profiles/inertial/effects/DragEffect.cpp"
          "profiles/inertial/effects/ProfileCycleEffect.cpp"
-    INCLUDE_DIRS "." "core" "core/effects" "core/effects/inertial_engine/audio" "core/effects/inertial_engine/visual" "profiles/inertial/effects" "profiles"
+    INCLUDE_DIRS "." "core" "core/effects" "core/effects/inertial_engine/audio" "core/effects/inertial_engine/visual" "profiles/inertial/effects" "profiles/inertial/overlays" "profiles"
     REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led json
 )
 
