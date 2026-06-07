@@ -10,16 +10,6 @@ namespace InertialSaber::Core {
 
 static constexpr const char* TAG = "SaberActionBus";
 
-// TODO: Plan 03 — inject from profile
-static constexpr uint32_t kSensorGracePeriodMs       = 3000;
-static constexpr float    kKineticEnergyDeadbandG     = 0.25f;
-static constexpr float    kRotationDeadbandDps        = 15.0f;
-static constexpr float    kOrientationOffsetDeg       = 0.0f;
-static constexpr float    kInertialOverloadThresholdG = 1.0f;
-static constexpr float    kInertialOverloadChargeRate = 2.0f;
-static constexpr float    kInertialOverloadDrainRate  = 0.5f;
-static constexpr float    kInertialBurstCooldownMs    = 1500.0f;
-
 SaberActionBus::SaberActionBus() = default;
 
 SaberActionBus::~SaberActionBus() {
@@ -85,6 +75,15 @@ void SaberActionBus::stop() {
     }
 
     ESP_LOGI(TAG, "Bus stopped");
+}
+
+void SaberActionBus::setPhysicsConfig(const Core::InertialDefinition& def) {
+    m_kineticEnergyDeadbandG = def.kineticEnergyDeadbandG;
+    m_rotationDeadbandDps    = def.rotationDeadbandDps;
+    m_overloadThresholdG     = def.overloadThresholdG;
+    m_overloadChargeRate     = def.overloadChargeRate;
+    m_overloadDrainRate      = def.overloadDrainRate;
+    m_burstCooldownMs        = def.burstCooldownMs;
 }
 
 void SaberActionBus::registerEffect(std::unique_ptr<InertialEffect> effect) {
@@ -197,29 +196,29 @@ void SaberActionBus::loadStagedMotionToPacket() {
 }
 
 void SaberActionBus::filterStagedMotionWarmUp() {
-    if (m_packet.timestamp_ms < kSensorGracePeriodMs) {
+    if (m_packet.timestamp_ms < System::Config::HardwareConfig::kImuGracePeriodMs) {
         m_packet.KineticEnergy = 0.0f;
         m_packet.AxisRotation[0] = 0.0f;
         m_packet.AxisRotation[1] = 0.0f;
         m_packet.AxisRotation[2] = 0.0f;
-        m_packet.OrientationVector = 90.0f + kOrientationOffsetDeg;
+        m_packet.OrientationVector = 90.0f + System::Config::HardwareConfig::kImuOrientationOffsetDeg;
     }
 }
 
 void SaberActionBus::filterStagedMotionStabilization() {
-    if (m_packet.KineticEnergy < kKineticEnergyDeadbandG) {
+    if (m_packet.KineticEnergy < m_kineticEnergyDeadbandG) {
         m_packet.KineticEnergy = 0.0f;
     }
 
     for (int i = 0; i < 3; ++i) {
-        if (std::abs(m_packet.AxisRotation[i]) < kRotationDeadbandDps) {
+        if (std::abs(m_packet.AxisRotation[i]) < m_rotationDeadbandDps) {
             m_packet.AxisRotation[i] = 0.0f;
         }
     }
 }
 
 void SaberActionBus::filterStagedMotionOrientation() {
-    float correctedAngle = m_packet.OrientationVector - kOrientationOffsetDeg;
+    float correctedAngle = m_packet.OrientationVector - System::Config::HardwareConfig::kImuOrientationOffsetDeg;
     if (correctedAngle > 90.0f) correctedAngle = 90.0f;
     if (correctedAngle < -90.0f) correctedAngle = -90.0f;
     
@@ -254,7 +253,7 @@ float SaberActionBus::calculateDeltaTimeSec() {
 }
 
 bool SaberActionBus::isInertialOverloadInCooldown() const {
-    return (m_packet.timestamp_ms - m_lastBurstTimeMs) < kInertialBurstCooldownMs;
+    return (m_packet.timestamp_ms - m_lastBurstTimeMs) < m_burstCooldownMs;
 }
 
 void SaberActionBus::resetInertialOverloadState() {
@@ -264,10 +263,10 @@ void SaberActionBus::resetInertialOverloadState() {
 }
 
 void SaberActionBus::chargeOrDrainInertialOverload(float dtSec) {
-    if (m_packet.KineticEnergy > kInertialOverloadThresholdG) {
-        m_overloadLevel += kInertialOverloadChargeRate * dtSec;
+    if (m_packet.KineticEnergy > m_overloadThresholdG) {
+        m_overloadLevel += m_overloadChargeRate * dtSec;
     } else {
-        m_overloadLevel -= kInertialOverloadDrainRate * dtSec;
+        m_overloadLevel -= m_overloadDrainRate * dtSec;
     }
 }
 

@@ -26,6 +26,10 @@ struct InertialDefinition {
     float overloadDrainRate;   ///< Accumulator drain rate per second at rest.
     float burstCooldownMs;     ///< Minimum milliseconds between successive Inertial Bursts.
 
+    // ── Sensor Sensitivity (per-profile) ─────────────────────────────────────
+    float kineticEnergyDeadbandG;  ///< Minimum linear acceleration in Gs to register as movement.
+    float rotationDeadbandDps;     ///< Minimum angular velocity in deg/sec to register as rotation.
+
     float    swingIdleThresholdG;   ///< Below this G-Force, swing volume is zero.
     float    swingMaxThresholdG;    ///< At or above this G-Force, swing volume is at maximum.
     float    swingCrossfadeLowG;    ///< Below this G-Force, SwingL dominates the tonal balance.

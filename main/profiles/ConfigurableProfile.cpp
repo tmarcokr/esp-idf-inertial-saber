@@ -45,6 +45,8 @@ void ConfigurableProfile::load(Core::SaberActionBus &bus,
                                ProfileManager &profileManager) {
   ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName);
 
+  bus.setPhysicsConfig(m_def);
+
   auto swingFx =
       std::make_unique<Effects::InertialSwingEffect>(audio, m_def);
   swingEffect = swingFx.get();
