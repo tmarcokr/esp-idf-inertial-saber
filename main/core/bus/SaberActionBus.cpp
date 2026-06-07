@@ -85,10 +85,15 @@ void SaberActionBus::registerEffect(std::unique_ptr<InertialEffect> effect) {
               [](const auto& a, const auto& b) {
                   return a->Priority < b->Priority;
               });
+    m_effectsChanged = true;
 }
 
 void SaberActionBus::clearEffects() {
+    for (auto& fx : m_effects) {
+        m_effectsPendingDestruction.push_back(std::move(fx));
+    }
     m_effects.clear();
+    m_effectsChanged = true;
 }
 
 void SaberActionBus::updateMotion(float energy, const float rotation[3], float orientation) {
@@ -140,11 +145,23 @@ void SaberActionBus::busLoop() {
         computeInertialOverload();
         drainInputQueue();
 
-        for (auto& effect : m_effects) {
+        m_effectsChanged = false;
+        std::vector<InertialEffect*> activeEffects;
+        activeEffects.reserve(m_effects.size());
+        for (const auto& fx : m_effects) {
+            activeEffects.push_back(fx.get());
+        }
+
+        for (auto* effect : activeEffects) {
+            if (m_effectsChanged) {
+                break;
+            }
             if (effect->Test(m_packet)) {
                 effect->Run();
             }
         }
+
+        m_effectsPendingDestruction.clear();
         m_packet.inputs = {};
     }
 

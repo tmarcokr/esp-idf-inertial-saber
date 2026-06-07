@@ -13,6 +13,7 @@ This workflow guides the process of creating a new lightsaber profile for Inerti
 Place your raw sound files inside a single source folder. The script scans and maps them according to these patterns:
 
 *   **Hum Loop**: `hum.wav`
+*   **Profile Selection Sound**: `font.wav`
 *   **Low Swing**: `swingl*.wav`, `swing_l*.wav`, `lswing*.wav` (e.g. `swingl1.wav`, `swingl2.wav` ...)
 *   **High Swing**: `swingh*.wav`, `swing_h*.wav`, `hswing*.wav` (e.g. `swingh1.wav`, `swingh2.wav` ...)
 *   **Inertial Bursts**: `swng*.wav`, `burst*.wav`

@@ -59,6 +59,7 @@ def build_profile(src_dir, dest_root, profile_name, blade_hue):
     # Sound categories mapping: (pattern, target_subfolder, target_prefix)
     categories = {
         "hum": (r"^hum\.wav$", "", "hum"),
+        "font": (r"^font\.wav$", "", "font"),
         "swingl": (r"^(swingl|swing_l|lswing)\d*\.wav$", "swingl", "swingl"),
         "swingh": (r"^(swingh|swing_h|hswing)\d*\.wav$", "swingh", "swingh"),
         "burst": (r"^(swng|burst)\d*\.wav$", "swng", "swng"),
@@ -150,6 +151,8 @@ def build_profile(src_dir, dest_root, profile_name, blade_hue):
         for idx, src_path in enumerate(paths):
             if cat == "hum":
                 dest_name = "hum.wav"
+            elif cat == "font":
+                dest_name = "font.wav"
             else:
                 dest_name = f"{prefix}{idx+1}.wav"
                 
