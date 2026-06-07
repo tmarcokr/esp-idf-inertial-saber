@@ -37,11 +37,12 @@ bool DragEffect::Test(const Core::SaberDataPacket& packet) {
 
     if (m_buttonId < Core::Platform::kMaxInputs) {
         const auto& input = packet.inputs[m_buttonId];
+        using Gesture    = Core::InputDescriptor::Gesture;
         using InputState = Core::InputDescriptor::State;
 
-        if (input.current == InputState::HELD) {
+        if (input.gesture == Gesture::HOLD_TICK && input.holdLevel == 1) {
             m_triggerMet = true;
-        } else if (input.current == InputState::RELEASED) {
+        } else if (input.current == InputState::RELEASED && m_active) {
             m_triggerMet = false;
         }
     }

@@ -30,20 +30,17 @@ BlasterEffect::BlasterEffect(
     Priority = 2;
 }
 
-bool BlasterEffect::Test(const Core::SaberDataPacket &packet) {
-  if (!m_power.isIgnited()) {
-    return false;
-  }
-  if (m_buttonId >= Core::Platform::kMaxInputs) {
-    return false;
-  }
+bool BlasterEffect::Test(const Core::SaberDataPacket& packet) {
+    if (!m_power.isIgnited()) {
+        return false;
+    }
+    if (m_buttonId >= Core::Platform::kMaxInputs) {
+        return false;
+    }
 
-  const auto &input = packet.inputs[m_buttonId];
-  using InputState = Core::InputDescriptor::State;
-
-  return (input.current == InputState::RELEASED &&
-          input.previous != InputState::IDLE &&
-          input.holdDuration_ms < 500);
+    const auto& input = packet.inputs[m_buttonId];
+    using Gesture = Core::InputDescriptor::Gesture;
+    return input.gesture == Gesture::CLICK && input.pressCount == 1;
 }
 
 void BlasterEffect::Run() {

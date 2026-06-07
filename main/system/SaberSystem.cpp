@@ -1,6 +1,8 @@
 #include "SaberSystem.hpp"
 #include "profiles/ProfileParser.hpp"
 #include "core/effects/inertial_engine/audio/InertialSwingEffect.hpp"
+#include "profiles/inertial/effects/ProfileCycleEffect.hpp"
+#include "system/config/HardwareConfig.hpp"
 #include "esp_log.h"
 
 namespace InertialSaber::System {
@@ -35,12 +37,13 @@ esp_err_t SaberSystem::start() {
   m_profileManager.init();
   m_profileManager.loadActive(m_bus, *m_audioHardware.getEngine(), *m_ledHardware.getEngine());
 
-  m_btnHardware.getButton()->onLongPress(1500, [this]() {
-    if (m_profileManager.getActiveProfile().getPowerState() != Core::InertialProfile::PowerState::RETRACTED) {
-      return;
-    }
-    m_profileManager.nextProfile(m_bus, *m_audioHardware.getEngine(), *m_ledHardware.getEngine());
-  });
+  m_bus.registerEffect(std::make_unique<Effects::ProfileCycleEffect>(
+      m_profileManager.getActiveProfile(),
+      m_profileManager,
+      m_bus,
+      *m_audioHardware.getEngine(),
+      *m_ledHardware.getEngine(),
+      Config::HardwareConfig::kMainBtnInputId));
 
   ESP_LOGI(TAG, "Starting Action Bus...");
   if ((err = m_bus.start()) != ESP_OK) {
