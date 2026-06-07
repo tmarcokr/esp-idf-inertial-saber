@@ -14,6 +14,8 @@ struct HardwareConfig {
     // ── Main Button ──
     static constexpr gpio_num_t kMainBtn = GPIO_NUM_9;
     static constexpr uint8_t kMainBtnInputId = 0;
+    static constexpr uint32_t kClickWindowMs = 400;
+    static constexpr uint32_t kHoldTickMs = 500;
 
     // ── SD Card SPI pins ──
     static constexpr gpio_num_t kSdMiso = GPIO_NUM_4;

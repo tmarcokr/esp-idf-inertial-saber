@@ -20,8 +20,20 @@ struct InputDescriptor {
     State current = State::IDLE;
     State previous = State::IDLE;
     uint32_t holdDuration_ms = 0;
-    uint8_t pressCount = 0;
     uint32_t lastTransition_ms = 0;
+
+    /**
+     * @brief Semantic gesture resolved by the input adapter.
+     */
+    enum class Gesture : uint8_t {
+        NONE      = 0,
+        CLICK     = 1,
+        HOLD_TICK = 2
+    };
+
+    Gesture gesture = Gesture::NONE;
+    uint8_t pressCount = 0;
+    uint8_t holdLevel = 0;
 };
 
 /**

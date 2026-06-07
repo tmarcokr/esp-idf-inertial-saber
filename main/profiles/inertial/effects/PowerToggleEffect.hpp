@@ -60,8 +60,6 @@ private:
     bool     m_pendingTransition = false;
     bool     m_enginesStarted = false;
     uint32_t m_sequenceStartMs = 0;
-    uint32_t m_lastClickTimeMs = 0;
-    bool     m_hasLastClick = false;
 };
 
 } // namespace InertialSaber::Effects

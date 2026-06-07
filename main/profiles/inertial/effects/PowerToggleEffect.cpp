@@ -37,53 +37,34 @@ PowerToggleEffect::PowerToggleEffect(
   Priority = 1;
 }
 
-bool PowerToggleEffect::Test(const Core::SaberDataPacket &packet) {
-  if (m_buttonId >= Core::Platform::kMaxInputs) {
-    return false;
-  }
-
-  using ProfileState = Core::InertialProfile::PowerState;
-  const ProfileState state = m_profile.getPowerState();
-
-  if (state == ProfileState::IGNITING || state == ProfileState::RETRACTING) {
-    return true;
-  }
-
-  if (state != ProfileState::IGNITED) {
-    m_lastClickTimeMs = 0;
-    m_hasLastClick = false;
-  }
-
-  const auto &input = packet.inputs[m_buttonId];
-  using InputState = Core::InputDescriptor::State;
-
-  if (state == ProfileState::RETRACTED) {
-    const bool clicked = (input.current == InputState::RELEASED &&
-                          input.previous != InputState::IDLE &&
-                          input.holdDuration_ms < 500);
-    if (clicked) {
-      m_pendingTransition = true;
-      return true;
+bool PowerToggleEffect::Test(const Core::SaberDataPacket& packet) {
+    if (m_buttonId >= Core::Platform::kMaxInputs) {
+        return false;
     }
-  } else if (state == ProfileState::IGNITED) {
-    const bool clicked = (input.current == InputState::RELEASED &&
-                          input.previous != InputState::IDLE &&
-                          input.holdDuration_ms < 500);
-    if (clicked) {
-      const uint32_t now = nowMs();
-      if (m_hasLastClick && (now - m_lastClickTimeMs) <= 500) {
-        m_lastClickTimeMs = 0;
-        m_hasLastClick = false;
+
+    using ProfileState = Core::InertialProfile::PowerState;
+    using Gesture      = Core::InputDescriptor::Gesture;
+
+    const auto state  = m_profile.getPowerState();
+    const auto& input = packet.inputs[m_buttonId];
+
+    if (state == ProfileState::IGNITING || state == ProfileState::RETRACTING) {
+        return true;
+    }
+
+    if (state == ProfileState::RETRACTED &&
+        input.gesture == Gesture::CLICK && input.pressCount == 1) {
         m_pendingTransition = true;
         return true;
-      } else {
-        m_lastClickTimeMs = now;
-        m_hasLastClick = true;
-      }
     }
-  }
 
-  return false;
+    if (state == ProfileState::IGNITED &&
+        input.gesture == Gesture::CLICK && input.pressCount == 2) {
+        m_pendingTransition = true;
+        return true;
+    }
+
+    return false;
 }
 
 void PowerToggleEffect::Run() {
