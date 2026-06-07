@@ -1,12 +1,15 @@
 #pragma once
 
 #include "interfaces/InertialEffect.hpp"
-#include "interfaces/InertialProfile.hpp"
-#include "profiles/ProfileManager.hpp"
 #include <cstdint>
 
 namespace InertialSaber::Core {
 struct SaberDataPacket;
+class SaberActionBus;
+}
+namespace InertialSaber::Profiles {
+class ConfigurableProfile;
+class ProfileManager;
 }
 namespace Espressif::Wrappers::Audio {
 class AudioEngine;
@@ -18,7 +21,7 @@ class Engine;
 namespace InertialSaber::Effects {
 
 /**
- * @brief Cycles to the next profile on CLICK pressCount=3 while the saber is IGNITED.
+ * @brief Cycles to the next profile on CLICK pressCount=3 while the saber is RETRACTED.
  */
 class ProfileCycleEffect final : public Core::InertialEffect {
 public:
@@ -26,7 +29,7 @@ public:
      * @brief Construct a new ProfileCycleEffect.
      */
     ProfileCycleEffect(
-        Core::InertialProfile&                   profile,
+        Profiles::ConfigurableProfile&           profile,
         Profiles::ProfileManager&                profileManager,
         Core::SaberActionBus&                    bus,
         Espressif::Wrappers::Audio::AudioEngine& audio,
@@ -44,7 +47,7 @@ public:
     void Run() override;
 
 private:
-    Core::InertialProfile&                   m_profile;
+    Profiles::ConfigurableProfile&           m_profile;
     Profiles::ProfileManager&                m_profileManager;
     Core::SaberActionBus&                    m_bus;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;

@@ -17,9 +17,14 @@ This document tracks all non-default `sdkconfig` modifications required by Inert
 | `CONFIG_FATFS_MAX_LFN` | _(absent)_ | `255` | 2026-05-09 |
 | `CONFIG_FATFS_LFN_NONE` | `y` | `not set` | 2026-05-09 |
 
-**Reason**: The InertialSwing engine loads audio files from `/sdcard/InertialFont/...`. The directory name `InertialFont` (13 chars) exceeds the FAT 8.3 filename limit. Without LFN enabled, the FAT VFS driver cannot resolve any path under this directory, causing `ESP_ERR_NOT_FOUND` on all `AudioChannel::load()` calls.
+**Reason**: Two critical subsystems depend on long filenames:
+1. **Profile Loader** — `ProfileLoader::loadFromSd()` opens `profile.json` (4-char extension exceeds the 3-char 8.3 limit). Without LFN, the driver stores it as `PROFIL~1.JSO` and `fopen("profile.json")` silently fails. The system boots with zero profiles and the saber does not respond to any input — with **no error messages**.
+2. **Audio Engine** — loads WAV files from paths like `/sdcard/profiles/inertial/...`. Directory names exceeding 8 characters (e.g. `InertialFont`) cannot be resolved without LFN.
 
 **Heap vs Stack**: LFN buffers are allocated on the heap (`CONFIG_FATFS_LFN_HEAP`) rather than the stack to avoid increasing stack requirements for tasks that perform file I/O.
+
+> [!CAUTION]
+> This override is silently reset to `LFN_NONE` by `idf.py set-target` and `idf.py fullclean`. The failure mode is **silent** — no error logs, the saber simply does not ignite. Always verify after target changes.
 
 ---
 

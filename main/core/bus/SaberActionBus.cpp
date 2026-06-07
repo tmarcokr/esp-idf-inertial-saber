@@ -10,6 +10,16 @@ namespace InertialSaber::Core {
 
 static constexpr const char* TAG = "SaberActionBus";
 
+// TODO: Plan 03 — inject from profile
+static constexpr uint32_t kSensorGracePeriodMs       = 3000;
+static constexpr float    kKineticEnergyDeadbandG     = 0.25f;
+static constexpr float    kRotationDeadbandDps        = 15.0f;
+static constexpr float    kOrientationOffsetDeg       = 0.0f;
+static constexpr float    kInertialOverloadThresholdG = 1.0f;
+static constexpr float    kInertialOverloadChargeRate = 2.0f;
+static constexpr float    kInertialOverloadDrainRate  = 0.5f;
+static constexpr float    kInertialBurstCooldownMs    = 1500.0f;
+
 SaberActionBus::SaberActionBus() = default;
 
 SaberActionBus::~SaberActionBus() {
@@ -22,7 +32,7 @@ esp_err_t SaberActionBus::start() {
         return ESP_FAIL;
     }
 
-    m_inputQueue = xQueueCreate(Platform::kInputQueueDepth, sizeof(InputEvent));
+    m_inputQueue = xQueueCreate(kInputQueueDepth, sizeof(InputEvent));
     if (m_inputQueue == nullptr) {
         ESP_LOGE(TAG, "Failed to create input queue");
         return ESP_FAIL;
@@ -34,11 +44,11 @@ esp_err_t SaberActionBus::start() {
     BaseType_t result = xTaskCreatePinnedToCore(
         busTaskEntry,
         "saber_bus",
-        Platform::kBusTaskStackSize,
+        System::Config::HardwareConfig::kBusTaskStackSize,
         this,
-        Platform::kBusTaskPriority,
+        System::Config::HardwareConfig::kBusTaskPriority,
         &m_taskHandle,
-        Platform::kBusTaskCore
+        System::Config::HardwareConfig::kBusTaskCore
     );
 
     if (result != pdPASS) {
@@ -50,7 +60,8 @@ esp_err_t SaberActionBus::start() {
     }
 
     ESP_LOGI(TAG, "Bus started on core %d (priority %d)",
-             Platform::kBusTaskCore, Platform::kBusTaskPriority);
+             System::Config::HardwareConfig::kBusTaskCore,
+             System::Config::HardwareConfig::kBusTaskPriority);
     return ESP_OK;
 }
 
@@ -64,7 +75,7 @@ void SaberActionBus::stop() {
     if (m_taskHandle != nullptr) {
         xTaskNotifyGive(m_taskHandle);
         // Without this delay, m_taskHandle could be nullified before the task reads m_running
-        vTaskDelay(pdMS_TO_TICKS(Platform::kBusTimeoutMs * 2));
+        vTaskDelay(pdMS_TO_TICKS(kBusTimeoutMs * 2));
         m_taskHandle = nullptr;
     }
 
@@ -109,7 +120,7 @@ void SaberActionBus::updateMotion(float energy, const float rotation[3], float o
 }
 
 void SaberActionBus::pushInputEvent(uint8_t inputId, const InputDescriptor& descriptor) {
-    if (inputId >= Platform::kMaxInputs || m_inputQueue == nullptr) {
+    if (inputId >= System::Config::HardwareConfig::kMaxInputs || m_inputQueue == nullptr) {
         return;
     }
 
@@ -133,7 +144,7 @@ void SaberActionBus::busTaskEntry(void* arg) {
 
 void SaberActionBus::busLoop() {
     while (m_running) {
-        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(Platform::kBusTimeoutMs));
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kBusTimeoutMs));
 
         if (!m_running) {
             break;
@@ -171,7 +182,7 @@ void SaberActionBus::busLoop() {
 void SaberActionBus::drainInputQueue() {
     InputEvent event{};
     while (xQueueReceive(m_inputQueue, &event, 0) == pdTRUE) {
-        if (event.inputId < Platform::kMaxInputs) {
+        if (event.inputId < System::Config::HardwareConfig::kMaxInputs) {
             m_packet.inputs[event.inputId] = event.descriptor;
         }
     }
@@ -186,29 +197,29 @@ void SaberActionBus::loadStagedMotionToPacket() {
 }
 
 void SaberActionBus::filterStagedMotionWarmUp() {
-    if (m_packet.timestamp_ms < Platform::kSensorGracePeriodMs) {
+    if (m_packet.timestamp_ms < kSensorGracePeriodMs) {
         m_packet.KineticEnergy = 0.0f;
         m_packet.AxisRotation[0] = 0.0f;
         m_packet.AxisRotation[1] = 0.0f;
         m_packet.AxisRotation[2] = 0.0f;
-        m_packet.OrientationVector = 90.0f + Platform::kOrientationOffsetDeg;
+        m_packet.OrientationVector = 90.0f + kOrientationOffsetDeg;
     }
 }
 
 void SaberActionBus::filterStagedMotionStabilization() {
-    if (m_packet.KineticEnergy < Platform::kKineticEnergyDeadbandG) {
+    if (m_packet.KineticEnergy < kKineticEnergyDeadbandG) {
         m_packet.KineticEnergy = 0.0f;
     }
 
     for (int i = 0; i < 3; ++i) {
-        if (std::abs(m_packet.AxisRotation[i]) < Platform::kRotationDeadbandDps) {
+        if (std::abs(m_packet.AxisRotation[i]) < kRotationDeadbandDps) {
             m_packet.AxisRotation[i] = 0.0f;
         }
     }
 }
 
 void SaberActionBus::filterStagedMotionOrientation() {
-    float correctedAngle = m_packet.OrientationVector - Platform::kOrientationOffsetDeg;
+    float correctedAngle = m_packet.OrientationVector - kOrientationOffsetDeg;
     if (correctedAngle > 90.0f) correctedAngle = 90.0f;
     if (correctedAngle < -90.0f) correctedAngle = -90.0f;
     
@@ -243,7 +254,7 @@ float SaberActionBus::calculateDeltaTimeSec() {
 }
 
 bool SaberActionBus::isInertialOverloadInCooldown() const {
-    return (m_packet.timestamp_ms - m_lastBurstTimeMs) < Platform::kInertialBurstCooldownMs;
+    return (m_packet.timestamp_ms - m_lastBurstTimeMs) < kInertialBurstCooldownMs;
 }
 
 void SaberActionBus::resetInertialOverloadState() {
@@ -253,10 +264,10 @@ void SaberActionBus::resetInertialOverloadState() {
 }
 
 void SaberActionBus::chargeOrDrainInertialOverload(float dtSec) {
-    if (m_packet.KineticEnergy > Platform::kInertialOverloadThresholdG) {
-        m_overloadLevel += Platform::kInertialOverloadChargeRate * dtSec;
+    if (m_packet.KineticEnergy > kInertialOverloadThresholdG) {
+        m_overloadLevel += kInertialOverloadChargeRate * dtSec;
     } else {
-        m_overloadLevel -= Platform::kInertialOverloadDrainRate * dtSec;
+        m_overloadLevel -= kInertialOverloadDrainRate * dtSec;
     }
 }
 

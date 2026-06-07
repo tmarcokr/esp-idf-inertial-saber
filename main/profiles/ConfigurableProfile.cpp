@@ -1,11 +1,14 @@
 #include "profiles/ConfigurableProfile.hpp"
 #include "profiles/ProfileParser.hpp"
+#include "profiles/ProfileManager.hpp"
 #include "InertialLightEffect.hpp"
 #include "PowerToggleEffect.hpp"
 #include "InertialSwingEffect.hpp"
 #include "BlasterEffect.hpp"
 #include "KineticImpactEffect.hpp"
 #include "DragEffect.hpp"
+#include "ProfileCycleEffect.hpp"
+#include "system/config/HardwareConfig.hpp"
 
 #include "esp_log.h"
 
@@ -28,9 +31,18 @@ const Core::InertialDefinition &ConfigurableProfile::getDefinition() const {
   return m_def;
 }
 
+ConfigurableProfile::PowerState ConfigurableProfile::getPowerState() const {
+  return m_powerState;
+}
+
+void ConfigurableProfile::setPowerState(PowerState state) {
+  m_powerState = state;
+}
+
 void ConfigurableProfile::load(Core::SaberActionBus &bus,
                                Espressif::Wrappers::Audio::AudioEngine &audio,
-                               Espressif::Wrappers::SmartLed::Engine &led) {
+                               Espressif::Wrappers::SmartLed::Engine &led,
+                               ProfileManager &profileManager) {
   ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName);
 
   auto swingFx =
@@ -56,6 +68,14 @@ void ConfigurableProfile::load(Core::SaberActionBus &bus,
 
   bus.registerEffect(std::make_unique<Effects::DragEffect>(
       powerRef, audio, led, m_def, 0));
+
+  bus.registerEffect(std::make_unique<Effects::ProfileCycleEffect>(
+      *this,
+      profileManager,
+      bus,
+      audio,
+      led,
+      System::Config::HardwareConfig::kMainBtnInputId));
 }
 
 void ConfigurableProfile::unload(Core::SaberActionBus &bus) {

@@ -1,0 +1,8 @@
+# InertialSaber OS — sdkconfig overrides
+# See docs/wiki/sdkconfig_overrides.md for rationale.
+
+# FAT Long File Name Support (CRITICAL)
+# Without LFN, profile.json (4-char extension) cannot be resolved
+# and the system boots silently with zero profiles.
+CONFIG_FATFS_LFN_HEAP=y
+CONFIG_FATFS_MAX_LFN=255

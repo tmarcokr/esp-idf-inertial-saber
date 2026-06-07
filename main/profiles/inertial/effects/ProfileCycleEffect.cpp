@@ -1,4 +1,7 @@
 #include "ProfileCycleEffect.hpp"
+#include "profiles/ConfigurableProfile.hpp"
+#include "profiles/ProfileManager.hpp"
+#include "system/config/HardwareConfig.hpp"
 #include "models/SaberDataPacket.hpp"
 #include "esp_log.h"
 #include <string>
@@ -8,7 +11,7 @@ namespace InertialSaber::Effects {
 static constexpr const char* TAG = "ProfileCycle";
 
 ProfileCycleEffect::ProfileCycleEffect(
-    Core::InertialProfile&                   profile,
+    Profiles::ConfigurableProfile&           profile,
     Profiles::ProfileManager&                profileManager,
     Core::SaberActionBus&                    bus,
     Espressif::Wrappers::Audio::AudioEngine& audio,
@@ -25,9 +28,9 @@ ProfileCycleEffect::ProfileCycleEffect(
 }
 
 bool ProfileCycleEffect::Test(const Core::SaberDataPacket& packet) {
-    using PowerState = Core::InertialProfile::PowerState;
+    using PowerState = Profiles::ConfigurableProfile::PowerState;
     if (m_profile.getPowerState() != PowerState::RETRACTED) return false;
-    if (m_buttonId >= Core::Platform::kMaxInputs)     return false;
+    if (m_buttonId >= System::Config::HardwareConfig::kMaxInputs) return false;
 
     const auto& input = packet.inputs[m_buttonId];
     using Gesture = Core::InputDescriptor::Gesture;

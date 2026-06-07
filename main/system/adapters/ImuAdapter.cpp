@@ -19,8 +19,8 @@ ImuAdapter::~ImuAdapter() {
 esp_err_t ImuAdapter::start() {
     BaseType_t result = xTaskCreatePinnedToCore(
         imuAdapterTask, "imu_adapter", 4096, this,
-        Core::Platform::kBusTaskPriority + 1,
-        &m_imuTaskHandle, Core::Platform::kBusTaskCore);
+        Config::HardwareConfig::kBusTaskPriority + 1,
+        &m_imuTaskHandle, Config::HardwareConfig::kBusTaskCore);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "IMU adapter task creation failed");

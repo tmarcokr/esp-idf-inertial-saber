@@ -1,7 +1,5 @@
 #include "profiles/ProfileManager.hpp"
 #include "profiles/ProfileLoader.hpp"
-#include "profiles/inertial/effects/ProfileCycleEffect.hpp"
-#include "system/config/HardwareConfig.hpp"
 #include "esp_log.h"
 #include <cstdio>
 
@@ -15,7 +13,8 @@ void ProfileManager::init() {
   esp_err_t err = ProfileLoader::loadFromSd(m_profiles);
 
   if (err != ESP_OK || m_profiles.empty()) {
-    ESP_LOGI(TAG, "No profiles found on SD. System will start without active profiles.");
+    ESP_LOGE(TAG, "No profiles found on SD (err=%s, count=%u)",
+             esp_err_to_name(err), (unsigned)m_profiles.size());
   }
 
   m_activeIndex = 0;
@@ -25,21 +24,25 @@ void ProfileManager::init() {
     if (fscanf(f, "%u", &loadedIndex) == 1) {
       if (loadedIndex < m_profiles.size()) {
         m_activeIndex = loadedIndex;
+        ESP_LOGI(TAG, "Restored active profile index: %u", loadedIndex);
       } else {
-        ESP_LOGW(TAG, "Loaded active index %u out of bounds (%u profiles). Resetting to 0.", loadedIndex, m_profiles.size());
+        ESP_LOGW(TAG, "Loaded active index %u out of bounds (%u profiles). Resetting to 0.", loadedIndex, (unsigned)m_profiles.size());
       }
+    } else {
+      ESP_LOGW(TAG, "Failed to parse active_profile.txt content");
     }
     fclose(f);
+  } else {
+    ESP_LOGW(TAG, "active_profile.txt not found, defaulting to index 0");
   }
-  ESP_LOGI(TAG, "Initialized %u profile(s)", m_profiles.size());
+  ESP_LOGI(TAG, "Initialized %u profile(s), active index: %u", (unsigned)m_profiles.size(), (unsigned)m_activeIndex);
 }
 
 void ProfileManager::loadActive(Core::SaberActionBus &bus,
                                Espressif::Wrappers::Audio::AudioEngine &audio,
                                Espressif::Wrappers::SmartLed::Engine &led) {
   if (m_profiles.empty()) return;
-  m_profiles[m_activeIndex]->load(bus, audio, led);
-  registerSystemEffects(bus, audio, led);
+  m_profiles[m_activeIndex]->load(bus, audio, led, *this);
 }
 
 void ProfileManager::nextProfile(Core::SaberActionBus &bus,
@@ -53,8 +56,7 @@ void ProfileManager::nextProfile(Core::SaberActionBus &bus,
   m_activeIndex = (m_activeIndex + 1) % m_profiles.size();
 
   ESP_LOGI(TAG, "Loading next profile at index %u...", m_activeIndex);
-  m_profiles[m_activeIndex]->load(bus, audio, led);
-  registerSystemEffects(bus, audio, led);
+  m_profiles[m_activeIndex]->load(bus, audio, led, *this);
   saveActiveIndex();
 }
 
@@ -73,8 +75,7 @@ void ProfileManager::prevProfile(Core::SaberActionBus &bus,
   }
 
   ESP_LOGI(TAG, "Loading previous profile at index %u...", m_activeIndex);
-  m_profiles[m_activeIndex]->load(bus, audio, led);
-  registerSystemEffects(bus, audio, led);
+  m_profiles[m_activeIndex]->load(bus, audio, led, *this);
   saveActiveIndex();
 }
 
@@ -83,24 +84,13 @@ void ProfileManager::saveActiveIndex() {
   if (f) {
     fprintf(f, "%u\n", (unsigned int)m_activeIndex);
     fclose(f);
+    ESP_LOGI(TAG, "Saved active profile index: %u", (unsigned)m_activeIndex);
   } else {
     ESP_LOGE(TAG, "Failed to open active_profile.txt for writing");
   }
 }
 
-void ProfileManager::registerSystemEffects(Core::SaberActionBus &bus,
-                                           Espressif::Wrappers::Audio::AudioEngine &audio,
-                                           Espressif::Wrappers::SmartLed::Engine &led) {
-  bus.registerEffect(std::make_unique<Effects::ProfileCycleEffect>(
-      *m_profiles[m_activeIndex],
-      *this,
-      bus,
-      audio,
-      led,
-      System::Config::HardwareConfig::kMainBtnInputId));
-}
-
-Core::InertialProfile &ProfileManager::getActiveProfile() const {
+ConfigurableProfile &ProfileManager::getActiveProfile() const {
   return *m_profiles[m_activeIndex];
 }
 
