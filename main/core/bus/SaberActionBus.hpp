@@ -97,6 +97,8 @@ private:
     volatile bool m_running = false;
 
     std::vector<std::unique_ptr<InertialEffect>> m_effects;
+    std::vector<std::unique_ptr<InertialEffect>> m_effectsPendingDestruction;
+    bool m_effectsChanged = false;
     SaberDataPacket m_packet{};
 
     float m_overloadLevel = 0.0f;

@@ -59,6 +59,10 @@ public:
   [[nodiscard]] size_t getProfileCount() const;
 
 private:
+  void registerSystemEffects(Core::SaberActionBus &bus,
+                             Espressif::Wrappers::Audio::AudioEngine &audio,
+                             Espressif::Wrappers::SmartLed::Engine &led);
+
   std::vector<std::unique_ptr<Core::InertialProfile>> m_profiles;
   size_t m_activeIndex = 0;
 };
