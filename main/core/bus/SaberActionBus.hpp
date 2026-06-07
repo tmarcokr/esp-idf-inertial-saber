@@ -3,6 +3,7 @@
 #include "../interfaces/InertialEffect.hpp"
 #include "system/config/HardwareConfig.hpp"
 #include "../models/SaberDataPacket.hpp"
+#include "../models/InertialDefinition.hpp"
 
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
@@ -58,6 +59,12 @@ public:
     void stop();
 
     /**
+     * @brief Inject per-profile physics parameters from the active profile.
+     * @param def The InertialDefinition of the profile being loaded.
+     */
+    void setPhysicsConfig(const Core::InertialDefinition& def);
+
+    /**
      * @brief Register an InertialEffect on the bus. Ownership is transferred.
      * @param effect The effect to register. Must not be null.
      */
@@ -107,6 +114,13 @@ private:
     float m_overloadLevel = 0.0f;
     uint32_t m_lastBurstTimeMs = 0;
     int64_t m_lastLoopTimeUs = 0;
+
+    float m_kineticEnergyDeadbandG = 0.25f;
+    float m_rotationDeadbandDps = 15.0f;
+    float m_overloadThresholdG = 1.0f;
+    float m_overloadChargeRate = 2.0f;
+    float m_overloadDrainRate = 0.5f;
+    float m_burstCooldownMs = 1500.0f;
 
     // Atomic-safe motion staging area written by updateMotion()
     volatile float m_stagedEnergy = 0.0f;

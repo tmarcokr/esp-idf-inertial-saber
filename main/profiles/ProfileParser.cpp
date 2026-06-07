@@ -78,6 +78,10 @@ esp_err_t ProfileParser::parse(const char *jsonStr, Core::InertialDefinition &ou
   outDef.overloadDrainRate = getFloat(overload, "drain_rate", 0.5f);
   outDef.burstCooldownMs = getFloat(overload, "burst_cooldown_ms", 1500.0f);
 
+  cJSON *sensor = cJSON_GetObjectItemCaseSensitive(root, "sensor");
+  outDef.kineticEnergyDeadbandG = getFloat(sensor, "kinetic_deadband_g",    0.25f);
+  outDef.rotationDeadbandDps    = getFloat(sensor, "rotation_deadband_dps", 15.0f);
+
   cJSON *swing = cJSON_GetObjectItemCaseSensitive(root, "swing");
   outDef.swingIdleThresholdG = getFloat(swing, "idle_threshold_g", 0.15f);
   outDef.swingMaxThresholdG = getFloat(swing, "max_threshold_g", 1.0f);
@@ -131,6 +135,10 @@ esp_err_t ProfileParser::runSelfTest() {
   const char *testJson = R"({
     "name": "test_sith",
     "root_path": "profiles/sith/",
+    "sensor": {
+      "kinetic_deadband_g": 0.35,
+      "rotation_deadband_dps": 18.0
+    },
     "overload": {
       "threshold_g": 1.5,
       "charge_rate": 2.5,
@@ -191,6 +199,7 @@ esp_err_t ProfileParser::runSelfTest() {
 
   if (name != "test_sith" || std::strcmp(def.profileName, "test_sith") != 0) return ESP_FAIL;
   if (root != "profiles/sith/" || std::strcmp(def.profileRoot, "profiles/sith/") != 0) return ESP_FAIL;
+  if (def.kineticEnergyDeadbandG != 0.35f || def.rotationDeadbandDps != 18.0f) return ESP_FAIL;
   if (def.overloadThresholdG != 1.5f || def.overloadChargeRate != 2.5f) return ESP_FAIL;
   if (def.swingIdleThresholdG != 0.2f || def.humBaseVolume != 9000 || def.clashThresholdG != 2.5f) return ESP_FAIL;
   if (def.fontHumCount != 2 || def.fontSwingPairCount != 4) return ESP_FAIL;
@@ -208,6 +217,7 @@ esp_err_t ProfileParser::runSelfTest() {
   }
 
   if (fallbackName != "unnamed" || fallbackDef.overloadThresholdG != 1.0f) return ESP_FAIL;
+  if (fallbackDef.kineticEnergyDeadbandG != 0.25f || fallbackDef.rotationDeadbandDps != 15.0f) return ESP_FAIL;
   if (fallbackDef.fontHumCount != 1 || fallbackDef.bladeBaseHue != 240 || fallbackDef.clashThresholdG != 2.0f) return ESP_FAIL;
 
   ESP_LOGI(TAG, "All parser self-tests passed successfully!");

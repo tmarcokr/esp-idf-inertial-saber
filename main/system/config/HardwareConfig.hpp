@@ -11,6 +11,8 @@ struct HardwareConfig {
     static constexpr gpio_num_t kImuSda = GPIO_NUM_22;
     static constexpr gpio_num_t kImuScl = GPIO_NUM_23;
     static constexpr gpio_num_t kImuInt = GPIO_NUM_21;
+    static constexpr uint32_t kImuGracePeriodMs = 3000;
+    static constexpr float kImuOrientationOffsetDeg = 0.0f;
 
     // ── Main Button ──
     static constexpr gpio_num_t kMainBtn = GPIO_NUM_9;
