@@ -17,7 +17,6 @@ idf_component_register(
          "profiles/ProfileParser.cpp"
          "profiles/ProfileLoader.cpp"
          "profiles/ProfileManager.cpp"
-         "profiles/inertial/InertialDefaultProfile.cpp"
          "profiles/inertial/effects/BladeIgniteSweep.cpp"
          "profiles/inertial/effects/BladeRetractSweep.cpp"
          "profiles/inertial/effects/PowerToggleEffect.cpp"

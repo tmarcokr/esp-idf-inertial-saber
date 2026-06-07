@@ -1,6 +1,5 @@
 #include "profiles/ProfileManager.hpp"
 #include "profiles/ProfileLoader.hpp"
-#include "profiles/inertial/InertialDefaultProfile.hpp"
 #include "profiles/inertial/effects/ProfileCycleEffect.hpp"
 #include "system/config/HardwareConfig.hpp"
 #include "esp_log.h"
@@ -16,8 +15,7 @@ void ProfileManager::init() {
   esp_err_t err = ProfileLoader::loadFromSd(m_profiles);
 
   if (err != ESP_OK || m_profiles.empty()) {
-    ESP_LOGI(TAG, "No profiles found on SD. Using default compiled profile fallback.");
-    m_profiles.push_back(std::make_unique<InertialDefaultProfile>());
+    ESP_LOGI(TAG, "No profiles found on SD. System will start without active profiles.");
   }
 
   m_activeIndex = 0;
