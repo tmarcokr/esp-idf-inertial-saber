@@ -4,6 +4,8 @@ description: Create a dynamic lightsaber profile by validating raw WAV assets, g
 
 # Workflow: Profile Creation and Validation
 
+> **CRITICAL AGENT INSTRUCTION:** When a user executes this workflow, you MUST explicitly ask the user for the 4 required parameters (`src_dir`, `dest_root`, `profile_name`, `blade_hue`) in a conversational manner BEFORE attempting to run any script or assuming default values. Do NOT generate mock assets or execute the script until the user has provided their real data.
+
 This workflow guides the process of creating a new lightsaber profile for InertialSaber OS. It utilizes an automation script to scan, validate audio parameters against hardware requirements, calculate transition timings, and produce the required dynamic folder structure and `profile.json` configuration file.
 
 ---
@@ -65,4 +67,4 @@ python3 .agents/scripts/create_profile.py <src_dir> <dest_root> <profile_name> <
 1.  **Verify local staging folder**: Inspect the generated folder under `<dest_root>/<profile_name>/`. It should contain the `profile.json` and the subfolders containing the renamed wav files.
 2.  **SD Card Deployment**: Copy the `<profile_name>` folder to `/sdcard/profiles/` (so the path is `/sdcard/profiles/<profile_name>/profile.json`).
 3.  **Modify Configurations (Optional)**: If you need to tweak swing thresholds, LED counts, or custom lighting cycles, open and edit `/sdcard/profiles/<profile_name>/profile.json`.
-4.  **Run on Hardware**: Cycle profiles by long-pressing (1.5 seconds) the button while the blade is retracted.
+4.  **Run on Hardware**: Select the new profile using your configured profile cycle input while the blade is retracted.
