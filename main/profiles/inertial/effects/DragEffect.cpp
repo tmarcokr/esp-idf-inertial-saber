@@ -1,6 +1,6 @@
 #include "DragEffect.hpp"
 #include "AudioEngine.hpp"
-#include "BladeDragEffect.hpp"
+#include "../overlays/BladeDragEffect.hpp"
 #include "Engine.hpp"
 #include "PowerToggleEffect.hpp"
 #include "models/InertialDefinition.hpp"

@@ -1,6 +1,6 @@
 #include "KineticImpactEffect.hpp"
 #include "AudioEngine.hpp"
-#include "BladeClashFlash.hpp"
+#include "../overlays/BladeClashFlash.hpp"
 #include "Engine.hpp"
 #include "PowerToggleEffect.hpp"
 #include "models/InertialDefinition.hpp"

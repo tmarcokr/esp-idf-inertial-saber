@@ -1,6 +1,6 @@
 #include "BlasterEffect.hpp"
 #include "AudioEngine.hpp"
-#include "BladeBlasterBlock.hpp"
+#include "../overlays/BladeBlasterBlock.hpp"
 #include "Engine.hpp"
 #include "PowerToggleEffect.hpp"
 #include "models/InertialDefinition.hpp"
