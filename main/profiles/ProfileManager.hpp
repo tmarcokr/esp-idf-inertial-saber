@@ -63,6 +63,8 @@ private:
                              Espressif::Wrappers::Audio::AudioEngine &audio,
                              Espressif::Wrappers::SmartLed::Engine &led);
 
+  void saveActiveIndex();
+
   std::vector<std::unique_ptr<Core::InertialProfile>> m_profiles;
   size_t m_activeIndex = 0;
 };

@@ -26,8 +26,8 @@ ProfileCycleEffect::ProfileCycleEffect(
 
 bool ProfileCycleEffect::Test(const Core::SaberDataPacket& packet) {
     using PowerState = Core::InertialProfile::PowerState;
-    if (m_profile.getPowerState() != PowerState::IGNITED) return false;
-    if (m_buttonId >= Core::Platform::kMaxInputs)         return false;
+    if (m_profile.getPowerState() != PowerState::RETRACTED) return false;
+    if (m_buttonId >= Core::Platform::kMaxInputs)     return false;
 
     const auto& input = packet.inputs[m_buttonId];
     using Gesture = Core::InputDescriptor::Gesture;

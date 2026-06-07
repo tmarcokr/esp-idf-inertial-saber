@@ -4,6 +4,7 @@
 #include "profiles/inertial/effects/ProfileCycleEffect.hpp"
 #include "system/config/HardwareConfig.hpp"
 #include "esp_log.h"
+#include <cstdio>
 
 namespace InertialSaber::Profiles {
 
@@ -20,6 +21,18 @@ void ProfileManager::init() {
   }
 
   m_activeIndex = 0;
+  FILE *f = fopen("/sdcard/active_profile.txt", "r");
+  if (f) {
+    unsigned int loadedIndex = 0;
+    if (fscanf(f, "%u", &loadedIndex) == 1) {
+      if (loadedIndex < m_profiles.size()) {
+        m_activeIndex = loadedIndex;
+      } else {
+        ESP_LOGW(TAG, "Loaded active index %u out of bounds (%u profiles). Resetting to 0.", loadedIndex, m_profiles.size());
+      }
+    }
+    fclose(f);
+  }
   ESP_LOGI(TAG, "Initialized %u profile(s)", m_profiles.size());
 }
 
@@ -44,6 +57,7 @@ void ProfileManager::nextProfile(Core::SaberActionBus &bus,
   ESP_LOGI(TAG, "Loading next profile at index %u...", m_activeIndex);
   m_profiles[m_activeIndex]->load(bus, audio, led);
   registerSystemEffects(bus, audio, led);
+  saveActiveIndex();
 }
 
 void ProfileManager::prevProfile(Core::SaberActionBus &bus,
@@ -63,6 +77,17 @@ void ProfileManager::prevProfile(Core::SaberActionBus &bus,
   ESP_LOGI(TAG, "Loading previous profile at index %u...", m_activeIndex);
   m_profiles[m_activeIndex]->load(bus, audio, led);
   registerSystemEffects(bus, audio, led);
+  saveActiveIndex();
+}
+
+void ProfileManager::saveActiveIndex() {
+  FILE *f = fopen("/sdcard/active_profile.txt", "w");
+  if (f) {
+    fprintf(f, "%u\n", (unsigned int)m_activeIndex);
+    fclose(f);
+  } else {
+    ESP_LOGE(TAG, "Failed to open active_profile.txt for writing");
+  }
 }
 
 void ProfileManager::registerSystemEffects(Core::SaberActionBus &bus,
