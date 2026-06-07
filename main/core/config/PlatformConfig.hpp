@@ -47,8 +47,7 @@ constexpr float kOrientationOffsetDeg = 0.0f;
 // The SaberActionBus computes the Inertial Overload accumulator independently of
 // the active profile, because it starts before any profile is loaded.
 // Phase 3 will inject InertialDefinition into the bus so these defaults are
-// overridden per profile at load time. Until then, these match the values in
-// InertialDefaultProfile to preserve identical runtime behaviour.
+// overridden per profile at load time. Until then, these serve as fallback values.
 constexpr float    kInertialOverloadThresholdG  = 1.0f;
 constexpr float    kInertialOverloadChargeRate   = 2.0f;
 constexpr float    kInertialOverloadDrainRate    = 0.5f;
