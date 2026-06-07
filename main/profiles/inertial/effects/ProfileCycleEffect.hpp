@@ -1,6 +1,6 @@
 #pragma once
 
-#include "interfaces/InertialEffect.hpp"
+#include "core/InertialEffect.hpp"
 #include <cstdint>
 
 namespace InertialSaber::Core {

@@ -1,5 +1,5 @@
 #include "SdHardware.hpp"
-#include "system/config/HardwareConfig.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
 
 namespace InertialSaber::System::Hardware {
@@ -7,10 +7,10 @@ static constexpr const char* TAG = "SdHardware";
 
 esp_err_t SdHardware::init() {
     Espressif::Wrappers::SdCard::Config sd_cfg = {
-        .miso = Config::HardwareConfig::kSdMiso,
-        .mosi = Config::HardwareConfig::kSdMosi,
-        .sck = Config::HardwareConfig::kSdSck,
-        .cs = Config::HardwareConfig::kSdCs,
+        .miso = Hardware::HardwareConfig::kSdMiso,
+        .mosi = Hardware::HardwareConfig::kSdMosi,
+        .sck = Hardware::HardwareConfig::kSdSck,
+        .cs = Hardware::HardwareConfig::kSdCs,
         .mount_point = "/sdcard",
         .max_files = 5,
         .format_if_mount_failed = false};

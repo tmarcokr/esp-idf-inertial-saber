@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/models/InertialDefinition.hpp"
+#include "profiles/inertial/InertialDefinition.hpp"
 #include "esp_err.h"
 #include <string>
 
@@ -19,7 +19,7 @@ public:
    * @param outRoot Output string for profileRoot to maintain lifetime.
    * @return ESP_OK on success, or an error code.
    */
-  static esp_err_t parse(const char *jsonStr, Core::InertialDefinition &outDef,
+  static esp_err_t parse(const char *jsonStr, InertialSaber::Profiles::Inertial::InertialDefinition &outDef,
                          std::string &outName, std::string &outRoot);
 
 #ifndef NDEBUG

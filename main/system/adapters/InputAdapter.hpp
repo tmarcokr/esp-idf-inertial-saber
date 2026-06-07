@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/bus/SaberActionBus.hpp"
-#include "core/models/SaberDataPacket.hpp"
+#include "core/SaberActionBus.hpp"
+#include "core/SaberDataPacket.hpp"
 #include "GpioButton.hpp"
 #include "esp_timer.h"
 

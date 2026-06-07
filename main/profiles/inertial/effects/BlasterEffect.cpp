@@ -1,11 +1,11 @@
 #include "BlasterEffect.hpp"
 #include "AudioEngine.hpp"
-#include "../overlays/BladeBlasterBlock.hpp"
+#include "overlays/BladeBlasterBlock.hpp"
 #include "Engine.hpp"
 #include "PowerToggleEffect.hpp"
-#include "models/InertialDefinition.hpp"
-#include "models/SaberDataPacket.hpp"
-#include "system/config/HardwareConfig.hpp"
+#include "profiles/inertial/InertialDefinition.hpp"
+#include "core/SaberDataPacket.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 
 #include "esp_log.h"
 #include "esp_random.h"
@@ -20,7 +20,7 @@ BlasterEffect::BlasterEffect(
     PowerToggleEffect &power,
     Espressif::Wrappers::Audio::AudioEngine &audio,
     Espressif::Wrappers::SmartLed::Engine &ledEngine,
-    const Core::InertialDefinition &definition,
+    const InertialSaber::Profiles::Inertial::InertialDefinition &definition,
     uint8_t buttonId)
     : m_power(power)
     , m_audio(audio)
@@ -35,7 +35,7 @@ bool BlasterEffect::Test(const Core::SaberDataPacket& packet) {
     if (!m_power.isIgnited()) {
         return false;
     }
-    if (m_buttonId >= System::Config::HardwareConfig::kMaxInputs) {
+    if (m_buttonId >= System::Hardware::HardwareConfig::kMaxInputs) {
         return false;
     }
 

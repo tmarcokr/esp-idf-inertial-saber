@@ -8,7 +8,7 @@
 #include "KineticImpactEffect.hpp"
 #include "DragEffect.hpp"
 #include "ProfileCycleEffect.hpp"
-#include "system/config/HardwareConfig.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 
 #include "esp_log.h"
 
@@ -16,7 +16,7 @@ namespace InertialSaber::Profiles {
 
 static constexpr const char *TAG = "ConfigurableProfile";
 
-ConfigurableProfile::ConfigurableProfile(const Core::InertialDefinition &def)
+ConfigurableProfile::ConfigurableProfile(const InertialSaber::Profiles::Inertial::InertialDefinition &def)
     : m_def(def) {}
 
 ConfigurableProfile::ConfigurableProfile(const std::string &jsonStr)
@@ -27,7 +27,7 @@ ConfigurableProfile::ConfigurableProfile(const std::string &jsonStr)
   m_allocatedDef.profileRoot = m_profileRootStorage.c_str();
 }
 
-const Core::InertialDefinition &ConfigurableProfile::getDefinition() const {
+const InertialSaber::Profiles::Inertial::InertialDefinition &ConfigurableProfile::getDefinition() const {
   return m_def;
 }
 
@@ -77,7 +77,7 @@ void ConfigurableProfile::load(Core::SaberActionBus &bus,
       bus,
       audio,
       led,
-      System::Config::HardwareConfig::kMainBtnInputId));
+      System::Hardware::HardwareConfig::kMainBtnInputId));
 }
 
 void ConfigurableProfile::unload(Core::SaberActionBus &bus) {

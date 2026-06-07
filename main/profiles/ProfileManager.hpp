@@ -1,7 +1,7 @@
 #pragma once
 
 #include "profiles/ConfigurableProfile.hpp"
-#include "core/bus/SaberActionBus.hpp"
+#include "core/SaberActionBus.hpp"
 #include "AudioEngine.hpp"
 #include "Engine.hpp"
 #include <vector>

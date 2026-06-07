@@ -4,7 +4,7 @@
 #include "driver/gpio.h"
 #include <cstdint>
 
-namespace InertialSaber::System::Config {
+namespace InertialSaber::System::Hardware {
 
 struct HardwareConfig {
     // ── IMU (MPU6050) ──
@@ -49,4 +49,4 @@ struct HardwareConfig {
     static constexpr uint8_t  kMaxInputs        = 4;
 };
 
-} // namespace InertialSaber::System::Config
+} // namespace InertialSaber::System::Hardware

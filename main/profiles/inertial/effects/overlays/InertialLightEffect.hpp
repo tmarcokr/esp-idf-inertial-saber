@@ -2,8 +2,8 @@
 
 #include "Engine.hpp"
 #include "InertialBladeEffect.hpp"
-#include "models/InertialDefinition.hpp"
-#include "interfaces/InertialEffect.hpp"
+#include "profiles/inertial/InertialDefinition.hpp"
+#include "core/InertialEffect.hpp"
 
 #include <cstdint>
 
@@ -18,7 +18,7 @@ class InertialLightEffect final : public Core::InertialEffect {
 public:
   explicit InertialLightEffect(
       Espressif::Wrappers::SmartLed::Engine& ledEngine,
-      const Core::InertialDefinition& definition);
+      const InertialSaber::Profiles::Inertial::InertialDefinition& definition);
 
   bool Test(const Core::SaberDataPacket &packet) override;
   void Run() override;
@@ -28,7 +28,7 @@ public:
 
 private:
   Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
-  const Core::InertialDefinition& m_def;
+  const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
   InertialBladeEffect* m_bladeEffect = nullptr;
   bool m_active = false;
 

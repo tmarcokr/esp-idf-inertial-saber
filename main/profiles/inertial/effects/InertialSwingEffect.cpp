@@ -1,6 +1,7 @@
 #include "InertialSwingEffect.hpp"
 
 #include "esp_log.h"
+#include "esp_random.h"
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -9,38 +10,31 @@ namespace InertialSaber::Effects {
 
 using Espressif::Wrappers::Audio::INVALID_CHANNEL;
 
-static InertialSwing::SwingFontConfig buildFontConfig(const Core::InertialDefinition& def) {
-    return {
-        .basePath       = std::string("/sdcard/") + def.profileRoot,
-        .humCount       = def.fontHumCount,
-        .swingPairCount = def.fontSwingPairCount,
-        .burstCount     = def.fontBurstCount,
-    };
-}
-
 InertialSwingEffect::InertialSwingEffect(
     Espressif::Wrappers::Audio::AudioEngine& engine,
-    const Core::InertialDefinition& definition)
+    const InertialSaber::Profiles::Inertial::InertialDefinition& definition)
     : m_engine(engine)
     , m_def(definition)
-    , m_audioProvider(buildFontConfig(definition)) {
+    , m_humPath(std::string("/sdcard/") + definition.profileRoot + "/hum.wav") {
     Priority = 0;
 }
 
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
 
-    m_chHum = m_engine.play(m_audioProvider.provideHumPath(), true, m_def.humBaseVolume);
+    m_chHum = m_engine.play(m_humPath, true, m_def.humBaseVolume);
     
-    auto paths = m_audioProvider.provideSwingPaths();
+    auto paths = provideSwingPaths();
     m_chSwingL = m_engine.play(paths.low, true, 0);
     m_chSwingH = m_engine.play(paths.high, true, 0);
 
-    m_swapper.reset();
+    m_needsSwap = false;
+    m_wasMoving = false;
+    m_lastMovementTimeMs = 0;
 
     m_active.store(true);
     ESP_LOGI(TAG, "Activated — pair %u, hum=%d, swL=%d, swH=%d",
-             m_audioProvider.getCurrentPairIndex(), m_chHum, m_chSwingL, m_chSwingH);
+             m_currentPairIndex, m_chHum, m_chSwingL, m_chSwingH);
 }
 
 void InertialSwingEffect::deactivate() {
@@ -88,8 +82,7 @@ void InertialSwingEffect::Run() {
     applyHumDucking(masterVolume);
     handleInertialBurst();
     
-    if (m_swapper.evaluateSwap(masterVolume, m_timestampMs,
-                               m_def.swingSwapMinVolume, m_def.swingSwapCooldownMs)) {
+    if (evaluateSwap(masterVolume)) {
         executeSwap();
     }
 }
@@ -116,12 +109,12 @@ void InertialSwingEffect::applySwingVolumes(float masterVolume, float finalMix) 
     m_engine.setChannelVolume(m_chSwingL, volL);
     m_engine.setChannelVolume(m_chSwingH, volH);
 
-    if (++m_logCounter >= 400) { // ~500ms at 800Hz
+    if (++m_logCounter >= 400) { 
         m_logCounter = 0;
         auto humVol = static_cast<uint16_t>(m_def.humBaseVolume * std::max(0.0f, 1.0f - masterVolume * m_def.humMaxDucking));
         ESP_LOGI(TAG, "KE:%.2f | MV:%.2f | Mix:%.2f | L:%u H:%u | Hum:%u | OL:%.2f | Pair:%u",
                  m_kineticEnergy, masterVolume, finalMix,
-                 volL, volH, humVol, m_inertialOverload, m_audioProvider.getCurrentPairIndex());
+                 volL, volH, humVol, m_inertialOverload, m_currentPairIndex);
     }
 }
 
@@ -134,26 +127,73 @@ void InertialSwingEffect::applyHumDucking(float masterVolume) {
 }
 
 void InertialSwingEffect::handleInertialBurst() {
-    if (!m_inertialBurst || m_audioProvider.getConfig().burstCount == 0) return;
+    if (!m_inertialBurst || m_def.fontBurstCount == 0) return;
 
-    m_engine.play(m_audioProvider.provideBurstPath(), false, kMaxVolume14bit);
+    m_engine.play(provideBurstPath(), false, kMaxVolume14bit);
 
     ESP_LOGI(TAG, "Inertial Burst triggered");
 }
 
+InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
+    if (m_def.fontSwingPairCount > 1) {
+        uint8_t newPair;
+        do {
+            newPair = static_cast<uint8_t>(esp_random() % m_def.fontSwingPairCount);
+        } while (newPair == m_currentPairIndex);
+        m_currentPairIndex = newPair;
+    } else {
+        m_currentPairIndex = 0;
+    }
+    
+    std::string prefix = std::string("/sdcard/") + m_def.profileRoot + "/swing";
+    std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
+    
+    return { prefix + "l/swingl" + suffix, prefix + "h/swingh" + suffix };
+}
+
+std::string InertialSwingEffect::provideBurstPath() const {
+    uint8_t idx = static_cast<uint8_t>(esp_random() % m_def.fontBurstCount) + 1;
+    return std::string("/sdcard/") + m_def.profileRoot + "/swng/swng" + std::to_string(idx) + ".wav";
+}
+
+bool InertialSwingEffect::evaluateSwap(float masterVolume) {
+    if (masterVolume > m_def.swingSwapMinVolume) {
+        m_needsSwap = true;
+    }
+
+    bool isMoving = masterVolume > 0.0f;
+
+    if (isMoving) {
+        m_wasMoving = true;
+        m_lastMovementTimeMs = m_timestampMs;
+    } else {    
+        if (m_wasMoving) {
+            m_wasMoving = false;
+        } else if (m_needsSwap) {
+            uint32_t idleTime = m_timestampMs - m_lastMovementTimeMs;
+            if (idleTime >= m_def.swingSwapCooldownMs) {
+                m_needsSwap = false;
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 void InertialSwingEffect::executeSwap() {
-    if (m_audioProvider.getConfig().swingPairCount <= 1) return;
+    if (m_def.fontSwingPairCount <= 1) return;
 
     if (m_chSwingL != INVALID_CHANNEL) m_engine.stop(m_chSwingL);
     if (m_chSwingH != INVALID_CHANNEL) m_engine.stop(m_chSwingH);
 
-    auto paths = m_audioProvider.provideSwingPaths();
+    auto paths = provideSwingPaths();
 
     m_chSwingL = m_engine.play(paths.low, true, 0);
     m_chSwingH = m_engine.play(paths.high, true, 0);
 
     ESP_LOGI(TAG, "Pair swapped → %u (swL=%d, swH=%d)",
-             m_audioProvider.getCurrentPairIndex(), m_chSwingL, m_chSwingH);
+             m_currentPairIndex, m_chSwingL, m_chSwingH);
 }
 
 } // namespace InertialSaber::Effects

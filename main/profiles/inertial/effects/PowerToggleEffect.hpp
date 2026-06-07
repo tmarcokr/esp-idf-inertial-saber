@@ -1,11 +1,12 @@
+#include "profiles/inertial/InertialDefinition.hpp"
 #pragma once
 
-#include "interfaces/InertialEffect.hpp"
+#include "core/InertialEffect.hpp"
 #include <cstdint>
 #include <string>
 
 namespace InertialSaber::Core {
-struct InertialDefinition;
+
 struct SaberDataPacket;
 }
 namespace InertialSaber::Profiles {
@@ -35,7 +36,7 @@ public:
         InertialLightEffect&                     light,
         Espressif::Wrappers::Audio::AudioEngine& audio,
         Espressif::Wrappers::SmartLed::Engine&   ledEngine,
-        const Core::InertialDefinition&          definition,
+        const InertialSaber::Profiles::Inertial::InertialDefinition&          definition,
         uint8_t                                  buttonId);
 
     bool Test(const Core::SaberDataPacket& packet) override;
@@ -56,7 +57,7 @@ private:
     InertialLightEffect&                     m_light;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     Espressif::Wrappers::SmartLed::Engine&   m_ledEngine;
-    const Core::InertialDefinition&          m_def;
+    const InertialSaber::Profiles::Inertial::InertialDefinition&          m_def;
     uint8_t                                  m_buttonId;
 
     bool     m_pendingTransition = false;

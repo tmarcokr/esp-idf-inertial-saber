@@ -1,13 +1,12 @@
 #pragma once
 
-#include "models/InertialDefinition.hpp"
-#include "interfaces/InertialEffect.hpp"
+#include "profiles/inertial/InertialDefinition.hpp"
+#include "core/InertialEffect.hpp"
 #include "AudioEngine.hpp"
-#include "AudioPathProvider.hpp"
-#include "SwingSwapper.hpp"
 
 #include <atomic>
 #include <cstdint>
+#include <string>
 
 namespace InertialSaber::Effects {
 
@@ -21,7 +20,7 @@ namespace InertialSaber::Effects {
 class InertialSwingEffect final : public Core::InertialEffect {
 public:
     InertialSwingEffect(Espressif::Wrappers::Audio::AudioEngine& engine,
-                        const Core::InertialDefinition& definition);
+                        const InertialSaber::Profiles::Inertial::InertialDefinition& definition);
 
     /**
      * @brief Start audio playback: hum loop + initial random swing pair at volume 0.
@@ -47,9 +46,7 @@ private:
     static constexpr uint16_t kMaxVolume14bit = 16384;
 
     Espressif::Wrappers::Audio::AudioEngine& m_engine;
-    const Core::InertialDefinition& m_def;
-    InertialSwing::AudioPathProvider m_audioProvider;
-    InertialSwing::SwingSwapper m_swapper;
+    const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
     
     std::atomic<bool> m_active{false};
 
@@ -65,11 +62,29 @@ private:
 
     uint32_t m_logCounter = 0;
 
+    // Audio Provider state
+    std::string m_humPath;
+    uint8_t m_currentPairIndex = 0;
+
+    // Swing Swapper state
+    bool m_needsSwap = false;
+    bool m_wasMoving = false;
+    uint32_t m_lastMovementTimeMs = 0;
+
+    struct SwingPathPair {
+        std::string low;
+        std::string high;
+    };
+
     float computeMasterVolume() const;
     float computeFinalMix() const;
     void applySwingVolumes(float masterVolume, float finalMix);
     void applyHumDucking(float masterVolume);
     void handleInertialBurst();
+    
+    SwingPathPair provideSwingPaths();
+    std::string provideBurstPath() const;
+    bool evaluateSwap(float masterVolume);
     void executeSwap();
 };
 

@@ -18,7 +18,7 @@ using namespace Espressif::Wrappers::SmartLed;
 
 InertialLightEffect::InertialLightEffect(
     Engine& ledEngine,
-    const Core::InertialDefinition& definition)
+    const InertialSaber::Profiles::Inertial::InertialDefinition& definition)
     : m_ledEngine(ledEngine)
     , m_def(definition)
     , m_baseHue(definition.bladeBaseHue) {

@@ -34,11 +34,11 @@ esp_err_t SaberActionBus::start() {
     BaseType_t result = xTaskCreatePinnedToCore(
         busTaskEntry,
         "saber_bus",
-        System::Config::HardwareConfig::kBusTaskStackSize,
+        System::Hardware::HardwareConfig::kBusTaskStackSize,
         this,
-        System::Config::HardwareConfig::kBusTaskPriority,
+        System::Hardware::HardwareConfig::kBusTaskPriority,
         &m_taskHandle,
-        System::Config::HardwareConfig::kBusTaskCore
+        System::Hardware::HardwareConfig::kBusTaskCore
     );
 
     if (result != pdPASS) {
@@ -50,8 +50,8 @@ esp_err_t SaberActionBus::start() {
     }
 
     ESP_LOGI(TAG, "Bus started on core %d (priority %d)",
-             System::Config::HardwareConfig::kBusTaskCore,
-             System::Config::HardwareConfig::kBusTaskPriority);
+             System::Hardware::HardwareConfig::kBusTaskCore,
+             System::Hardware::HardwareConfig::kBusTaskPriority);
     return ESP_OK;
 }
 
@@ -77,7 +77,7 @@ void SaberActionBus::stop() {
     ESP_LOGI(TAG, "Bus stopped");
 }
 
-void SaberActionBus::setPhysicsConfig(const Core::InertialDefinition& def) {
+void SaberActionBus::setPhysicsConfig(const Core::PhysicsConfig& def) {
     m_kineticEnergyDeadbandG = def.kineticEnergyDeadbandG;
     m_rotationDeadbandDps    = def.rotationDeadbandDps;
     m_overloadThresholdG     = def.overloadThresholdG;
@@ -119,7 +119,7 @@ void SaberActionBus::updateMotion(float energy, const float rotation[3], float o
 }
 
 void SaberActionBus::pushInputEvent(uint8_t inputId, const InputDescriptor& descriptor) {
-    if (inputId >= System::Config::HardwareConfig::kMaxInputs || m_inputQueue == nullptr) {
+    if (inputId >= System::Hardware::HardwareConfig::kMaxInputs || m_inputQueue == nullptr) {
         return;
     }
 
@@ -181,7 +181,7 @@ void SaberActionBus::busLoop() {
 void SaberActionBus::drainInputQueue() {
     InputEvent event{};
     while (xQueueReceive(m_inputQueue, &event, 0) == pdTRUE) {
-        if (event.inputId < System::Config::HardwareConfig::kMaxInputs) {
+        if (event.inputId < System::Hardware::HardwareConfig::kMaxInputs) {
             m_packet.inputs[event.inputId] = event.descriptor;
         }
     }
@@ -196,12 +196,12 @@ void SaberActionBus::loadStagedMotionToPacket() {
 }
 
 void SaberActionBus::filterStagedMotionWarmUp() {
-    if (m_packet.timestamp_ms < System::Config::HardwareConfig::kImuGracePeriodMs) {
+    if (m_packet.timestamp_ms < System::Hardware::HardwareConfig::kImuGracePeriodMs) {
         m_packet.KineticEnergy = 0.0f;
         m_packet.AxisRotation[0] = 0.0f;
         m_packet.AxisRotation[1] = 0.0f;
         m_packet.AxisRotation[2] = 0.0f;
-        m_packet.OrientationVector = 90.0f + System::Config::HardwareConfig::kImuOrientationOffsetDeg;
+        m_packet.OrientationVector = 90.0f + System::Hardware::HardwareConfig::kImuOrientationOffsetDeg;
     }
 }
 
@@ -218,7 +218,7 @@ void SaberActionBus::filterStagedMotionStabilization() {
 }
 
 void SaberActionBus::filterStagedMotionOrientation() {
-    float correctedAngle = m_packet.OrientationVector - System::Config::HardwareConfig::kImuOrientationOffsetDeg;
+    float correctedAngle = m_packet.OrientationVector - System::Hardware::HardwareConfig::kImuOrientationOffsetDeg;
     if (correctedAngle > 90.0f) correctedAngle = 90.0f;
     if (correctedAngle < -90.0f) correctedAngle = -90.0f;
     

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Mpu6050.hpp"
-#include "core/bus/SaberActionBus.hpp"
-#include "system/config/HardwareConfig.hpp"
+#include "core/SaberActionBus.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_err.h"

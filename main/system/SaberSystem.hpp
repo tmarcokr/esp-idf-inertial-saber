@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/bus/SaberActionBus.hpp"
+#include "core/SaberActionBus.hpp"
 #include "profiles/ProfileManager.hpp"
 
 #include "system/adapters/ImuAdapter.hpp"

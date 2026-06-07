@@ -1,11 +1,11 @@
 #include "DragEffect.hpp"
 #include "AudioEngine.hpp"
-#include "../overlays/BladeDragEffect.hpp"
+#include "overlays/BladeDragEffect.hpp"
 #include "Engine.hpp"
 #include "PowerToggleEffect.hpp"
-#include "models/InertialDefinition.hpp"
-#include "models/SaberDataPacket.hpp"
-#include "system/config/HardwareConfig.hpp"
+#include "profiles/inertial/InertialDefinition.hpp"
+#include "core/SaberDataPacket.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 
 #include "esp_log.h"
 #include "esp_random.h"
@@ -20,7 +20,7 @@ DragEffect::DragEffect(
     PowerToggleEffect& power,
     Espressif::Wrappers::Audio::AudioEngine& audio,
     Espressif::Wrappers::SmartLed::Engine& ledEngine,
-    const Core::InertialDefinition& definition,
+    const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
     uint8_t buttonId)
     : m_power(power)
     , m_audio(audio)
@@ -36,7 +36,7 @@ bool DragEffect::Test(const Core::SaberDataPacket& packet) {
         return m_active;
     }
 
-    if (m_buttonId < System::Config::HardwareConfig::kMaxInputs) {
+    if (m_buttonId < System::Hardware::HardwareConfig::kMaxInputs) {
         const auto& input = packet.inputs[m_buttonId];
         using Gesture    = Core::InputDescriptor::Gesture;
         using InputState = Core::InputDescriptor::State;

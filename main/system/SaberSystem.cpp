@@ -1,7 +1,7 @@
 #include "SaberSystem.hpp"
 #include "profiles/ProfileParser.hpp"
-#include "core/effects/inertial_engine/audio/InertialSwingEffect.hpp"
-#include "system/config/HardwareConfig.hpp"
+#include "profiles/inertial/effects/InertialSwingEffect.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
 
 namespace InertialSaber::System {

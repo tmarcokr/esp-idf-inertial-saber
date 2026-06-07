@@ -1,6 +1,6 @@
 #pragma once
 
-#include "system/config/HardwareConfig.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 
 #include <array>
 #include <cstdint>
@@ -60,7 +60,7 @@ struct SaberDataPacket {
     bool InertialBurst = false;
 
     /// Array of input peripheral states (buttons, switches).
-    std::array<InputDescriptor, System::Config::HardwareConfig::kMaxInputs> inputs{};
+    std::array<InputDescriptor, System::Hardware::HardwareConfig::kMaxInputs> inputs{};
 
     /// FreeRTOS system time in milliseconds at the start of this bus cycle.
     uint32_t timestamp_ms = 0;
