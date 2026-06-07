@@ -7,7 +7,9 @@
 namespace InertialSaber::Core {
 struct InertialDefinition;
 struct SaberDataPacket;
-class InertialProfile;
+}
+namespace InertialSaber::Profiles {
+class ConfigurableProfile;
 }
 namespace InertialSaber::Effects {
 class InertialSwingEffect;
@@ -28,13 +30,13 @@ namespace InertialSaber::Effects {
 class PowerToggleEffect final : public Core::InertialEffect {
 public:
     PowerToggleEffect(
-        Core::InertialProfile&                  profile,
-        InertialSwingEffect&                    swing,
-        InertialLightEffect&                    light,
+        Profiles::ConfigurableProfile&           profile,
+        InertialSwingEffect&                     swing,
+        InertialLightEffect&                     light,
         Espressif::Wrappers::Audio::AudioEngine& audio,
-        Espressif::Wrappers::SmartLed::Engine&  ledEngine,
-        const Core::InertialDefinition&         definition,
-        uint8_t                                 buttonId);
+        Espressif::Wrappers::SmartLed::Engine&   ledEngine,
+        const Core::InertialDefinition&          definition,
+        uint8_t                                  buttonId);
 
     bool Test(const Core::SaberDataPacket& packet) override;
     void Run() override;
@@ -49,13 +51,13 @@ private:
 
     [[nodiscard]] std::string buildPath(const char* subAndPrefix, uint8_t index) const;
 
-    Core::InertialProfile&                  m_profile;
-    InertialSwingEffect&                    m_swing;
-    InertialLightEffect&                    m_light;
+    Profiles::ConfigurableProfile&           m_profile;
+    InertialSwingEffect&                     m_swing;
+    InertialLightEffect&                     m_light;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
-    Espressif::Wrappers::SmartLed::Engine&  m_ledEngine;
-    const Core::InertialDefinition&         m_def;
-    uint8_t                                 m_buttonId;
+    Espressif::Wrappers::SmartLed::Engine&   m_ledEngine;
+    const Core::InertialDefinition&          m_def;
+    uint8_t                                  m_buttonId;
 
     bool     m_pendingTransition = false;
     bool     m_enginesStarted = false;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../interfaces/InertialEffect.hpp"
-#include "../config/PlatformConfig.hpp"
+#include "system/config/HardwareConfig.hpp"
 #include "../models/SaberDataPacket.hpp"
 
 #include "esp_err.h"
@@ -92,6 +92,9 @@ public:
     TaskHandle_t getTaskHandle() const;
 
 private:
+    static constexpr uint32_t kBusTimeoutMs    = 10;
+    static constexpr uint8_t  kInputQueueDepth = 8;
+
     TaskHandle_t m_taskHandle = nullptr;
     QueueHandle_t m_inputQueue = nullptr;
     volatile bool m_running = false;

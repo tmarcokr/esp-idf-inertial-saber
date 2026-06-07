@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/interfaces/InertialProfile.hpp"
 #include "core/bus/SaberActionBus.hpp"
 #include "profiles/ProfileManager.hpp"
 

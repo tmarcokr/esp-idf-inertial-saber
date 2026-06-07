@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sdkconfig.h"
 #include "driver/gpio.h"
 #include <cstdint>
 
@@ -32,6 +33,18 @@ struct HardwareConfig {
     // ── SmartLed pins ──
     static constexpr gpio_num_t kLedData = GPIO_NUM_0;
     static constexpr uint16_t kNumLeds   = 5;
+
+    // ── Task Scheduling ──
+#if CONFIG_IDF_TARGET_ESP32S3
+    static constexpr int kBusTaskCore    = 0;
+    static constexpr int kEngineTaskCore = 1;
+#else
+    static constexpr int kBusTaskCore    = 0;
+    static constexpr int kEngineTaskCore = 0;
+#endif
+    static constexpr uint8_t  kBusTaskPriority  = 8;
+    static constexpr uint32_t kBusTaskStackSize = 8192;
+    static constexpr uint8_t  kMaxInputs        = 4;
 };
 
 } // namespace InertialSaber::System::Config

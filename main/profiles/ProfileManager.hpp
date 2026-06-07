@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/interfaces/InertialProfile.hpp"
+#include "profiles/ConfigurableProfile.hpp"
 #include "core/bus/SaberActionBus.hpp"
 #include "AudioEngine.hpp"
 #include "Engine.hpp"
@@ -51,7 +51,7 @@ public:
   /**
    * @brief Returns the currently active profile.
    */
-  [[nodiscard]] Core::InertialProfile &getActiveProfile() const;
+  [[nodiscard]] ConfigurableProfile &getActiveProfile() const;
 
   /**
    * @brief Returns the number of loaded profiles.
@@ -59,13 +59,9 @@ public:
   [[nodiscard]] size_t getProfileCount() const;
 
 private:
-  void registerSystemEffects(Core::SaberActionBus &bus,
-                             Espressif::Wrappers::Audio::AudioEngine &audio,
-                             Espressif::Wrappers::SmartLed::Engine &led);
-
   void saveActiveIndex();
 
-  std::vector<std::unique_ptr<Core::InertialProfile>> m_profiles;
+  std::vector<std::unique_ptr<ConfigurableProfile>> m_profiles;
   size_t m_activeIndex = 0;
 };
 

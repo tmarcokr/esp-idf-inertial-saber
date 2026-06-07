@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/interfaces/InertialProfile.hpp"
+#include "profiles/ConfigurableProfile.hpp"
 #include "esp_err.h"
 #include <memory>
 #include <vector>
@@ -17,7 +17,7 @@ public:
    * @param profiles Vector to append the loaded profile pointers to.
    * @return ESP_OK on success, or an error code.
    */
-  static esp_err_t loadFromSd(std::vector<std::unique_ptr<Core::InertialProfile>> &profiles);
+  static esp_err_t loadFromSd(std::vector<std::unique_ptr<ConfigurableProfile>> &profiles);
 };
 
 } // namespace InertialSaber::Profiles
