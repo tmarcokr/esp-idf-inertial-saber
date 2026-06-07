@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include "core/PhysicsConfig.hpp"
 
-namespace InertialSaber::Core {
+namespace InertialSaber::Profiles::Inertial {
 
 /**
  * @brief Per-profile physics, audio, and visual configuration.
@@ -16,19 +17,12 @@ namespace InertialSaber::Core {
  *   - InertialSwing audio engine
  *   - InertialLight visual engine
  */
-struct InertialDefinition {
+struct InertialDefinition : public Core::PhysicsConfig {
 
     const char* profileName;   ///< Human-readable profile identifier.
     const char* profileRoot;   ///< Root path on SD relative to /sdcard/ (e.g. "profiles/inertial/").
 
-    float overloadThresholdG;  ///< Minimum G-Force to start charging the accumulator.
-    float overloadChargeRate;  ///< Accumulator fill rate per second above threshold.
-    float overloadDrainRate;   ///< Accumulator drain rate per second at rest.
-    float burstCooldownMs;     ///< Minimum milliseconds between successive Inertial Bursts.
-
     // ── Sensor Sensitivity (per-profile) ─────────────────────────────────────
-    float kineticEnergyDeadbandG;  ///< Minimum linear acceleration in Gs to register as movement.
-    float rotationDeadbandDps;     ///< Minimum angular velocity in deg/sec to register as rotation.
 
     float    swingIdleThresholdG;   ///< Below this G-Force, swing volume is zero.
     float    swingMaxThresholdG;    ///< At or above this G-Force, swing volume is at maximum.
@@ -66,4 +60,4 @@ struct InertialDefinition {
     uint32_t lightBurstDurationMs; ///< Visual duration of the Plasma Rupture flash in ms.
 };
 
-} // namespace InertialSaber::Core
+} // namespace InertialSaber::Profiles::Inertial

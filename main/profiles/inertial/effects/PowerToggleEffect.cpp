@@ -1,14 +1,14 @@
 #include "PowerToggleEffect.hpp"
 #include "profiles/ConfigurableProfile.hpp"
-#include "system/config/HardwareConfig.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "AudioEngine.hpp"
-#include "../overlays/BladeIgniteSweep.hpp"
-#include "../overlays/BladeRetractSweep.hpp"
+#include "overlays/BladeIgniteSweep.hpp"
+#include "overlays/BladeRetractSweep.hpp"
 #include "Engine.hpp"
-#include "InertialLightEffect.hpp"
+#include "overlays/InertialLightEffect.hpp"
 #include "InertialSwingEffect.hpp"
-#include "models/InertialDefinition.hpp"
-#include "models/SaberDataPacket.hpp"
+#include "profiles/inertial/InertialDefinition.hpp"
+#include "core/SaberDataPacket.hpp"
 
 #include "esp_log.h"
 #include "esp_random.h"
@@ -32,14 +32,14 @@ PowerToggleEffect::PowerToggleEffect(
     InertialSwingEffect &swing, InertialLightEffect &light,
     Espressif::Wrappers::Audio::AudioEngine &audio,
     Espressif::Wrappers::SmartLed::Engine &ledEngine,
-    const Core::InertialDefinition &definition, uint8_t buttonId)
+    const InertialSaber::Profiles::Inertial::InertialDefinition &definition, uint8_t buttonId)
     : m_profile(profile), m_swing(swing), m_light(light), m_audio(audio), m_ledEngine(ledEngine),
       m_def(definition), m_buttonId(buttonId) {
   Priority = 1;
 }
 
 bool PowerToggleEffect::Test(const Core::SaberDataPacket& packet) {
-    if (m_buttonId >= System::Config::HardwareConfig::kMaxInputs) {
+    if (m_buttonId >= System::Hardware::HardwareConfig::kMaxInputs) {
         return false;
     }
 

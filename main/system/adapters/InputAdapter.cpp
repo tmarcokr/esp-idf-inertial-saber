@@ -1,5 +1,5 @@
 #include "InputAdapter.hpp"
-#include "system/config/HardwareConfig.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
 #include "esp_timer.h"
 
@@ -53,13 +53,13 @@ esp_err_t InputAdapter::start() {
                          [this]() { onPressDown(); });
     m_mainButton.onEvent(Espressif::Wrappers::ButtonEvent::PressUp,
                          [this]() { onPressUp(); });
-    m_mainButton.onLongPress(Config::HardwareConfig::kHoldTickMs,
+    m_mainButton.onLongPress(Hardware::HardwareConfig::kHoldTickMs,
                              [this]() { onFirstHoldTick(); });
 
     ESP_LOGI(TAG, "Input Adapter started (GPIO %d, click_window=%u ms, hold_tick=%u ms)",
-             static_cast<int>(Config::HardwareConfig::kMainBtn),
-             static_cast<unsigned int>(Config::HardwareConfig::kClickWindowMs),
-             static_cast<unsigned int>(Config::HardwareConfig::kHoldTickMs));
+             static_cast<int>(Hardware::HardwareConfig::kMainBtn),
+             static_cast<unsigned int>(Hardware::HardwareConfig::kClickWindowMs),
+             static_cast<unsigned int>(Hardware::HardwareConfig::kHoldTickMs));
     return ESP_OK;
 }
 
@@ -74,10 +74,10 @@ void InputAdapter::onPressDown() {
 
     esp_timer_stop(m_clickTimer);
     esp_timer_start_once(m_clickTimer,
-                         static_cast<uint64_t>(Config::HardwareConfig::kClickWindowMs) * 1000ULL);
+                         static_cast<uint64_t>(Hardware::HardwareConfig::kClickWindowMs) * 1000ULL);
 
     m_btnState.gesture = Core::InputDescriptor::Gesture::NONE;
-    m_bus.pushInputEvent(Config::HardwareConfig::kMainBtnInputId, m_btnState);
+    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
     m_btnState.gesture = Core::InputDescriptor::Gesture::NONE;
 }
 
@@ -94,7 +94,7 @@ void InputAdapter::onPressUp() {
     m_btnState.holdLevel         = 0;
 
     m_btnState.gesture = Core::InputDescriptor::Gesture::NONE;
-    m_bus.pushInputEvent(Config::HardwareConfig::kMainBtnInputId, m_btnState);
+    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
     m_btnState.gesture = Core::InputDescriptor::Gesture::NONE;
 }
 
@@ -104,7 +104,7 @@ void InputAdapter::onFirstHoldTick() {
 
     resolveHoldTick();
     esp_timer_start_periodic(m_holdTimer,
-                             static_cast<uint64_t>(Config::HardwareConfig::kHoldTickMs) * 1000ULL);
+                             static_cast<uint64_t>(Hardware::HardwareConfig::kHoldTickMs) * 1000ULL);
 }
 
 void InputAdapter::resolveClickGesture() {
@@ -115,7 +115,7 @@ void InputAdapter::resolveClickGesture() {
     m_btnState.pressCount = count;
     m_btnState.gesture    = Gesture::CLICK;
 
-    m_bus.pushInputEvent(Config::HardwareConfig::kMainBtnInputId, m_btnState);
+    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
     m_btnState.gesture    = Gesture::NONE;
     m_btnState.pressCount = 0;
 
@@ -126,16 +126,16 @@ void InputAdapter::resolveHoldTick() {
     const uint8_t level = m_holdLevel.fetch_add(1, std::memory_order_relaxed) + 1;
 
     m_btnState.current         = Core::InputDescriptor::State::HELD;
-    m_btnState.holdDuration_ms = level * Config::HardwareConfig::kHoldTickMs;
+    m_btnState.holdDuration_ms = level * Hardware::HardwareConfig::kHoldTickMs;
     m_btnState.holdLevel       = level;
     m_btnState.gesture         = Core::InputDescriptor::Gesture::HOLD_TICK;
 
-    m_bus.pushInputEvent(Config::HardwareConfig::kMainBtnInputId, m_btnState);
+    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
     m_btnState.gesture = Core::InputDescriptor::Gesture::NONE;
 
     ESP_LOGD(TAG, "Gesture resolved: HOLD_TICK level=%u (%u ms)",
              static_cast<unsigned>(level),
-             static_cast<unsigned>(level * Config::HardwareConfig::kHoldTickMs));
+             static_cast<unsigned>(level * Hardware::HardwareConfig::kHoldTickMs));
 }
 
 /*static*/ void InputAdapter::clickTimerCallback(void* arg) {

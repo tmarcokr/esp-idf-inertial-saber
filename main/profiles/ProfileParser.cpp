@@ -45,7 +45,7 @@ uint32_t getUint32(const cJSON *parent, const char *key, uint32_t defaultValue) 
 
 } // namespace
 
-esp_err_t ProfileParser::parse(const char *jsonStr, Core::InertialDefinition &outDef,
+esp_err_t ProfileParser::parse(const char *jsonStr, InertialSaber::Profiles::Inertial::InertialDefinition &outDef,
                                std::string &outName, std::string &outRoot) {
   if (!jsonStr) {
     return ESP_ERR_INVALID_ARG;
@@ -188,7 +188,7 @@ esp_err_t ProfileParser::runSelfTest() {
     }
   })";
 
-  Core::InertialDefinition def{};
+  InertialSaber::Profiles::Inertial::InertialDefinition def{};
   std::string name;
   std::string root;
 
@@ -207,7 +207,7 @@ esp_err_t ProfileParser::runSelfTest() {
   if (def.blasterLedCount != 4 || def.dragLedCount != 6) return ESP_FAIL;
   if (def.bladeBaseHue != 120 || def.lightIdleBaseFreq != 1.5f) return ESP_FAIL;
 
-  Core::InertialDefinition fallbackDef{};
+  InertialSaber::Profiles::Inertial::InertialDefinition fallbackDef{};
   std::string fallbackName;
   std::string fallbackRoot;
 

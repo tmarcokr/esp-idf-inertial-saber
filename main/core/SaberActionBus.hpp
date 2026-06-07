@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../interfaces/InertialEffect.hpp"
-#include "system/config/HardwareConfig.hpp"
-#include "../models/SaberDataPacket.hpp"
-#include "../models/InertialDefinition.hpp"
+#include "InertialEffect.hpp"
+#include "system/hardware/HardwareConfig.hpp"
+#include "SaberDataPacket.hpp"
+#include "PhysicsConfig.hpp"
 
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
@@ -62,7 +62,7 @@ public:
      * @brief Inject per-profile physics parameters from the active profile.
      * @param def The InertialDefinition of the profile being loaded.
      */
-    void setPhysicsConfig(const Core::InertialDefinition& def);
+    void setPhysicsConfig(const Core::PhysicsConfig& def);
 
     /**
      * @brief Register an InertialEffect on the bus. Ownership is transferred.

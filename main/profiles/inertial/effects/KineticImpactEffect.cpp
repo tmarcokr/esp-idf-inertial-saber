@@ -1,10 +1,10 @@
 #include "KineticImpactEffect.hpp"
 #include "AudioEngine.hpp"
-#include "../overlays/BladeClashFlash.hpp"
+#include "overlays/BladeClashFlash.hpp"
 #include "Engine.hpp"
 #include "PowerToggleEffect.hpp"
-#include "models/InertialDefinition.hpp"
-#include "models/SaberDataPacket.hpp"
+#include "profiles/inertial/InertialDefinition.hpp"
+#include "core/SaberDataPacket.hpp"
 
 #include "esp_log.h"
 #include "esp_random.h"
@@ -19,7 +19,7 @@ KineticImpactEffect::KineticImpactEffect(
     PowerToggleEffect &power,
     Espressif::Wrappers::Audio::AudioEngine &audio,
     Espressif::Wrappers::SmartLed::Engine &ledEngine,
-    const Core::InertialDefinition &definition)
+    const InertialSaber::Profiles::Inertial::InertialDefinition &definition)
     : m_power(power)
     , m_audio(audio)
     , m_ledEngine(ledEngine)

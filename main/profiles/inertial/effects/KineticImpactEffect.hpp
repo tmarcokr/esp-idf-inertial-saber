@@ -1,12 +1,13 @@
+#include "profiles/inertial/InertialDefinition.hpp"
 #pragma once
 
-#include "interfaces/InertialEffect.hpp"
+#include "core/InertialEffect.hpp"
 #include <array>
 #include <cstdint>
 #include <string>
 
 namespace InertialSaber::Core {
-struct InertialDefinition;
+
 struct SaberDataPacket;
 }
 namespace InertialSaber::Effects {
@@ -30,7 +31,7 @@ public:
         PowerToggleEffect&                      power,
         Espressif::Wrappers::Audio::AudioEngine& audio,
         Espressif::Wrappers::SmartLed::Engine&  ledEngine,
-        const Core::InertialDefinition&         definition);
+        const InertialSaber::Profiles::Inertial::InertialDefinition&         definition);
 
     bool Test(const Core::SaberDataPacket& packet) override;
     void Run() override;
@@ -44,7 +45,7 @@ private:
     PowerToggleEffect&                       m_power;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     Espressif::Wrappers::SmartLed::Engine&   m_ledEngine;
-    const Core::InertialDefinition&          m_def;
+    const InertialSaber::Profiles::Inertial::InertialDefinition&          m_def;
 
     std::array<float, 4> m_kineticEnergyWindow{};
     size_t               m_windowIdx = 0;

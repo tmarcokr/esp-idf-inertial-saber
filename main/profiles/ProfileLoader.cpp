@@ -52,7 +52,7 @@ esp_err_t ProfileLoader::loadFromSd(std::vector<std::unique_ptr<ConfigurableProf
     }
     fclose(f);
 
-    Core::InertialDefinition tempDef{};
+    InertialSaber::Profiles::Inertial::InertialDefinition tempDef{};
     std::string tempName;
     std::string tempRoot;
     if (ProfileParser::parse(jsonStr.c_str(), tempDef, tempName, tempRoot) == ESP_OK) {

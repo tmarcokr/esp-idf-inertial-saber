@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/models/InertialDefinition.hpp"
-#include "core/bus/SaberActionBus.hpp"
+#include "profiles/inertial/InertialDefinition.hpp"
+#include "core/SaberActionBus.hpp"
 #include "AudioEngine.hpp"
 #include "Engine.hpp"
 #include <cstdint>
@@ -34,14 +34,14 @@ public:
   /**
    * @brief Constructor that binds this profile to an external configuration definition.
    */
-  explicit ConfigurableProfile(const Core::InertialDefinition &def);
+  explicit ConfigurableProfile(const InertialSaber::Profiles::Inertial::InertialDefinition &def);
 
   /**
    * @brief Constructor that parses a JSON configuration string.
    */
   explicit ConfigurableProfile(const std::string &jsonStr);
 
-  [[nodiscard]] const Core::InertialDefinition &getDefinition() const;
+  [[nodiscard]] const InertialSaber::Profiles::Inertial::InertialDefinition &getDefinition() const;
 
   [[nodiscard]] PowerState getPowerState() const;
   void setPowerState(PowerState state);
@@ -65,8 +65,8 @@ public:
 private:
   std::string m_profileNameStorage;
   std::string m_profileRootStorage;
-  Core::InertialDefinition m_allocatedDef{};
-  const Core::InertialDefinition &m_def;
+  InertialSaber::Profiles::Inertial::InertialDefinition m_allocatedDef{};
+  const InertialSaber::Profiles::Inertial::InertialDefinition &m_def;
   PowerState m_powerState = PowerState::RETRACTED;
 };
 

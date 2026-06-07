@@ -1,5 +1,5 @@
 #include "AudioHardware.hpp"
-#include "system/config/HardwareConfig.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
 
 namespace InertialSaber::System::Hardware {
@@ -7,10 +7,10 @@ static constexpr const char* TAG = "AudioHardware";
 
 esp_err_t AudioHardware::init() {
     Espressif::Wrappers::Audio::AudioEngine::Config audio_cfg = {
-        .bclk_pin = Config::HardwareConfig::kI2sBclk,
-        .ws_pin = Config::HardwareConfig::kI2sWs,
-        .dout_pin = Config::HardwareConfig::kI2sDout,
-        .sd_mode_pin = Config::HardwareConfig::kI2sSdMode,
+        .bclk_pin = Hardware::HardwareConfig::kI2sBclk,
+        .ws_pin = Hardware::HardwareConfig::kI2sWs,
+        .dout_pin = Hardware::HardwareConfig::kI2sDout,
+        .sd_mode_pin = Hardware::HardwareConfig::kI2sSdMode,
         .sample_rate = 44100,
         .max_channels = 9};
 

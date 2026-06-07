@@ -19,8 +19,8 @@ ImuAdapter::~ImuAdapter() {
 esp_err_t ImuAdapter::start() {
     BaseType_t result = xTaskCreatePinnedToCore(
         imuAdapterTask, "imu_adapter", 4096, this,
-        Config::HardwareConfig::kBusTaskPriority + 1,
-        &m_imuTaskHandle, Config::HardwareConfig::kBusTaskCore);
+        Hardware::HardwareConfig::kBusTaskPriority + 1,
+        &m_imuTaskHandle, Hardware::HardwareConfig::kBusTaskCore);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "IMU adapter task creation failed");
@@ -29,7 +29,7 @@ esp_err_t ImuAdapter::start() {
 
     // ── IMU Interrupt Configuration ──
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << Config::HardwareConfig::kImuInt),
+        .pin_bit_mask = (1ULL << Hardware::HardwareConfig::kImuInt),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -41,7 +41,7 @@ esp_err_t ImuAdapter::start() {
     if (isr_err != ESP_OK && isr_err != ESP_ERR_INVALID_STATE) {
         ESP_LOGE(TAG, "Failed to install GPIO ISR service: %s", esp_err_to_name(isr_err));
     }
-    gpio_isr_handler_add(Config::HardwareConfig::kImuInt, imuIsrHandler, this);
+    gpio_isr_handler_add(Hardware::HardwareConfig::kImuInt, imuIsrHandler, this);
 
     ESP_LOGI(TAG, "IMU Adapter started successfully");
     return ESP_OK;

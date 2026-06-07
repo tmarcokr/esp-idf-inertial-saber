@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../models/SaberDataPacket.hpp"
+#include "SaberDataPacket.hpp"
 
 #include <cstdint>
 
