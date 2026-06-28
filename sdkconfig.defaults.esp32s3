@@ -1,0 +1,5 @@
+# InertialSaber OS — ESP32-S3 specific overrides
+# PSRAM / SPIRAM activation (Phase 6)
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y

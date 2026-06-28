@@ -8,6 +8,8 @@ idf_component_register(
          "system/hardware/LedHardware.cpp"
          "system/hardware/ImuHardware.cpp"
          "system/hardware/ButtonHardware.cpp"
+         "system/MemoryVfs.cpp"
+         "system/PsramAudioCache.cpp"
          "core/SaberActionBus.cpp"
          "profiles/inertial/effects/InertialSwingEffect.cpp"
          "profiles/inertial/effects/overlays/InertialLightEffect.cpp"
@@ -26,7 +28,7 @@ idf_component_register(
          "profiles/inertial/effects/DragEffect.cpp"
          "profiles/inertial/effects/ProfileCycleEffect.cpp"
     INCLUDE_DIRS "." "core" "profiles/inertial/effects" "profiles/inertial/effects/overlays" "profiles"
-    REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led json
+    REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led json rgb_led
 )
 
 # Force C++20 for all source files

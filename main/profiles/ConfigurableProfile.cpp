@@ -7,8 +7,12 @@
 #include "BlasterEffect.hpp"
 #include "KineticImpactEffect.hpp"
 #include "DragEffect.hpp"
-#include "ProfileCycleEffect.hpp"
+#include "profiles/inertial/effects/ProfileCycleEffect.hpp"
 #include "system/hardware/HardwareConfig.hpp"
+
+#if CONFIG_IDF_TARGET_ESP32S3
+#include "system/PsramAudioCache.hpp"
+#endif
 
 #include "esp_log.h"
 
@@ -42,13 +46,40 @@ void ConfigurableProfile::setPowerState(PowerState state) {
 void ConfigurableProfile::load(Core::SaberActionBus &bus,
                                Espressif::Wrappers::Audio::AudioEngine &audio,
                                Espressif::Wrappers::SmartLed::Engine &led,
-                               ProfileManager &profileManager) {
+                               ProfileManager &profileManager
+#if CONFIG_IDF_TARGET_ESP32S3
+                               , InertialSaber::System::PsramAudioCache* psramCache
+#endif
+  ) {
   ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName);
 
   bus.setPhysicsConfig(m_def);
 
+#if CONFIG_IDF_TARGET_ESP32S3
+  if (psramCache) {
+      std::string humSd = std::string("/sdcard/") + m_def.profileRoot + "/hum.wav";
+      if (psramCache->loadFile(humSd, "hum.wav") != ESP_OK) {
+          ESP_LOGE(TAG, "Failed to load hum.wav to PSRAM");
+      }
+
+      // Preload initial swing pair (index 0, pair 1)
+      std::string swlSd = std::string("/sdcard/") + m_def.profileRoot + "/swingl/swingl1.wav";
+      std::string swhSd = std::string("/sdcard/") + m_def.profileRoot + "/swingh/swingh1.wav";
+      if (psramCache->loadFile(swlSd, "swingl.wav") != ESP_OK) {
+          ESP_LOGE(TAG, "Failed to load swingl1.wav to PSRAM");
+      }
+      if (psramCache->loadFile(swhSd, "swingh.wav") != ESP_OK) {
+          ESP_LOGE(TAG, "Failed to load swhSd to PSRAM");
+      }
+  }
+#endif
+
   auto swingFx =
-      std::make_unique<Effects::InertialSwingEffect>(audio, m_def);
+      std::make_unique<Effects::InertialSwingEffect>(audio, m_def
+#if CONFIG_IDF_TARGET_ESP32S3
+                                                     , psramCache
+#endif
+      );
   swingEffect = swingFx.get();
   bus.registerEffect(std::move(swingFx));
 
@@ -80,7 +111,11 @@ void ConfigurableProfile::load(Core::SaberActionBus &bus,
       System::Hardware::HardwareConfig::kMainBtnInputId));
 }
 
-void ConfigurableProfile::unload(Core::SaberActionBus &bus) {
+void ConfigurableProfile::unload(Core::SaberActionBus &bus
+#if CONFIG_IDF_TARGET_ESP32S3
+                                 , InertialSaber::System::PsramAudioCache* psramCache
+#endif
+  ) {
   ESP_LOGI(TAG, "Unloading configurable profile '%s'", m_def.profileName);
 
   if (swingEffect) {
@@ -91,6 +126,12 @@ void ConfigurableProfile::unload(Core::SaberActionBus &bus) {
   }
 
   bus.clearEffects();
+
+#if CONFIG_IDF_TARGET_ESP32S3
+  if (psramCache) {
+      psramCache->unloadAll();
+  }
+#endif
 
   swingEffect = nullptr;
   lightEffect = nullptr;

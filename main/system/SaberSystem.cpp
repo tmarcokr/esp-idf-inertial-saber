@@ -8,9 +8,26 @@ namespace InertialSaber::System {
 
 static constexpr const char *TAG = "SaberSystem";
 
-SaberSystem::SaberSystem() {}
+SaberSystem::SaberSystem() : m_statusLed(Hardware::HardwareConfig::kStatusLed) {}
 
 esp_err_t SaberSystem::start() {
+  esp_err_t err;
+  
+  if ((err = m_statusLed.init()) == ESP_OK) {
+      (void)m_statusLed.setColor({255, 255, 0}); // Yellow: Booting
+  }
+
+  err = internalStart();
+
+  if (err == ESP_OK) {
+      (void)m_statusLed.setColor({0, 255, 0}); // Green: Ready
+  } else {
+      (void)m_statusLed.setColor({255, 0, 0}); // Red: Error
+  }
+  return err;
+}
+
+esp_err_t SaberSystem::internalStart() {
   esp_err_t err;
 
 #ifndef NDEBUG
@@ -24,6 +41,11 @@ esp_err_t SaberSystem::start() {
   if ((err = m_ledHardware.init()) != ESP_OK) return err;
   if ((err = m_imuHardware.init()) != ESP_OK) return err;
   if ((err = m_btnHardware.init()) != ESP_OK) return err;
+
+#if CONFIG_IDF_TARGET_ESP32S3
+  if ((err = m_psramCache.init()) != ESP_OK) return err;
+  m_profileManager.setPsramCache(&m_psramCache);
+#endif
 
   ESP_LOGI(TAG, "Starting Adapters...");
   m_imuAdapter = std::make_unique<Adapters::ImuAdapter>(m_bus, *m_imuHardware.getMpu());
