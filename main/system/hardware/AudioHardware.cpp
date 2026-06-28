@@ -26,6 +26,11 @@ esp_err_t AudioHardware::init() {
         ESP_LOGE(TAG, "AudioEngine start failed: %s", esp_err_to_name(err));
         return err;
     }
+
+    // Restored to 100% volume. The PolyphonicMixer's improved soft-clipper
+    // will mathematically guarantee that no hard-clipping ever occurs.
+    m_audioEngine->setGlobalVolume(16384);
+
     ESP_LOGI(TAG, "Audio Engine ready (9 channels, 44.1kHz)");
     return ESP_OK;
 }

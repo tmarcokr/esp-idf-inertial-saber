@@ -136,7 +136,8 @@ void PowerToggleEffect::beginRetraction() {
       esp_random() % std::max<uint8_t>(m_def.fontOutCount, 1));
   const std::string path = buildPath("out/out", index);
 
-  m_audio.play(path, false, 16384);
+  // Set to 11468 (70% volume) for the out effect to balance power and distortion
+  m_audio.play(path, false, 11468);
   m_ledEngine.pushOverlay(std::make_unique<BladeRetractSweep>(
       m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.retractionDurationMs));
 
