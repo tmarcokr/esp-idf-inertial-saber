@@ -42,7 +42,11 @@ void ProfileManager::loadActive(Core::SaberActionBus &bus,
                                Espressif::Wrappers::Audio::AudioEngine &audio,
                                Espressif::Wrappers::SmartLed::Engine &led) {
   if (m_profiles.empty()) return;
-  m_profiles[m_activeIndex]->load(bus, audio, led, *this);
+  m_profiles[m_activeIndex]->load(bus, audio, led, *this
+#if CONFIG_IDF_TARGET_ESP32S3
+                                  , m_psramCache
+#endif
+  );
 }
 
 void ProfileManager::nextProfile(Core::SaberActionBus &bus,
@@ -51,12 +55,20 @@ void ProfileManager::nextProfile(Core::SaberActionBus &bus,
   if (m_profiles.size() <= 1) return;
 
   ESP_LOGI(TAG, "Hot-swapping profile: unloading active index %u", m_activeIndex);
-  m_profiles[m_activeIndex]->unload(bus);
+  m_profiles[m_activeIndex]->unload(bus
+#if CONFIG_IDF_TARGET_ESP32S3
+                                    , m_psramCache
+#endif
+  );
 
   m_activeIndex = (m_activeIndex + 1) % m_profiles.size();
 
   ESP_LOGI(TAG, "Loading next profile at index %u...", m_activeIndex);
-  m_profiles[m_activeIndex]->load(bus, audio, led, *this);
+  m_profiles[m_activeIndex]->load(bus, audio, led, *this
+#if CONFIG_IDF_TARGET_ESP32S3
+                                  , m_psramCache
+#endif
+  );
   saveActiveIndex();
 }
 
@@ -66,7 +78,11 @@ void ProfileManager::prevProfile(Core::SaberActionBus &bus,
   if (m_profiles.size() <= 1) return;
 
   ESP_LOGI(TAG, "Hot-swapping profile: unloading active index %u", m_activeIndex);
-  m_profiles[m_activeIndex]->unload(bus);
+  m_profiles[m_activeIndex]->unload(bus
+#if CONFIG_IDF_TARGET_ESP32S3
+                                    , m_psramCache
+#endif
+  );
 
   if (m_activeIndex == 0) {
     m_activeIndex = m_profiles.size() - 1;
@@ -75,7 +91,11 @@ void ProfileManager::prevProfile(Core::SaberActionBus &bus,
   }
 
   ESP_LOGI(TAG, "Loading previous profile at index %u...", m_activeIndex);
-  m_profiles[m_activeIndex]->load(bus, audio, led, *this);
+  m_profiles[m_activeIndex]->load(bus, audio, led, *this
+#if CONFIG_IDF_TARGET_ESP32S3
+                                  , m_psramCache
+#endif
+  );
   saveActiveIndex();
 }
 

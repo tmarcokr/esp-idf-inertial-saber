@@ -11,9 +11,14 @@
 #include "system/hardware/ImuHardware.hpp"
 #include "system/hardware/ButtonHardware.hpp"
 #include "system/hardware/SdHardware.hpp"
+#include "RgbLed.hpp"
 
 #include "esp_err.h"
 #include <memory>
+
+#if CONFIG_IDF_TARGET_ESP32S3
+#include "system/PsramAudioCache.hpp"
+#endif
 
 namespace InertialSaber::System {
 
@@ -28,12 +33,15 @@ public:
   [[nodiscard]] esp_err_t start();
 
 private:
+  [[nodiscard]] esp_err_t internalStart();
+
   // ── Hardware ──
   Hardware::SdHardware m_sdHardware;
   Hardware::AudioHardware m_audioHardware;
   Hardware::LedHardware m_ledHardware;
   Hardware::ImuHardware m_imuHardware;
   Hardware::ButtonHardware m_btnHardware;
+  Espressif::Wrappers::RgbLed m_statusLed;
 
   // ── Adapters ──
   std::unique_ptr<Adapters::ImuAdapter> m_imuAdapter;
@@ -42,6 +50,10 @@ private:
   // ── Core ──
   Core::SaberActionBus m_bus;
   Profiles::ProfileManager m_profileManager;
+
+#if CONFIG_IDF_TARGET_ESP32S3
+  PsramAudioCache m_psramCache;
+#endif
 };
 
 } // namespace InertialSaber::System

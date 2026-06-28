@@ -28,4 +28,18 @@ This document tracks all non-default `sdkconfig` modifications required by Inert
 
 ---
 
-_Add new overrides below this line following the same format._
+### 2. PSRAM / SPIRAM Support (ESP32-S3)
+
+| Key | Default | Override | Since |
+|---|---|---|---|
+| `CONFIG_SPIRAM` | `not set` | `y` | 2026-06-28 |
+| `CONFIG_SPIRAM_MODE_OCT` | _(absent)_ | `y` | 2026-06-28 |
+| `CONFIG_SPIRAM_SPEED_80M` | _(absent)_ | `y` | 2026-06-28 |
+
+**Reason**: In Phase 6 (MemoryVfs + PSRAM Audio Preloading), latency-critical looping audio channels (`hum.wav` and the active swing pair) are preloaded into PSRAM to eliminate SD card read latency. This requires enabling SPIRAM support in ESP-IDF.
+- **PSRAM Mode**: Octal mode (`CONFIG_SPIRAM_MODE_OCT`) is selected as it is standard for high-performance PSRAM modules (e.g. 8MB) on ESP32-S3 boards.
+- **PSRAM Speed**: 80MHz (`CONFIG_SPIRAM_SPEED_80M`) ensures the memory bandwidth is maximized for the audio mixer.
+
+> [!NOTE]
+> These overrides are target-specific for ESP32-S3 and must be placed in `sdkconfig.defaults.esp32s3` to avoid target verification errors when building for the ESP32-C6.
+
