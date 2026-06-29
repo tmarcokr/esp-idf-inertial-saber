@@ -35,11 +35,7 @@ void InertialSwingEffect::activate() {
     if (m_active.load()) return;
 
 #if CONFIG_IDF_TARGET_ESP32S3
-    if (m_psramCache) {
-        m_humPath = "/mem/hum.wav";
-    } else {
-        m_humPath = std::string("/sdcard/") + m_def.profileRoot + "/hum.wav";
-    }
+    m_humPath = "/mem/hum.wav";
 #else
     m_humPath = std::string("/sdcard/") + m_def.profileRoot + "/hum.wav";
 #endif
@@ -160,24 +156,19 @@ void InertialSwingEffect::handleInertialBurst() {
 
 InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
 #if CONFIG_IDF_TARGET_ESP32S3
-    if (m_psramCache) {
-        uint8_t availablePairs = m_psramCache->getLoadedSwingPairCount();
-        if (availablePairs > 0) {
-            if (availablePairs > 1) {
-                uint8_t newPair;
-                do {
-                    newPair = static_cast<uint8_t>(esp_random() % availablePairs);
-                } while (newPair == m_currentPairIndex);
-                m_currentPairIndex = newPair;
-            } else {
-                m_currentPairIndex = 0;
-            }
-            std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
-            return { "/mem/swingl" + suffix, "/mem/swingh" + suffix };
-        }
+    uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->getLoadedSwingPairCount() : 0;
+    if (availablePairs > 1) {
+        uint8_t newPair;
+        do {
+            newPair = static_cast<uint8_t>(esp_random() % availablePairs);
+        } while (newPair == m_currentPairIndex);
+        m_currentPairIndex = newPair;
+    } else {
+        m_currentPairIndex = 0;
     }
-#endif
-
+    std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
+    return { "/mem/swingl" + suffix, "/mem/swingh" + suffix };
+#else
     if (m_def.fontSwingPairCount > 1) {
         uint8_t newPair;
         do {
@@ -192,6 +183,7 @@ InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
     std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
     
     return { prefix + "l/swingl" + suffix, prefix + "h/swingh" + suffix };
+#endif
 }
 
 std::string InertialSwingEffect::provideBurstPath() const {
@@ -226,11 +218,8 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
 
 void InertialSwingEffect::executeSwap() {
 #if CONFIG_IDF_TARGET_ESP32S3
-    if (m_psramCache) {
-        if (m_psramCache->getLoadedSwingPairCount() <= 1) return;
-    } else {
-        if (m_def.fontSwingPairCount <= 1) return;
-    }
+    uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->getLoadedSwingPairCount() : 0;
+    if (availablePairs <= 1) return;
 #else
     if (m_def.fontSwingPairCount <= 1) return;
 #endif
