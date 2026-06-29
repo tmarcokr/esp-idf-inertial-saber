@@ -35,15 +35,12 @@ void InertialSwingEffect::activate() {
     if (m_active.load()) return;
 
 #if CONFIG_IDF_TARGET_ESP32S3
-    if (m_psramCache && m_psramCache->isPreloadComplete()) {
-        m_runningFromPsram = true;
+    if (m_psramCache) {
         m_humPath = "/mem/hum.wav";
     } else {
-        m_runningFromPsram = false;
         m_humPath = std::string("/sdcard/") + m_def.profileRoot + "/hum.wav";
     }
 #else
-    m_runningFromPsram = false;
     m_humPath = std::string("/sdcard/") + m_def.profileRoot + "/hum.wav";
 #endif
 
@@ -100,15 +97,7 @@ bool InertialSwingEffect::Test(const Core::SaberDataPacket& packet) {
 void InertialSwingEffect::Run() {
     if (m_chHum == INVALID_CHANNEL || m_chSwingL == INVALID_CHANNEL || m_chSwingH == INVALID_CHANNEL) return;
 
-#if CONFIG_IDF_TARGET_ESP32S3
-    if (m_psramCache && !m_runningFromPsram && m_psramCache->isPreloadComplete()) {
-        m_engine.stop(m_chHum);
-        m_humPath = "/mem/hum.wav";
-        m_chHum = m_engine.play(m_humPath, true, m_def.humBaseVolume);
-        m_runningFromPsram = true;
-        ESP_LOGI(TAG, "Hot-Swap completed: Transition of SD to PSRAM successful");
-    }
-#endif
+
 
     float masterVolume = computeMasterVolume();
     float finalMix = computeFinalMix();
@@ -171,7 +160,7 @@ void InertialSwingEffect::handleInertialBurst() {
 
 InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
 #if CONFIG_IDF_TARGET_ESP32S3
-    if (m_psramCache && m_runningFromPsram) {
+    if (m_psramCache) {
         uint8_t availablePairs = m_psramCache->getLoadedSwingPairCount();
         if (availablePairs > 0) {
             if (availablePairs > 1) {
@@ -237,7 +226,7 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
 
 void InertialSwingEffect::executeSwap() {
 #if CONFIG_IDF_TARGET_ESP32S3
-    if (m_psramCache && m_runningFromPsram) {
+    if (m_psramCache) {
         if (m_psramCache->getLoadedSwingPairCount() <= 1) return;
     } else {
         if (m_def.fontSwingPairCount <= 1) return;
