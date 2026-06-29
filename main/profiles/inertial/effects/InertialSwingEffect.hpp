@@ -77,6 +77,7 @@ private:
     // Audio Provider state
     std::string m_humPath;
     uint8_t m_currentPairIndex = 0;
+    bool m_runningFromPsram = false;
 
     // Swing Swapper state
     bool m_needsSwap = false;

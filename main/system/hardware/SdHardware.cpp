@@ -12,7 +12,7 @@ esp_err_t SdHardware::init() {
         .sck = Hardware::HardwareConfig::kSdSck,
         .cs = Hardware::HardwareConfig::kSdCs,
         .mount_point = "/sdcard",
-        .max_files = 5,
+        .max_files = 16,
         .format_if_mount_failed = false};
 
     m_sdCard = std::make_unique<Espressif::Wrappers::SdCard>(sd_cfg);

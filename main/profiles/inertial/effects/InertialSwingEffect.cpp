@@ -25,16 +25,27 @@ InertialSwingEffect::InertialSwingEffect(
     , m_def(definition)
 #if CONFIG_IDF_TARGET_ESP32S3
     , m_psramCache(psramCache)
-    , m_humPath(psramCache ? "/mem/hum.wav" : std::string("/sdcard/") + definition.profileRoot + "/hum.wav")
-#else
-    , m_humPath(std::string("/sdcard/") + definition.profileRoot + "/hum.wav")
 #endif
+    , m_humPath(std::string("/sdcard/") + definition.profileRoot + "/hum.wav")
     {
     Priority = 0;
 }
 
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
+
+#if CONFIG_IDF_TARGET_ESP32S3
+    if (m_psramCache && m_psramCache->isPreloadComplete()) {
+        m_runningFromPsram = true;
+        m_humPath = "/mem/hum.wav";
+    } else {
+        m_runningFromPsram = false;
+        m_humPath = std::string("/sdcard/") + m_def.profileRoot + "/hum.wav";
+    }
+#else
+    m_runningFromPsram = false;
+    m_humPath = std::string("/sdcard/") + m_def.profileRoot + "/hum.wav";
+#endif
 
     m_chHum = m_engine.play(m_humPath, true, m_def.humBaseVolume);
     
@@ -88,6 +99,16 @@ bool InertialSwingEffect::Test(const Core::SaberDataPacket& packet) {
 
 void InertialSwingEffect::Run() {
     if (m_chHum == INVALID_CHANNEL || m_chSwingL == INVALID_CHANNEL || m_chSwingH == INVALID_CHANNEL) return;
+
+#if CONFIG_IDF_TARGET_ESP32S3
+    if (m_psramCache && !m_runningFromPsram && m_psramCache->isPreloadComplete()) {
+        m_engine.stop(m_chHum);
+        m_humPath = "/mem/hum.wav";
+        m_chHum = m_engine.play(m_humPath, true, m_def.humBaseVolume);
+        m_runningFromPsram = true;
+        ESP_LOGI(TAG, "Hot-Swap completed: Transition of SD to PSRAM successful");
+    }
+#endif
 
     float masterVolume = computeMasterVolume();
     float finalMix = computeFinalMix();
@@ -150,8 +171,21 @@ void InertialSwingEffect::handleInertialBurst() {
 
 InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
 #if CONFIG_IDF_TARGET_ESP32S3
-    if (m_psramCache) {
-        return { "/mem/swingl.wav", "/mem/swingh.wav" };
+    if (m_psramCache && m_runningFromPsram) {
+        uint8_t availablePairs = m_psramCache->getLoadedSwingPairCount();
+        if (availablePairs > 0) {
+            if (availablePairs > 1) {
+                uint8_t newPair;
+                do {
+                    newPair = static_cast<uint8_t>(esp_random() % availablePairs);
+                } while (newPair == m_currentPairIndex);
+                m_currentPairIndex = newPair;
+            } else {
+                m_currentPairIndex = 0;
+            }
+            std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
+            return { "/mem/swingl" + suffix, "/mem/swingh" + suffix };
+        }
     }
 #endif
 
@@ -202,43 +236,14 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
 }
 
 void InertialSwingEffect::executeSwap() {
-    if (m_def.fontSwingPairCount <= 1) return;
-
 #if CONFIG_IDF_TARGET_ESP32S3
-    if (m_psramCache) {
-        if (m_chSwingL != INVALID_CHANNEL) m_engine.stop(m_chSwingL);
-        if (m_chSwingH != INVALID_CHANNEL) m_engine.stop(m_chSwingH);
-
-        // Unload old files
-        m_psramCache->unloadFile("swingl.wav");
-        m_psramCache->unloadFile("swingh.wav");
-
-        // Select new index
-        uint8_t newPair;
-        do {
-            newPair = static_cast<uint8_t>(esp_random() % m_def.fontSwingPairCount);
-        } while (newPair == m_currentPairIndex);
-        m_currentPairIndex = newPair;
-
-        std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
-        std::string swlSd = std::string("/sdcard/") + m_def.profileRoot + "/swingl/swingl" + suffix;
-        std::string swhSd = std::string("/sdcard/") + m_def.profileRoot + "/swingh/swingh" + suffix;
-
-        // Load next files to PSRAM VFS
-        if (m_psramCache->loadFile(swlSd, "swingl.wav") != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to load swingl to PSRAM: %s", swlSd.c_str());
-        }
-        if (m_psramCache->loadFile(swhSd, "swingh.wav") != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to load swingh to PSRAM: %s", swhSd.c_str());
-        }
-
-        m_chSwingL = m_engine.play("/mem/swingl.wav", true, 0);
-        m_chSwingH = m_engine.play("/mem/swingh.wav", true, 0);
-
-        ESP_LOGI(TAG, "PSRAM swap → pair %u (swL=%d, swH=%d)",
-                 m_currentPairIndex, m_chSwingL, m_chSwingH);
-        return;
+    if (m_psramCache && m_runningFromPsram) {
+        if (m_psramCache->getLoadedSwingPairCount() <= 1) return;
+    } else {
+        if (m_def.fontSwingPairCount <= 1) return;
     }
+#else
+    if (m_def.fontSwingPairCount <= 1) return;
 #endif
 
     if (m_chSwingL != INVALID_CHANNEL) m_engine.stop(m_chSwingL);

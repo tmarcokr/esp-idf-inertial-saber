@@ -16,6 +16,8 @@ namespace InertialSaber::Effects {
 namespace InertialSaber::System { class PsramAudioCache; }
 #endif
 
+namespace Espressif::Wrappers { class RgbLed; }
+
 namespace InertialSaber::Profiles {
 
 class ProfileManager;
@@ -32,7 +34,8 @@ public:
       RETRACTED,
       IGNITING,
       IGNITED,
-      RETRACTING
+      RETRACTING,
+      PRELOADING
   };
 
   /**
@@ -56,7 +59,8 @@ public:
   void load(Core::SaberActionBus &bus,
             Espressif::Wrappers::Audio::AudioEngine &audio,
             Espressif::Wrappers::SmartLed::Engine &led,
-            ProfileManager &profileManager
+            ProfileManager &profileManager,
+            Espressif::Wrappers::RgbLed* statusLed = nullptr
 #if CONFIG_IDF_TARGET_ESP32S3
             , InertialSaber::System::PsramAudioCache* psramCache = nullptr
 #endif

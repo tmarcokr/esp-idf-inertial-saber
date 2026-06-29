@@ -40,11 +40,6 @@ bool ProfileCycleEffect::Test(const Core::SaberDataPacket& packet) {
 void ProfileCycleEffect::Run() {
     ESP_LOGI(TAG, "Profile cycle triggered");
     m_profileManager.nextProfile(m_bus, m_audio, m_led);
-
-    const auto& def = m_profileManager.getActiveProfile().getDefinition();
-    std::string fontPath = std::string("/sdcard/") + def.profileRoot + "font.wav";
-    ESP_LOGI(TAG, "Playing selection sound: %s", fontPath.c_str());
-    m_audio.play(fontPath, false, 16384);
 }
 
 } // namespace InertialSaber::Effects
