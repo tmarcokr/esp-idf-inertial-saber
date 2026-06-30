@@ -8,6 +8,7 @@
 #include "KineticImpactEffect.hpp"
 #include "DragEffect.hpp"
 #include "profiles/inertial/effects/ProfileCycleEffect.hpp"
+#include "profiles/inertial/effects/PreloadWaitEffect.hpp"
 #include "system/hardware/HardwareConfig.hpp"
 
 #if CONFIG_IDF_TARGET_ESP32S3
@@ -46,33 +47,29 @@ void ConfigurableProfile::setPowerState(PowerState state) {
 void ConfigurableProfile::load(Core::SaberActionBus &bus,
                                Espressif::Wrappers::Audio::AudioEngine &audio,
                                Espressif::Wrappers::SmartLed::Engine &led,
-                               ProfileManager &profileManager
+                               ProfileManager &profileManager,
+                               Espressif::Wrappers::RgbLed* statusLed
 #if CONFIG_IDF_TARGET_ESP32S3
                                , InertialSaber::System::PsramAudioCache* psramCache
 #endif
   ) {
   ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName);
 
+  m_powerState = PowerState::PRELOADING;
   bus.setPhysicsConfig(m_def);
 
 #if CONFIG_IDF_TARGET_ESP32S3
   if (psramCache) {
-      std::string humSd = std::string("/sdcard/") + m_def.profileRoot + "/hum.wav";
-      if (psramCache->loadFile(humSd, "hum.wav") != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to load hum.wav to PSRAM");
-      }
-
-      // Preload initial swing pair (index 0, pair 1)
-      std::string swlSd = std::string("/sdcard/") + m_def.profileRoot + "/swingl/swingl1.wav";
-      std::string swhSd = std::string("/sdcard/") + m_def.profileRoot + "/swingh/swingh1.wav";
-      if (psramCache->loadFile(swlSd, "swingl.wav") != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to load swingl1.wav to PSRAM");
-      }
-      if (psramCache->loadFile(swhSd, "swingh.wav") != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to load swhSd to PSRAM");
-      }
+      psramCache->requestProfilePreload(m_def.profileRoot, m_def.fontSwingPairCount);
   }
 #endif
+
+  bus.registerEffect(std::make_unique<Effects::PreloadWaitEffect>(
+      *this, audio, statusLed
+#if CONFIG_IDF_TARGET_ESP32S3
+      , psramCache
+#endif
+  ));
 
   auto swingFx =
       std::make_unique<Effects::InertialSwingEffect>(audio, m_def

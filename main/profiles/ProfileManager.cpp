@@ -42,7 +42,7 @@ void ProfileManager::loadActive(Core::SaberActionBus &bus,
                                Espressif::Wrappers::Audio::AudioEngine &audio,
                                Espressif::Wrappers::SmartLed::Engine &led) {
   if (m_profiles.empty()) return;
-  m_profiles[m_activeIndex]->load(bus, audio, led, *this
+  m_profiles[m_activeIndex]->load(bus, audio, led, *this, m_statusLed
 #if CONFIG_IDF_TARGET_ESP32S3
                                   , m_psramCache
 #endif
@@ -64,7 +64,7 @@ void ProfileManager::nextProfile(Core::SaberActionBus &bus,
   m_activeIndex = (m_activeIndex + 1) % m_profiles.size();
 
   ESP_LOGI(TAG, "Loading next profile at index %u...", m_activeIndex);
-  m_profiles[m_activeIndex]->load(bus, audio, led, *this
+  m_profiles[m_activeIndex]->load(bus, audio, led, *this, m_statusLed
 #if CONFIG_IDF_TARGET_ESP32S3
                                   , m_psramCache
 #endif
@@ -91,7 +91,7 @@ void ProfileManager::prevProfile(Core::SaberActionBus &bus,
   }
 
   ESP_LOGI(TAG, "Loading previous profile at index %u...", m_activeIndex);
-  m_profiles[m_activeIndex]->load(bus, audio, led, *this
+  m_profiles[m_activeIndex]->load(bus, audio, led, *this, m_statusLed
 #if CONFIG_IDF_TARGET_ESP32S3
                                   , m_psramCache
 #endif

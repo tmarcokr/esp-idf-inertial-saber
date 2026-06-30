@@ -92,6 +92,9 @@ void PowerToggleEffect::Run() {
   case ProfileState::RETRACTING:
     tickRetraction();
     break;
+
+  case ProfileState::PRELOADING:
+    break;
   }
 }
 

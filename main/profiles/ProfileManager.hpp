@@ -7,6 +7,8 @@
 #include <vector>
 #include <memory>
 
+namespace Espressif::Wrappers { class RgbLed; }
+
 #if CONFIG_IDF_TARGET_ESP32S3
 namespace InertialSaber::System { class PsramAudioCache; }
 #endif
@@ -23,6 +25,8 @@ public:
 
   ProfileManager(const ProfileManager &) = delete;
   ProfileManager &operator=(const ProfileManager &) = delete;
+
+  void setStatusLed(Espressif::Wrappers::RgbLed* statusLed) { m_statusLed = statusLed; }
 
 #if CONFIG_IDF_TARGET_ESP32S3
   void setPsramCache(InertialSaber::System::PsramAudioCache* psramCache) { m_psramCache = psramCache; }
@@ -71,6 +75,7 @@ private:
 
   std::vector<std::unique_ptr<ConfigurableProfile>> m_profiles;
   size_t m_activeIndex = 0;
+  Espressif::Wrappers::RgbLed* m_statusLed = nullptr;
 
 #if CONFIG_IDF_TARGET_ESP32S3
   InertialSaber::System::PsramAudioCache* m_psramCache = nullptr;

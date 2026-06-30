@@ -27,6 +27,7 @@ idf_component_register(
          "profiles/inertial/effects/overlays/BladeDragEffect.cpp"
          "profiles/inertial/effects/DragEffect.cpp"
          "profiles/inertial/effects/ProfileCycleEffect.cpp"
+         "profiles/inertial/effects/PreloadWaitEffect.cpp"
     INCLUDE_DIRS "." "core" "profiles/inertial/effects" "profiles/inertial/effects/overlays" "profiles"
     REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led json rgb_led
 )

@@ -18,18 +18,46 @@ PsramAudioCache::PsramAudioCache(const char* mount_point, uint8_t max_files, uin
 }
 
 PsramAudioCache::~PsramAudioCache() {
+    if (m_loaderTask) {
+        vTaskDelete(m_loaderTask);
+        m_loaderTask = nullptr;
+    }
+    if (m_loadQueue) {
+        vQueueDelete(m_loadQueue);
+        m_loadQueue = nullptr;
+    }
     unloadAll();
     delete[] m_entries;
 }
 
 esp_err_t PsramAudioCache::init() {
-    return m_vfs.init();
+    esp_err_t err = m_vfs.init();
+    if (err != ESP_OK) return err;
+
+    m_loadQueue = xQueueCreate(2, sizeof(PreloadRequest));
+    if (!m_loadQueue) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    BaseType_t ret = xTaskCreatePinnedToCore(
+        &PsramAudioCache::loaderTaskFn,
+        "psram_loader",
+        4096,
+        this,
+        2,
+        &m_loaderTask,
+        1
+    );
+    if (ret != pdPASS) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    return ESP_OK;
 }
 
 esp_err_t PsramAudioCache::loadFile(const std::string& sdPath, const char* vfsName) {
     if (vfsName == nullptr) return ESP_ERR_INVALID_ARG;
 
-    // Find free slot
     int slot = -1;
     for (uint8_t i = 0; i < m_maxFiles; ++i) {
         if (!m_entries[i].occupied) {
@@ -57,7 +85,12 @@ esp_err_t PsramAudioCache::loadFile(const std::string& sdPath, const char* vfsNa
         return ESP_ERR_INVALID_SIZE;
     }
 
-    // Allocate buffer in SPIRAM
+    if (heap_caps_get_free_size(MALLOC_CAP_SPIRAM) < size + 256 * 1024) {
+        ESP_LOGW(TAG, "Not enough PSRAM for '%s' (requires %zu + 256KB threshold)", vfsName, size);
+        fclose(f);
+        return ESP_ERR_NO_MEM;
+    }
+
     uint8_t* buffer = static_cast<uint8_t*>(heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
     if (!buffer) {
         fclose(f);
@@ -122,6 +155,75 @@ void PsramAudioCache::unloadAll() {
 
 const char* PsramAudioCache::mountPoint() const {
     return "/mem";
+}
+
+void PsramAudioCache::requestProfilePreload(const std::string& profileRoot, uint8_t totalSwingPairs) {
+    m_preloadComplete.store(false);
+    m_loadedSwingPairs.store(0);
+
+    PreloadRequest req{};
+    snprintf(req.profileRoot, sizeof(req.profileRoot), "%s", profileRoot.c_str());
+    req.totalSwingPairs = totalSwingPairs;
+
+    if (m_loadQueue) {
+        PreloadRequest dummy;
+        (void)xQueueReceive(m_loadQueue, &dummy, 0);
+        xQueueSend(m_loadQueue, &req, 0);
+    }
+}
+
+bool PsramAudioCache::isPreloadComplete() const {
+    return m_preloadComplete.load();
+}
+
+uint8_t PsramAudioCache::getLoadedSwingPairCount() const {
+    return m_loadedSwingPairs.load();
+}
+
+void PsramAudioCache::loaderTaskFn(void* pvParameters) {
+    auto* self = static_cast<PsramAudioCache*>(pvParameters);
+    PreloadRequest req;
+    while (true) {
+        if (xQueueReceive(self->m_loadQueue, &req, portMAX_DELAY) == pdTRUE) {
+            self->runPreload(req.profileRoot, req.totalSwingPairs);
+        }
+    }
+}
+
+void PsramAudioCache::runPreload(const std::string& profileRoot, uint8_t totalSwingPairs) {
+    ESP_LOGI(TAG, "Iniciando carga a PSRAM para profile: %s", profileRoot.c_str());
+    unloadAll();
+
+    std::string humSd = "/sdcard/" + profileRoot + "/hum.wav";
+    if (loadFile(humSd, "hum.wav") != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to load hum.wav to PSRAM. Aborting preload.");
+        m_preloadComplete.store(true);
+        return;
+    }
+    ESP_LOGI(TAG, "Cargado a PSRAM: hum.wav");
+
+    for (uint8_t i = 1; i <= totalSwingPairs; ++i) {
+        std::string suffix = std::to_string(i) + ".wav";
+        std::string swlSd = "/sdcard/" + profileRoot + "/swingl/swingl" + suffix;
+        std::string swhSd = "/sdcard/" + profileRoot + "/swingh/swingh" + suffix;
+        std::string vfsL = "swingl" + std::to_string(i) + ".wav";
+        std::string vfsH = "swingh" + std::to_string(i) + ".wav";
+
+        if (loadFile(swlSd, vfsL.c_str()) != ESP_OK) {
+            ESP_LOGW(TAG, "Memoria PSRAM llena. Carga detenida en el par %d", i);
+            break;
+        }
+        if (loadFile(swhSd, vfsH.c_str()) != ESP_OK) {
+            unloadFile(vfsL.c_str());
+            ESP_LOGW(TAG, "Memoria PSRAM llena. Carga detenida en el par %d", i);
+            break;
+        }
+        m_loadedSwingPairs.store(i);
+        ESP_LOGI(TAG, "Cargado a PSRAM: par swing %d", i);
+    }
+
+    m_preloadComplete.store(true);
+    ESP_LOGI(TAG, "Carga a PSRAM completada. Pares totales cargados: %d", m_loadedSwingPairs.load());
 }
 
 } // namespace InertialSaber::System
