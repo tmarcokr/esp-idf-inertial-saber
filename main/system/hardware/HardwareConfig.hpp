@@ -20,11 +20,10 @@ struct HardwareConfig {
     // Status LED (Internal WS2812)
     static constexpr gpio_num_t kStatusLed = GPIO_NUM_48;
 
-    // SD Card SPI
-    static constexpr gpio_num_t kSdMiso = GPIO_NUM_7;
-    static constexpr gpio_num_t kSdMosi = GPIO_NUM_8;
-    static constexpr gpio_num_t kSdSck  = GPIO_NUM_9;
-    static constexpr gpio_num_t kSdCs   = GPIO_NUM_10;
+    // SD Card SDMMC (1-Bit)
+    static constexpr gpio_num_t kSdD0   = GPIO_NUM_7;
+    static constexpr gpio_num_t kSdCmd  = GPIO_NUM_8;
+    static constexpr gpio_num_t kSdClk  = GPIO_NUM_9;
 
     // I2S / MAX98357A
     static constexpr gpio_num_t kI2sBclk   = GPIO_NUM_11;
