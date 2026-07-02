@@ -28,8 +28,8 @@ esp_err_t AudioHardware::init() {
     }
 
     // Master volume at Q14 unity. The PolyphonicMixer now applies a sqrt-law
-    // compressor (ProffieOS-style) + DC blocker, so loud/bass content is gain-
-    // reduced before the final clamp instead of flat-topping. To get louder,
+    // compressor (Kinetic Acoustic Compressor) + DC blocker, so loud/bass content
+    // is gain-reduced before the final clamp instead of flat-topping. To get louder,
     // prefer raising the MAX98357A hardware GAIN strap (6 -> 9/12 dB) over
     // pushing this value, and tune volumeToCompressorGain() in PolyphonicMixer.
     m_audioEngine->setGlobalVolume(16384);
