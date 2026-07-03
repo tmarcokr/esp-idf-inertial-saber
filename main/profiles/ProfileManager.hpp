@@ -9,9 +9,8 @@
 
 namespace Espressif::Wrappers { class RgbLed; }
 
-#if CONFIG_IDF_TARGET_ESP32S3
 namespace InertialSaber::System { class PsramAudioCache; }
-#endif
+
 
 namespace InertialSaber::Profiles {
 
@@ -28,9 +27,8 @@ public:
 
   void setStatusLed(Espressif::Wrappers::RgbLed* statusLed) { m_statusLed = statusLed; }
 
-#if CONFIG_IDF_TARGET_ESP32S3
   void setPsramCache(InertialSaber::System::PsramAudioCache* psramCache) { m_psramCache = psramCache; }
-#endif
+
 
   /**
    * @brief Discovers and initializes profiles from the SD card.
@@ -77,9 +75,8 @@ private:
   size_t m_activeIndex = 0;
   Espressif::Wrappers::RgbLed* m_statusLed = nullptr;
 
-#if CONFIG_IDF_TARGET_ESP32S3
   InertialSaber::System::PsramAudioCache* m_psramCache = nullptr;
-#endif
+
 };
 
 } // namespace InertialSaber::Profiles

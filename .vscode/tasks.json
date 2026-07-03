@@ -4,7 +4,7 @@
         {
             "label": "Set ESP-IDF Target",
             "type": "shell",
-            "command": "source ${env:HOME}/esp/esp-idf/export.sh && idf.py set-target ${input:espTarget}",
+            "command": "source ${env:HOME}/esp/esp-idf/export.sh && idf.py set-target esp32s3",
             "problemMatcher": [],
             "presentation": {
                 "reveal": "always"
@@ -84,19 +84,6 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             }
-        }
-    ],
-    "inputs": [
-        {
-            "id": "espTarget",
-            "type": "pickString",
-            "description": "Select the ESP32 target chip for this project:",
-            "options": [
-                "esp32",
-                "esp32s3",
-                "esp32c6"
-            ],
-            "default": "esp32c6"
         }
     ]
 }

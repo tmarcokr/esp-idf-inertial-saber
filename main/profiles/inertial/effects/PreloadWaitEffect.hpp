@@ -17,11 +17,10 @@ namespace Espressif::Wrappers::Audio {
 class AudioEngine;
 }
 
-#if CONFIG_IDF_TARGET_ESP32S3
 namespace InertialSaber::System {
 class PsramAudioCache;
 }
-#endif
+
 
 namespace InertialSaber::Effects {
 
@@ -34,9 +33,8 @@ public:
         Profiles::ConfigurableProfile&           profile,
         Espressif::Wrappers::Audio::AudioEngine& audio,
         Espressif::Wrappers::RgbLed*             statusLed
-#if CONFIG_IDF_TARGET_ESP32S3
         , System::PsramAudioCache*               psramCache
-#endif
+
     );
 
     bool Test(const Core::SaberDataPacket& packet) override;
@@ -46,9 +44,8 @@ private:
     Profiles::ConfigurableProfile&           m_profile;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     Espressif::Wrappers::RgbLed*             m_statusLed;
-#if CONFIG_IDF_TARGET_ESP32S3
     System::PsramAudioCache*                 m_psramCache;
-#endif
+
 };
 
 } // namespace InertialSaber::Effects

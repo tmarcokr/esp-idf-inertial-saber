@@ -11,9 +11,8 @@
 #include "profiles/inertial/effects/PreloadWaitEffect.hpp"
 #include "system/hardware/HardwareConfig.hpp"
 
-#if CONFIG_IDF_TARGET_ESP32S3
 #include "system/PsramAudioCache.hpp"
-#endif
+
 
 #include "esp_log.h"
 
@@ -49,33 +48,29 @@ void ConfigurableProfile::load(Core::SaberActionBus &bus,
                                Espressif::Wrappers::SmartLed::Engine &led,
                                ProfileManager &profileManager,
                                Espressif::Wrappers::RgbLed* statusLed
-#if CONFIG_IDF_TARGET_ESP32S3
                                , InertialSaber::System::PsramAudioCache* psramCache
-#endif
+
   ) {
   ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName);
 
   m_powerState = PowerState::PRELOADING;
   bus.setPhysicsConfig(m_def);
 
-#if CONFIG_IDF_TARGET_ESP32S3
   if (psramCache) {
       psramCache->requestProfilePreload(m_def.profileRoot, m_def.fontSwingPairCount);
   }
-#endif
+
 
   bus.registerEffect(std::make_unique<Effects::PreloadWaitEffect>(
       *this, audio, statusLed
-#if CONFIG_IDF_TARGET_ESP32S3
       , psramCache
-#endif
+
   ));
 
   auto swingFx =
       std::make_unique<Effects::InertialSwingEffect>(audio, m_def
-#if CONFIG_IDF_TARGET_ESP32S3
                                                      , psramCache
-#endif
+
       );
   swingEffect = swingFx.get();
   bus.registerEffect(std::move(swingFx));
@@ -109,9 +104,8 @@ void ConfigurableProfile::load(Core::SaberActionBus &bus,
 }
 
 void ConfigurableProfile::unload(Core::SaberActionBus &bus
-#if CONFIG_IDF_TARGET_ESP32S3
                                  , InertialSaber::System::PsramAudioCache* psramCache
-#endif
+
   ) {
   ESP_LOGI(TAG, "Unloading configurable profile '%s'", m_def.profileName);
 
@@ -124,11 +118,10 @@ void ConfigurableProfile::unload(Core::SaberActionBus &bus
 
   bus.clearEffects();
 
-#if CONFIG_IDF_TARGET_ESP32S3
   if (psramCache) {
       psramCache->unloadAll();
   }
-#endif
+
 
   swingEffect = nullptr;
   lightEffect = nullptr;
