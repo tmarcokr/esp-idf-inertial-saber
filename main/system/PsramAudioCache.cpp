@@ -1,6 +1,5 @@
 #include "sdkconfig.h"
 
-#if CONFIG_IDF_TARGET_ESP32S3
 
 #include "system/PsramAudioCache.hpp"
 #include "esp_log.h"
@@ -228,4 +227,3 @@ void PsramAudioCache::runPreload(const std::string& profileRoot, uint8_t totalSw
 
 } // namespace InertialSaber::System
 
-#endif // CONFIG_IDF_TARGET_ESP32S3

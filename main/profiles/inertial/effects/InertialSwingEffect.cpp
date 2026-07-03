@@ -6,9 +6,8 @@
 #include <cmath>
 #include <string>
 
-#if CONFIG_IDF_TARGET_ESP32S3
 #include "system/PsramAudioCache.hpp"
-#endif
+
 
 namespace InertialSaber::Effects {
 
@@ -17,15 +16,13 @@ using Espressif::Wrappers::Audio::INVALID_CHANNEL;
 InertialSwingEffect::InertialSwingEffect(
     Espressif::Wrappers::Audio::AudioEngine& engine,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition
-#if CONFIG_IDF_TARGET_ESP32S3
     , InertialSaber::System::PsramAudioCache* psramCache
-#endif
+
     )
     : m_engine(engine)
     , m_def(definition)
-#if CONFIG_IDF_TARGET_ESP32S3
     , m_psramCache(psramCache)
-#endif
+
     , m_humPath(std::string("/sdcard/") + definition.profileRoot + "/hum.wav")
     {
     Priority = 0;
@@ -34,12 +31,7 @@ InertialSwingEffect::InertialSwingEffect(
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
 
-#if CONFIG_IDF_TARGET_ESP32S3
     m_humPath = "/mem/hum.wav";
-#else
-    m_humPath = std::string("/sdcard/") + m_def.profileRoot + "/hum.wav";
-#endif
-
     m_chHum = m_engine.play(m_humPath, true, m_def.humBaseVolume);
     
     auto paths = provideSwingPaths();
@@ -155,7 +147,6 @@ void InertialSwingEffect::handleInertialBurst() {
 }
 
 InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
-#if CONFIG_IDF_TARGET_ESP32S3
     uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->getLoadedSwingPairCount() : 0;
     if (availablePairs > 1) {
         uint8_t newPair;
@@ -168,22 +159,8 @@ InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
     }
     std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
     return { "/mem/swingl" + suffix, "/mem/swingh" + suffix };
-#else
-    if (m_def.fontSwingPairCount > 1) {
-        uint8_t newPair;
-        do {
-            newPair = static_cast<uint8_t>(esp_random() % m_def.fontSwingPairCount);
-        } while (newPair == m_currentPairIndex);
-        m_currentPairIndex = newPair;
-    } else {
-        m_currentPairIndex = 0;
-    }
-    
-    std::string prefix = std::string("/sdcard/") + m_def.profileRoot + "/swing";
-    std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
-    
-    return { prefix + "l/swingl" + suffix, prefix + "h/swingh" + suffix };
-#endif
+
+
 }
 
 std::string InertialSwingEffect::provideBurstPath() const {
@@ -217,12 +194,8 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
 }
 
 void InertialSwingEffect::executeSwap() {
-#if CONFIG_IDF_TARGET_ESP32S3
     uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->getLoadedSwingPairCount() : 0;
     if (availablePairs <= 1) return;
-#else
-    if (m_def.fontSwingPairCount <= 1) return;
-#endif
 
     if (m_chSwingL != INVALID_CHANNEL) m_engine.stop(m_chSwingL);
     if (m_chSwingH != INVALID_CHANNEL) m_engine.stop(m_chSwingH);

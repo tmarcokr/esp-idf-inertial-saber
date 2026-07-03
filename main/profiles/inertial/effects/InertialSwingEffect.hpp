@@ -4,9 +4,8 @@
 #include "core/InertialEffect.hpp"
 #include "AudioEngine.hpp"
 
-#if CONFIG_IDF_TARGET_ESP32S3
 namespace InertialSaber::System { class PsramAudioCache; }
-#endif
+
 
 #include <atomic>
 #include <cstdint>
@@ -25,9 +24,8 @@ class InertialSwingEffect final : public Core::InertialEffect {
 public:
     InertialSwingEffect(Espressif::Wrappers::Audio::AudioEngine& engine,
                         const InertialSaber::Profiles::Inertial::InertialDefinition& definition
-#if CONFIG_IDF_TARGET_ESP32S3
                         , InertialSaber::System::PsramAudioCache* psramCache = nullptr
-#endif
+
     );
 
     /**
@@ -56,9 +54,8 @@ private:
     Espressif::Wrappers::Audio::AudioEngine& m_engine;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
 
-#if CONFIG_IDF_TARGET_ESP32S3
     InertialSaber::System::PsramAudioCache* m_psramCache = nullptr;
-#endif
+
     
     std::atomic<bool> m_active{false};
 

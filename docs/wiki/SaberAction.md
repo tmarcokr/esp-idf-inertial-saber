@@ -9,12 +9,8 @@ The system allows the dynamic subscription of "Actions" to a constant **Data Str
 The SaberAction Bus is **application-level logic**, located under `main/core/`. It is not a reusable hardware component; it is the central nervous system that orchestrates the InertialSaber OS domain logic.
 
 ### 1.2. Platform Abstraction
-The bus code is 100% portable between ESP32-S3 and ESP32-C6. Platform-specific constants (core affinity, task priorities) are centralized in `PlatformConfig.hpp` and resolved at compile time via `CONFIG_IDF_TARGET_*` macros provided by ESP-IDF.
-
-| Aspect | ESP32-C6 (RISC-V) | ESP32-S3 (Xtensa) |
-| :--- | :--- | :--- |
-| **Cores** | Single-core (all tasks on core 0) | Dual-core (bus on core 0, engines on core 1) |
-| **FPU** | Software-emulated | Hardware FPU |
+La arquitectura está optimizada exclusivamente para **ESP32-S3** (Xtensa Dual-Core con soporte FPU por hardware y PSRAM). 
+El bus se ejecuta en el Core 0 (PRO) y los motores de renderizado en el Core 1 (APP), garantizando latencia cero.
 
 ---
 

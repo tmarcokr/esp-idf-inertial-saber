@@ -12,9 +12,8 @@ namespace InertialSaber::Effects {
     class InertialLightEffect;
 } // namespace InertialSaber::Effects
 
-#if CONFIG_IDF_TARGET_ESP32S3
 namespace InertialSaber::System { class PsramAudioCache; }
-#endif
+
 
 namespace Espressif::Wrappers { class RgbLed; }
 
@@ -61,18 +60,16 @@ public:
             Espressif::Wrappers::SmartLed::Engine &led,
             ProfileManager &profileManager,
             Espressif::Wrappers::RgbLed* statusLed = nullptr
-#if CONFIG_IDF_TARGET_ESP32S3
             , InertialSaber::System::PsramAudioCache* psramCache = nullptr
-#endif
+
   );
 
   /**
    * @brief Deactivate this profile's effects and clear them from the bus.
    */
   void unload(Core::SaberActionBus &bus
-#if CONFIG_IDF_TARGET_ESP32S3
               , InertialSaber::System::PsramAudioCache* psramCache = nullptr
-#endif
+
   );
 
   Effects::InertialSwingEffect* swingEffect = nullptr;

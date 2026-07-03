@@ -2,7 +2,6 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_IDF_TARGET_ESP32S3
 
 #include "system/MemoryVfs.hpp"
 #include "esp_err.h"
@@ -67,4 +66,3 @@ private:
 
 } // namespace InertialSaber::System
 
-#endif // CONFIG_IDF_TARGET_ESP32S3

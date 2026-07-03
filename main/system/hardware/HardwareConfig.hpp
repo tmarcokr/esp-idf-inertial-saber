@@ -7,7 +7,6 @@
 namespace InertialSaber::System::Hardware {
 
 struct HardwareConfig {
-#if CONFIG_IDF_TARGET_ESP32S3
     // ── ESP32-S3 Hardware Pinout ──
     // IMU (MPU6050)
     static constexpr gpio_num_t kImuSda = GPIO_NUM_4;
@@ -37,38 +36,7 @@ struct HardwareConfig {
     // Task Scheduling
     static constexpr int kBusTaskCore    = 0;
     static constexpr int kEngineTaskCore = 1;
-#else
-    // ── ESP32-C6 Hardware Pinout (Default) ──
-    // IMU (MPU6050)
-    static constexpr gpio_num_t kImuSda = GPIO_NUM_22;
-    static constexpr gpio_num_t kImuScl = GPIO_NUM_23;
-    static constexpr gpio_num_t kImuInt = GPIO_NUM_21;
 
-    // Main Button
-    static constexpr gpio_num_t kMainBtn = GPIO_NUM_9;
-
-    // Status LED (Internal WS2812)
-    static constexpr gpio_num_t kStatusLed = GPIO_NUM_8;
-
-    // SD Card SPI
-    static constexpr gpio_num_t kSdMiso = GPIO_NUM_4;
-    static constexpr gpio_num_t kSdMosi = GPIO_NUM_11;
-    static constexpr gpio_num_t kSdSck  = GPIO_NUM_7;
-    static constexpr gpio_num_t kSdCs   = GPIO_NUM_10;
-
-    // I2S / MAX98357A
-    static constexpr gpio_num_t kI2sBclk   = GPIO_NUM_18;
-    static constexpr gpio_num_t kI2sWs     = GPIO_NUM_19;
-    static constexpr gpio_num_t kI2sDout   = GPIO_NUM_20;
-    static constexpr gpio_num_t kI2sSdMode = GPIO_NUM_1;
-
-    // SmartLed
-    static constexpr gpio_num_t kLedData = GPIO_NUM_0;
-
-    // Task Scheduling
-    static constexpr int kBusTaskCore    = 0;
-    static constexpr int kEngineTaskCore = 0;
-#endif
 
     // ── Common Parameters ──
     static constexpr uint32_t kImuGracePeriodMs = 3000;

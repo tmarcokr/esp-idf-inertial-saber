@@ -16,9 +16,8 @@
 #include "esp_err.h"
 #include <memory>
 
-#if CONFIG_IDF_TARGET_ESP32S3
 #include "system/PsramAudioCache.hpp"
-#endif
+
 
 namespace InertialSaber::System {
 
@@ -51,9 +50,8 @@ private:
   Core::SaberActionBus m_bus;
   Profiles::ProfileManager m_profileManager;
 
-#if CONFIG_IDF_TARGET_ESP32S3
   PsramAudioCache m_psramCache;
-#endif
+
 };
 
 } // namespace InertialSaber::System

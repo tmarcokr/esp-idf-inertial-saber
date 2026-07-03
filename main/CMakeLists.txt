@@ -34,3 +34,7 @@ idf_component_register(
 
 # Force C++20 for all source files
 target_compile_features(${COMPONENT_LIB} PRIVATE cxx_std_20)
+
+if(NOT CONFIG_IDF_TARGET_ESP32S3)
+    message(FATAL_ERROR "El proyecto Inertial Saber solo soporta el target esp32s3. Ejecuta: idf.py set-target esp32s3")
+endif()

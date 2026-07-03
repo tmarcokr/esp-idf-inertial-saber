@@ -40,10 +40,9 @@ esp_err_t SaberSystem::internalStart() {
   if ((err = m_imuHardware.init()) != ESP_OK) return err;
   if ((err = m_btnHardware.init()) != ESP_OK) return err;
 
-#if CONFIG_IDF_TARGET_ESP32S3
   if ((err = m_psramCache.init()) != ESP_OK) return err;
   m_profileManager.setPsramCache(&m_psramCache);
-#endif
+
 
   ESP_LOGI(TAG, "Starting Adapters...");
   m_imuAdapter = std::make_unique<Adapters::ImuAdapter>(m_bus, *m_imuHardware.getMpu());
