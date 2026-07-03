@@ -12,7 +12,9 @@ esp_err_t AudioHardware::init() {
         .dout_pin = Hardware::HardwareConfig::kI2sDout,
         .sd_mode_pin = Hardware::HardwareConfig::kI2sSdMode,
         .sample_rate = 44100,
-        .max_channels = 9};
+        .max_channels = 9,
+        .compressor_gain_threshold = 1000,
+        .dc_cutoff = Espressif::Wrappers::Audio::DcBlocker::CutoffPreset::Hz50};
 
     m_audioEngine = std::make_unique<Espressif::Wrappers::Audio::AudioEngine>(audio_cfg);
     esp_err_t err = m_audioEngine->init();
@@ -29,9 +31,8 @@ esp_err_t AudioHardware::init() {
 
     // Master volume at Q14 unity. The PolyphonicMixer now applies a sqrt-law
     // compressor (Kinetic Acoustic Compressor) + DC blocker, so loud/bass content
-    // is gain-reduced before the final clamp instead of flat-topping. To get louder,
-    // prefer raising the MAX98357A hardware GAIN strap (6 -> 9/12 dB) over
-    // pushing this value, and tune volumeToCompressorGain() in PolyphonicMixer.
+    // is gain-reduced before the final clamp instead of flat-topping.
+    // The compressor_gain_threshold and dc_cutoff above are tuned for this specific hardware.
     m_audioEngine->setGlobalVolume(16384);
 
     ESP_LOGI(TAG, "Audio Engine ready (9 channels, 44.1kHz)");
