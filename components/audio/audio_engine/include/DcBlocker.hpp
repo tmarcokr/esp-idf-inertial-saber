@@ -44,8 +44,11 @@ public:
      */
     int32_t process(int32_t x) {
         // y[n] = x[n] - x[n-1] + R * y[n-1]
+        // Divide (truncates toward zero) instead of >>15 (floors toward -inf):
+        // an arithmetic shift leaves a small negative y[n-1] stuck at a nonzero
+        // DC value forever, so the filter never settles to silence at zero input.
         int64_t y = static_cast<int64_t>(x) - _x_prev
-                    + ((static_cast<int64_t>(_y_prev) * _cutoff_coeff) >> 15);
+                    + ((static_cast<int64_t>(_y_prev) * _cutoff_coeff) / 32768);
         _x_prev = x;
         _y_prev = static_cast<int32_t>(y);
         return _y_prev;
