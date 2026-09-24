@@ -36,7 +36,7 @@ A high-performance configuration model. Profiles are compiled C++ classes that e
 - `main/`: Core application logic and ISample implementations.
 - `components/`: Hardware wrappers and peripheral drivers.
 - `docs/wiki/`: Official functional and technical specifications (The Source of Truth).
-- `.agents/`: Expert AI configurations for development, hardware, and quality assurance.
+- `.claude/` + `CLAUDE.md`: Expert AI (Claude Code) configurations for development, hardware, and quality assurance.
 
 ## 📑 Documentation Index (Wiki)
 
