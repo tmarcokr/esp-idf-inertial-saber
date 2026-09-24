@@ -24,7 +24,7 @@ Use this workflow when you have completed a feature, bug fix, or documentation u
    - Squash your commits into a single cohesive functional commit following the **`/git-squash-commits`** workflow (`.claude/skills/git-squash-commits/SKILL.md`).
 
 4. **Auditor Review**:
-   - Request a quality check from the **`quality-auditor` skill** (or delegate to the `code-auditor` subagent).
+   - Delegate to the `code-auditor` subagent (or activate the **`quality-auditor` skill** when working without subagents).
    - Ensure RAII, C++20 standards, and commenting policies are met.
 
 5. **Final Output**:
@@ -33,9 +33,8 @@ Use this workflow when you have completed a feature, bug fix, or documentation u
 6. **Publish & Create PR**:
    - Push your finalized branch (using force push since history was rewritten):
      ```bash
-     gpf!
+     git push --force-with-lease -u origin HEAD
      ```
-   - *Note:* `gpf!` is the oh-my-zsh alias for `git push --force-with-lease`.
    - Create the Pull Request using the GitHub CLI:
      ```bash
      gh pr create --title "<TITLE>" --body "<MARKDOWN_CONTENT>"

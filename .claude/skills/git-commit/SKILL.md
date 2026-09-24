@@ -14,7 +14,7 @@ Commit description provided by the user (if any): `$ARGUMENTS`
 
 1. **Pre-Commit Validation**:
    - Before committing, you MUST ensure the code is functional and does not break the project.
-   - Run the VS Code task **"Build ESP-IDF"** or execute the command equivalent:
+   - Run the VS Code task **"Build ESP-IDF"** or execute the command equivalent (if no ESP-IDF environment is available, state `Build: NOT VERIFIED` in the commit report; CI builds every PR):
      ```bash
      source ~/esp/esp-idf/export.sh && idf.py build
      ```
@@ -23,20 +23,20 @@ Commit description provided by the user (if any): `$ARGUMENTS`
 2. **Stage Changes**:
    - Select the files to be included in the commit:
      ```bash
-     ga <file_path>
+     git add <file_path>
      ```
-   - *Note:* `ga` is the oh-my-zsh alias for `git add`.
+   - Stage explicit paths only. Never use `git add -A`, `git add .` or `git commit -a`.
+   - **Never stage private paths** listed in `.git/info/exclude` (even if they are tracked, e.g. `docs/development_roadmap/`).
 
 3. **Format & Commit**:
    - Write a simple, descriptive commit message in a single sentence explaining the work done:
      ```bash
-     gc -m "feat: <simple_description>"
+     git commit -m "feat: <simple_description>"
      ```
-   - *Note:* `gc -m` is the oh-my-zsh alias for `git commit -m`. Use conventional prefixes (feat, fix, docs, chore, etc.).
+   - Use conventional prefixes (feat, fix, docs, chore, etc.).
 
 4. **Verify State**:
    - Check the status to ensure everything is correctly recorded:
      ```bash
-     gst
+     git status
      ```
-   - *Note:* `gst` is the oh-my-zsh alias for `git status`.

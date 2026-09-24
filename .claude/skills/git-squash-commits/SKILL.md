@@ -9,7 +9,6 @@ argument-hint: "[base branch, default main]"
 Use this workflow to clean up your commit history (e.g., combining multiple "WIP" or "wp" commits into a single cohesive functional commit) before submitting a Pull Request to `main` (or `master`).
 
 ## Requirements
-- This workflow leverages `oh-my-zsh` with the `git` plugin enabled.
 - Base branch: `$ARGUMENTS` (if empty, use `main`).
 
 > **Note for Claude Code:** The Bash tool cannot drive interactive editors, so `git rebase -i` must not be run interactively. Steps 1–3 below describe the manual (human) flow; when executing this workflow as the agent, first list the commits to be squashed (`git log --oneline <base>..HEAD`, where `<base>` is the base branch above), show them to the user, and then perform the exact same `pick` + `fixup` rebase non-interactively:
@@ -21,11 +20,10 @@ Use this workflow to clean up your commit history (e.g., combining multiple "WIP
 ## Steps to Follow
 
 1. **Start Interactive Rebase**:
-   - Run the aliased command in your terminal targeting the base branch (in this case, `master` or `main`):
+   - Run the command in your terminal targeting the base branch (in this case, `master` or `main`):
      ```bash
-     grbi main
+     git rebase -i main
      ```
-   - *Note:* `grbi main` is the oh-my-zsh alias for `git rebase -i main` (Interactive Rebase).
 
 2. **Edit the Rebase File**:
    - Your default terminal text editor (e.g., `nano` or `vim`) will open showing a list of your recent branch commits in chronological order.
@@ -45,11 +43,10 @@ Use this workflow to clean up your commit history (e.g., combining multiple "WIP
    - Git will automatically process the rebase, squashing the marked commits into the top one, maintaining a single, clean timeline point.
 
 4. **Force Push**:
-   - Because you have rewritten your local commit history, a standard push will fail. You must force push your new unified history to remote:
+   - Because you have rewritten your local commit history, a standard push will fail. **Ask the user first**, then force push your new unified history to remote:
      ```bash
-     gpf!
+     git push --force-with-lease
      ```
-   - *Note:* `gpf!` is the oh-my-zsh alias for `git push --force-with-lease` (safer than a raw force push).
 
 ## Result
 Your remote repository branch is now updated with a clean, linear history containing a single, highly descriptive commit. You are now ready to open the Pull Request.
