@@ -13,5 +13,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Antigravity CLI
-.antigravitycli/
+# Claude Code (personal, not shared)
+.claude/settings.local.json
+CLAUDE.local.md
