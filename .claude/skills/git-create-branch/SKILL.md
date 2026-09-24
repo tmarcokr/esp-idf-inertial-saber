@@ -26,6 +26,7 @@ Use this workflow whenever you start a new task.
 3. **Execution**:
    - Checkout to a new branch from `main`:
      ```bash
-     gcb feature/<your_description>
+     git checkout -b feature/<your_description> main
      ```
-   - *Note:* `gcb` is the oh-my-zsh alias for `git checkout -b` (Create and switch to a new branch).
+   - *Note:* Always use plain `git` commands. Shell aliases (e.g. oh-my-zsh `gcb`, `gaa`, `gp`) may exist in the agent's shell but must not be used in skills or agent commands.
+   - If the working tree has uncommitted changes, report them before switching; never stash or discard them silently.

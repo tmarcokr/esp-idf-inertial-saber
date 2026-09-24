@@ -1,6 +1,6 @@
 # esp-idf-inertial-saber (InertialSaber OS)
 
-**InertialSaber OS** is a high-performance, open-source operating system for lightsabers, specifically engineered for the ESP32 family (S3/C6). InertialSaber OS utilizes a **Native Physics Engine** to deliver an organic, high-fidelity experience driven by real-time kinetic data.
+**InertialSaber OS** is a high-performance, open-source operating system for lightsabers, specifically engineered for the ESP32-S3. InertialSaber OS utilizes a **Native Physics Engine** to deliver an organic, high-fidelity experience driven by real-time kinetic data.
 
 ## 🚀 The Core Philosophy: "Inertial Logic"
 
@@ -33,10 +33,10 @@ A high-performance configuration model. Profiles are compiled C++ classes that e
 
 ## 📂 Project Structure
 
-- `main/`: Core application logic and ISample implementations.
+- `main/`: Core application logic — action bus (`core/`), profiles and effects (`profiles/`), adapters and hardware layer (`system/`).
 - `components/`: Hardware wrappers and peripheral drivers.
 - `docs/wiki/`: Official functional and technical specifications (The Source of Truth).
-- `.claude/` + `CLAUDE.md`: Expert AI (Claude Code) configurations for development, hardware, and quality assurance.
+- `.claude/` + `CLAUDE.md`: Claude Code configuration — an orchestrator protocol plus specialised subagents (architecture, implementation, audit, hardware review, documentation), procedure skills and guardrail hooks.
 
 ## 📑 Documentation Index (Wiki)
 
