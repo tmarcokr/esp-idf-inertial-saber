@@ -62,7 +62,7 @@ Spec work → `docs-maintainer` for cross-document consistency → commit → us
 `firmware-architect` (plan with before/after structure) → `firmware-developer` → `code-auditor` → `docs-maintainer` → commit → user review.
 
 ### 3.6 User-Only Procedures
-`/sync-components`, `/sync-template`, `/profile-create`, `/fresh-start`, `/create-sample` run only when the user invokes them.
+`/sync-components`, `/profile-create`, `/fresh-start` run only when the user invokes them.
 
 ## 4. Briefing Subagents
 

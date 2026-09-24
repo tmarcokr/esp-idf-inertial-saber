@@ -12,6 +12,7 @@ Use this workflow to sync or update shared components from the `esp-idf-componen
 - **Do not use `git checkout`** for bringing files from the components repo (e.g., `git checkout componentes/main -- components/`), as it will forcefully overwrite local changes without warning.
 - **Use `git merge`** to safely bring in changes. This ensures Git uses its merge engine to combine changes and alert about conflicts, preserving project-specific customizations if any.
 - Focus updates specifically on the `components/` directory.
+- **Guardrail interaction**: `.claude/hooks/guard-bash.py` denies agent git commands that stage, commit or push `components/` changes, and asks before `git clean`/`git restore`. Run this sync on a `feature/` branch; the agent may run the read-only steps (`git remote -v`, `git fetch componentes`, `git status`, `git diff --staged`), but present the merge, staging, cleanup and commit commands to the user, who runs them with the `!` prompt prefix.
 
 ## Process Steps
 
