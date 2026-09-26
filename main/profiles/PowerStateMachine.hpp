@@ -14,7 +14,7 @@ public:
     enum class State : uint8_t { Locked, Retracted, Igniting, Ignited, Retracting, Faulted };
     enum class Event : uint8_t { Lock, PreloadDone, PreloadFailed, IgniteRequested, IgnitionElapsed, RetractRequested, RetractionElapsed };
 
-    /** @brief Applies @p event; returns false (state unchanged, logged at DEBUG) if it is not allowed from the current state. */
+    /** @brief Applies @p event; returns false (state unchanged, logged as a warning) if it is not allowed from the current state. */
     bool handle(Event event);
 
     [[nodiscard]] State state() const { return m_state; }
