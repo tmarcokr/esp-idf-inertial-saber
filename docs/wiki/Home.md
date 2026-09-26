@@ -25,8 +25,6 @@ The core of the system is the **Kinetic Parser**. It transforms raw IMU data int
 
 ## 3. The Core Engines
 
-Experience the engines in action with the [Play with InertialSaber Simulator](https://tmarcokr.github.io/esp-idf-inertial-saber/).
-
 ### InertialSwing (Audio)
 InertialSwing uses **Linear Kinetic Energy**. This allows the saber to react to thrusts, steps, and subtle movements that don't involve rotation.
 - *Key Document:* [InertialSwing Specification](InertialSwing)

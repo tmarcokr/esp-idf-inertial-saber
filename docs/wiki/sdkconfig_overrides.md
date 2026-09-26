@@ -69,9 +69,9 @@ The existing overrides (§1 FAT LFN, §2 PSRAM) still exist in v6.1 and apply un
 
 | Key | Default | Override | Since |
 |---|---|---|---|
-| `CONFIG_ESPTOOLPY_FLASHSIZE_16MB` | `not set` (2 MB) | `y` | 2026-09-26 |
+| `CONFIG_ESPTOOLPY_FLASHSIZE_8MB` | `not set` (2 MB) | `y` | 2026-09-26 |
 
-**Reason**: The XIAO ESP32-S3 carries a 16 MB flash chip. With the 2 MB default, the bootloader reports `Detected size(16384k) larger than the size in the binary image header(2048k)` and limits flash access to 2 MB. The partition table is unchanged (default single 1 MB app partition).
+**Reason**: The target board, the Seeed XIAO ESP32-S3 Sense, carries an 8 MB flash chip (plus 8 MB octal PSRAM). With the 2 MB default, the bootloader reports `Detected size(8192k) larger than the size in the binary image header(2048k)` and limits flash access to 2 MB. The 8 MB setting is also compatible with 16 MB boards such as the ESP32-S3-DevKitC-1 N16R8 prototype, which simply use the first 8 MB. The partition table is unchanged (default single 1 MB app partition).
 
 > [!NOTE]
 > Target-specific: placed in `sdkconfig.defaults.esp32s3`.

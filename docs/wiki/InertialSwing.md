@@ -1,7 +1,5 @@
 # Technical Specification: InertialSwing Engine
 
-[Play with InertialSaber Simulator](https://tmarcokr.github.io/esp-idf-inertial-saber/)
-
 ## 1. System Overview
 The **InertialSwing Engine** is a high-performance audio model designed for the ESP32. This engine is based on **Linear Kinetic Energy** and **Physical Inertia**, allowing the saber to react to any movement (steps, thrusts, spins) in an organic and cinematic way.
 
