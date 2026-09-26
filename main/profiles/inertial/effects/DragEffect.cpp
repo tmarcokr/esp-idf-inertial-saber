@@ -5,7 +5,6 @@
 #include "PowerToggleEffect.hpp"
 #include "profiles/inertial/InertialDefinition.hpp"
 #include "core/SaberDataPacket.hpp"
-#include "system/hardware/HardwareConfig.hpp"
 
 #include "esp_log.h"
 #include "esp_random.h"
@@ -35,7 +34,7 @@ bool DragEffect::test(const Core::SaberDataPacket& packet) {
         return m_active;
     }
 
-    if (m_buttonId < System::Hardware::HardwareConfig::kMaxInputs) {
+    if (m_buttonId < Core::kMaxInputs) {
         const auto& input = packet.inputs[m_buttonId];
         using Gesture    = Core::InputDescriptor::Gesture;
         using InputState = Core::InputDescriptor::State;

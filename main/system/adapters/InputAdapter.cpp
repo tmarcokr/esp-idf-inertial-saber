@@ -77,7 +77,7 @@ void InputAdapter::onPressDown() {
                          static_cast<uint64_t>(Hardware::HardwareConfig::kClickWindowMs) * 1000ULL);
 
     m_btnState.gesture = Core::InputDescriptor::Gesture::None;
-    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
+    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
     m_btnState.gesture = Core::InputDescriptor::Gesture::None;
 }
 
@@ -94,7 +94,7 @@ void InputAdapter::onPressUp() {
     m_btnState.holdLevel        = 0;
 
     m_btnState.gesture = Core::InputDescriptor::Gesture::None;
-    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
+    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
     m_btnState.gesture = Core::InputDescriptor::Gesture::None;
 }
 
@@ -115,7 +115,7 @@ void InputAdapter::resolveClickGesture() {
     m_btnState.pressCount = count;
     m_btnState.gesture    = Gesture::Click;
 
-    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
+    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
     m_btnState.gesture    = Gesture::None;
     m_btnState.pressCount = 0;
 
@@ -130,7 +130,7 @@ void InputAdapter::resolveHoldTick() {
     m_btnState.holdLevel      = level;
     m_btnState.gesture        = Core::InputDescriptor::Gesture::HoldTick;
 
-    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
+    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
     m_btnState.gesture = Core::InputDescriptor::Gesture::None;
 
     ESP_LOGD(TAG, "Gesture resolved: HoldTick level=%u (%u ms)",

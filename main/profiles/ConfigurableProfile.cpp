@@ -9,7 +9,7 @@
 #include "DragEffect.hpp"
 #include "profiles/inertial/effects/ProfileCycleEffect.hpp"
 #include "profiles/inertial/effects/PreloadWaitEffect.hpp"
-#include "system/hardware/HardwareConfig.hpp"
+#include "core/SaberDataPacket.hpp"
 
 #include "system/PsramAudioCache.hpp"
 
@@ -81,18 +81,18 @@ void ConfigurableProfile::load(Core::SaberActionBus &bus,
   bus.registerEffect(std::move(lightFx));
 
   auto powerFx = std::make_unique<Effects::PowerToggleEffect>(
-      *this, *swingEffect, *lightEffect, audio, led, m_def, 0);
+      *this, *swingEffect, *lightEffect, audio, led, m_def, Core::kMainButtonInputId);
   auto &powerRef = *powerFx;
   bus.registerEffect(std::move(powerFx));
 
   bus.registerEffect(std::make_unique<Effects::BlasterEffect>(
-      powerRef, audio, led, m_def, 0));
+      powerRef, audio, led, m_def, Core::kMainButtonInputId));
 
   bus.registerEffect(std::make_unique<Effects::KineticImpactEffect>(
       powerRef, audio, led, m_def));
 
   bus.registerEffect(std::make_unique<Effects::DragEffect>(
-      powerRef, audio, led, m_def, 0));
+      powerRef, audio, led, m_def, Core::kMainButtonInputId));
 
   bus.registerEffect(std::make_unique<Effects::ProfileCycleEffect>(
       *this,
@@ -100,7 +100,7 @@ void ConfigurableProfile::load(Core::SaberActionBus &bus,
       bus,
       audio,
       led,
-      System::Hardware::HardwareConfig::kMainBtnInputId));
+      Core::kMainButtonInputId));
 }
 
 void ConfigurableProfile::unload(Core::SaberActionBus &bus

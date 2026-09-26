@@ -19,8 +19,8 @@ ImuAdapter::~ImuAdapter() {
 esp_err_t ImuAdapter::start() {
     BaseType_t result = xTaskCreatePinnedToCore(
         imuAdapterTask, "imu_adapter", 4096, this,
-        Hardware::HardwareConfig::kBusTaskPriority + 1,
-        &m_imuTaskHandle, Hardware::HardwareConfig::kBusTaskCore);
+        Hardware::HardwareConfig::kImuAdapterPriority,
+        &m_imuTaskHandle, Hardware::HardwareConfig::kBusConfig.task.core);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "IMU adapter task creation failed");
@@ -77,14 +77,18 @@ void ImuAdapter::imuLoop() {
                                      linAccel.y * linAccel.y +
                                      linAccel.z * linAccel.z);
 
-            float rotation[3] = {static_cast<float>(data->gyro_x),
-                                 static_cast<float>(data->gyro_y),
-                                 static_cast<float>(data->gyro_z)};
-
             auto angles = data->getEulerAngles();
             float orientation = angles.roll * (180.0f / M_PI);
 
-            m_bus.updateMotion(energy, rotation, orientation);
+            const Core::MotionSample sample{
+                .kineticEnergyG  = energy,
+                .axisRotationDps = {static_cast<float>(data->gyro_x),
+                                    static_cast<float>(data->gyro_y),
+                                    static_cast<float>(data->gyro_z)},
+                .orientationDeg  = orientation,
+            };
+
+            m_bus.updateMotion(sample);
         }
     }
 }

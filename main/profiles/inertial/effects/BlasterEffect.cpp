@@ -5,7 +5,6 @@
 #include "PowerToggleEffect.hpp"
 #include "profiles/inertial/InertialDefinition.hpp"
 #include "core/SaberDataPacket.hpp"
-#include "system/hardware/HardwareConfig.hpp"
 
 #include "esp_log.h"
 #include "esp_random.h"
@@ -34,7 +33,7 @@ bool BlasterEffect::test(const Core::SaberDataPacket& packet) {
     if (!m_power.isIgnited()) {
         return false;
     }
-    if (m_buttonId >= System::Hardware::HardwareConfig::kMaxInputs) {
+    if (m_buttonId >= Core::kMaxInputs) {
         return false;
     }
 

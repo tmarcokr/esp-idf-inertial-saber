@@ -10,7 +10,7 @@ namespace InertialSaber::Core {
 
 static constexpr const char* TAG = "SaberActionBus";
 
-SaberActionBus::SaberActionBus() = default;
+SaberActionBus::SaberActionBus(const BusConfig& config) : m_config(config) {}
 
 SaberActionBus::~SaberActionBus() {
     stop();
@@ -34,11 +34,11 @@ esp_err_t SaberActionBus::start() {
     BaseType_t result = xTaskCreatePinnedToCore(
         busTaskEntry,
         "saber_bus",
-        System::Hardware::HardwareConfig::kBusTaskStackSize,
+        m_config.task.stackSize,
         this,
-        System::Hardware::HardwareConfig::kBusTaskPriority,
+        m_config.task.priority,
         &m_taskHandle,
-        System::Hardware::HardwareConfig::kBusTaskCore
+        m_config.task.core
     );
 
     if (result != pdPASS) {
@@ -50,8 +50,8 @@ esp_err_t SaberActionBus::start() {
     }
 
     ESP_LOGI(TAG, "Bus started on core %d (priority %d)",
-             System::Hardware::HardwareConfig::kBusTaskCore,
-             System::Hardware::HardwareConfig::kBusTaskPriority);
+             static_cast<int>(m_config.task.core),
+             static_cast<int>(m_config.task.priority));
     return ESP_OK;
 }
 
@@ -106,12 +106,12 @@ void SaberActionBus::clearEffects() {
     m_effectsChanged = true;
 }
 
-void SaberActionBus::updateMotion(float energy, const float rotation[3], float orientation) {
-    m_stagedEnergy = energy;
-    m_stagedRotation[0] = rotation[0];
-    m_stagedRotation[1] = rotation[1];
-    m_stagedRotation[2] = rotation[2];
-    m_stagedOrientation = orientation;
+void SaberActionBus::updateMotion(const MotionSample& sample) {
+    m_stagedEnergy = sample.kineticEnergyG;
+    m_stagedRotation[0] = sample.axisRotationDps[0];
+    m_stagedRotation[1] = sample.axisRotationDps[1];
+    m_stagedRotation[2] = sample.axisRotationDps[2];
+    m_stagedOrientation = sample.orientationDeg;
 
     if (m_taskHandle != nullptr) {
         xTaskNotifyGive(m_taskHandle);
@@ -119,7 +119,7 @@ void SaberActionBus::updateMotion(float energy, const float rotation[3], float o
 }
 
 void SaberActionBus::pushInputEvent(uint8_t inputId, const InputDescriptor& descriptor) {
-    if (inputId >= System::Hardware::HardwareConfig::kMaxInputs || m_inputQueue == nullptr) {
+    if (inputId >= kMaxInputs || m_inputQueue == nullptr) {
         return;
     }
 
@@ -177,7 +177,7 @@ void SaberActionBus::busLoop() {
 void SaberActionBus::drainInputQueue() {
     InputEvent event{};
     while (xQueueReceive(m_inputQueue, &event, 0) == pdTRUE) {
-        if (event.inputId < System::Hardware::HardwareConfig::kMaxInputs) {
+        if (event.inputId < kMaxInputs) {
             m_packet.inputs[event.inputId] = event.descriptor;
         }
     }
@@ -192,12 +192,12 @@ void SaberActionBus::loadStagedMotionToPacket() {
 }
 
 void SaberActionBus::filterStagedMotionWarmUp() {
-    if (m_packet.timestampMs < System::Hardware::HardwareConfig::kImuGracePeriodMs) {
+    if (m_packet.timestampMs < m_config.motion.warmUpPeriodMs) {
         m_packet.kineticEnergy = 0.0f;
         m_packet.axisRotation[0] = 0.0f;
         m_packet.axisRotation[1] = 0.0f;
         m_packet.axisRotation[2] = 0.0f;
-        m_packet.orientation = 90.0f + System::Hardware::HardwareConfig::kImuOrientationOffsetDeg;
+        m_packet.orientation = 90.0f + m_config.motion.orientationOffsetDeg;
     }
 }
 
@@ -214,7 +214,7 @@ void SaberActionBus::filterStagedMotionStabilization() {
 }
 
 void SaberActionBus::filterStagedMotionOrientation() {
-    float correctedAngle = m_packet.orientation - System::Hardware::HardwareConfig::kImuOrientationOffsetDeg;
+    float correctedAngle = m_packet.orientation - m_config.motion.orientationOffsetDeg;
     if (correctedAngle > 90.0f) correctedAngle = 90.0f;
     if (correctedAngle < -90.0f) correctedAngle = -90.0f;
     

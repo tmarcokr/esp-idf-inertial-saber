@@ -11,6 +11,7 @@
 #include "system/hardware/ImuHardware.hpp"
 #include "system/hardware/ButtonHardware.hpp"
 #include "system/hardware/SdHardware.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "RgbLed.hpp"
 
 #include "esp_err.h"
@@ -47,7 +48,7 @@ private:
   std::unique_ptr<Adapters::InputAdapter> m_inputAdapter;
 
   // ── Core ──
-  Core::SaberActionBus m_bus;
+  Core::SaberActionBus m_bus{Hardware::HardwareConfig::kBusConfig};
   Profiles::ProfileManager m_profileManager;
 
   PsramAudioCache m_psramCache;

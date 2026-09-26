@@ -1,7 +1,6 @@
 #include "ProfileCycleEffect.hpp"
 #include "profiles/ConfigurableProfile.hpp"
 #include "profiles/ProfileManager.hpp"
-#include "system/hardware/HardwareConfig.hpp"
 #include "core/SaberDataPacket.hpp"
 #include "esp_log.h"
 #include <string>
@@ -29,7 +28,7 @@ ProfileCycleEffect::ProfileCycleEffect(
 bool ProfileCycleEffect::test(const Core::SaberDataPacket& packet) {
     using PowerState = Profiles::ConfigurableProfile::PowerState;
     if (m_profile.getPowerState() != PowerState::RETRACTED) return false;
-    if (m_buttonId >= System::Hardware::HardwareConfig::kMaxInputs) return false;
+    if (m_buttonId >= Core::kMaxInputs) return false;
 
     const auto& input = packet.inputs[m_buttonId];
     using Gesture = Core::InputDescriptor::Gesture;

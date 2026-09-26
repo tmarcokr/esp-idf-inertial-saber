@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/BusConfig.hpp"
+
 #include "sdkconfig.h"
 #include "driver/gpio.h"
 #include <cstdint>
@@ -34,23 +36,20 @@ struct HardwareConfig {
     static constexpr gpio_num_t kLedData = GPIO_NUM_21;
 
     // Task Scheduling
-    static constexpr int kBusTaskCore    = 0;
     static constexpr int kEngineTaskCore = 1;
+
+    static constexpr Core::BusConfig kBusConfig{
+        .task   = {.stackSize = 8192, .priority = 8, .core = 0},
+        .motion = {.warmUpPeriodMs = 3000, .orientationOffsetDeg = 0.0f},
+    };
+    static constexpr UBaseType_t kImuAdapterPriority = kBusConfig.task.priority + 1;
 
 
     // ── Common Parameters ──
-    static constexpr uint32_t kImuGracePeriodMs = 3000;
-    static constexpr float kImuOrientationOffsetDeg = 0.0f;
-
-    static constexpr uint8_t kMainBtnInputId = 0;
     static constexpr uint32_t kClickWindowMs = 400;
     static constexpr uint32_t kHoldTickMs = 500;
 
     static constexpr uint16_t kNumLeds   = 5;
-
-    static constexpr uint8_t  kBusTaskPriority  = 8;
-    static constexpr uint32_t kBusTaskStackSize = 8192;
-    static constexpr uint8_t  kMaxInputs        = 4;
 };
 
 } // namespace InertialSaber::System::Hardware

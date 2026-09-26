@@ -1,6 +1,5 @@
 #include "PowerToggleEffect.hpp"
 #include "profiles/ConfigurableProfile.hpp"
-#include "system/hardware/HardwareConfig.hpp"
 #include "AudioEngine.hpp"
 #include "overlays/BladeIgniteSweep.hpp"
 #include "overlays/BladeRetractSweep.hpp"
@@ -37,7 +36,7 @@ PowerToggleEffect::PowerToggleEffect(
       m_def(definition), m_buttonId(buttonId) {}
 
 bool PowerToggleEffect::test(const Core::SaberDataPacket& packet) {
-    if (m_buttonId >= System::Hardware::HardwareConfig::kMaxInputs) {
+    if (m_buttonId >= Core::kMaxInputs) {
         return false;
     }
 

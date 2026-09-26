@@ -1,11 +1,12 @@
 #pragma once
 
-#include "system/hardware/HardwareConfig.hpp"
-
 #include <array>
 #include <cstdint>
 
 namespace InertialSaber::Core {
+
+inline constexpr uint8_t kMaxInputs = 4;
+inline constexpr uint8_t kMainButtonInputId = 0;
 
 /**
  * @brief Full state-machine snapshot for a single input peripheral.
@@ -60,7 +61,7 @@ struct SaberDataPacket {
     bool inertialBurst = false;
 
     /// Array of input peripheral states (buttons, switches).
-    std::array<InputDescriptor, System::Hardware::HardwareConfig::kMaxInputs> inputs{};
+    std::array<InputDescriptor, kMaxInputs> inputs{};
 
     /// FreeRTOS system time in milliseconds at the start of this bus cycle.
     uint32_t timestampMs = 0;
