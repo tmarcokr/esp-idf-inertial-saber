@@ -21,6 +21,9 @@ struct MemoryFile {
     };
     std::unique_ptr<uint8_t[], HeapCapsDeleter> bytes;
     size_t size = 0;
+
+    /** @brief Allocates @p size uninitialised bytes with heap_caps_malloc(); bytes is null and size 0 on failure. */
+    [[nodiscard]] static MemoryFile allocate(size_t size, uint32_t caps);
 };
 
 /** @brief Shared, read-only handle to a MemoryFile. */

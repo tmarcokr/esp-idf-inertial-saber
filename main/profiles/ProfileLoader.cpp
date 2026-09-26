@@ -1,31 +1,18 @@
 #include "profiles/ProfileLoader.hpp"
+#include "system/Raii.hpp"
 #include "esp_log.h"
 #include <dirent.h>
-#include <sys/stat.h>
 #include <cstdio>
 #include <cstring>
-#include <memory>
 #include <string>
 
 namespace InertialSaber::Profiles {
 
 static constexpr const char *TAG = "ProfileLoader";
 
-namespace {
-
-struct DirCloser {
-  void operator()(DIR *dir) const { closedir(dir); }
-};
-
-struct FileCloser {
-  void operator()(FILE *file) const { fclose(file); }
-};
-
-} // namespace
-
 esp_err_t ProfileLoader::loadFromSd(std::vector<std::unique_ptr<ConfigurableProfile>> &profiles) {
   ESP_LOGI(TAG, "Scanning /sdcard/profiles/ ...");
-  std::unique_ptr<DIR, DirCloser> dir(opendir("/sdcard/profiles"));
+  System::UniqueDir dir = System::openDir("/sdcard/profiles");
   if (!dir) {
     ESP_LOGE(TAG, "opendir('/sdcard/profiles') FAILED — directory not found");
     return ESP_ERR_NOT_FOUND;
@@ -45,7 +32,7 @@ esp_err_t ProfileLoader::loadFromSd(std::vector<std::unique_ptr<ConfigurableProf
     std::string configPath = std::string("/sdcard/profiles/") + entry->d_name + "/profile.json";
     ESP_LOGI(TAG, "  trying: %s", configPath.c_str());
 
-    std::unique_ptr<FILE, FileCloser> file(fopen(configPath.c_str(), "r"));
+    System::UniqueFile file = System::openFile(configPath.c_str(), "r");
     if (!file) {
       ESP_LOGW(TAG, "  fopen FAILED for: %s", configPath.c_str());
       continue;

@@ -1,4 +1,5 @@
 #include "system/PsramAudioCache.hpp"
+#include "system/Raii.hpp"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include <algorithm>
@@ -13,10 +14,6 @@ namespace InertialSaber::System {
 namespace {
 
 using Espressif::Wrappers::MemoryFile;
-
-struct FileCloser {
-    void operator()(FILE* file) const { fclose(file); }
-};
 
 constexpr std::string_view kHumName = "hum.wav";
 
@@ -209,7 +206,7 @@ void PsramAudioCache::runPreload(const PreloadJob& job) {
 esp_err_t PsramAudioCache::loadFile(const std::string& sdPath, const std::string& vfsName) {
     configASSERT(xTaskGetCurrentTaskHandle() == m_loaderTask);
 
-    std::unique_ptr<FILE, FileCloser> source(fopen(sdPath.c_str(), "rb"));
+    UniqueFile source = openFile(sdPath.c_str(), "rb");
     if (!source) {
         ESP_LOGE(TAG, "Failed to open source file '%s'", sdPath.c_str());
         return ESP_ERR_NOT_FOUND;
@@ -234,13 +231,11 @@ esp_err_t PsramAudioCache::loadFile(const std::string& sdPath, const std::string
         return ESP_ERR_NO_MEM;
     }
 
-    MemoryFile file;
-    file.bytes.reset(static_cast<uint8_t*>(heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)));
+    MemoryFile file = MemoryFile::allocate(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!file.bytes) {
         ESP_LOGE(TAG, "Failed to allocate %zu bytes in PSRAM for file '%s'", size, vfsName.c_str());
         return ESP_ERR_NO_MEM;
     }
-    file.size = size;
 
     const size_t readBytes = fread(file.bytes.get(), 1, size, source.get());
     source.reset();

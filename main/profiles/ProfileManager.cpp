@@ -1,5 +1,6 @@
 #include "profiles/ProfileManager.hpp"
 #include "profiles/ProfileLoader.hpp"
+#include "system/Raii.hpp"
 #include "esp_log.h"
 #include <cstdio>
 
@@ -19,10 +20,9 @@ esp_err_t ProfileManager::init() {
   }
 
   m_activeIndex = 0;
-  FILE *f = fopen("/sdcard/active_profile.txt", "r");
-  if (f) {
+  if (System::UniqueFile file = System::openFile("/sdcard/active_profile.txt", "r")) {
     unsigned int loadedIndex = 0;
-    if (fscanf(f, "%u", &loadedIndex) == 1) {
+    if (fscanf(file.get(), "%u", &loadedIndex) == 1) {
       if (loadedIndex < m_profiles.size()) {
         m_activeIndex = loadedIndex;
         ESP_LOGI(TAG, "Restored active profile index: %u", loadedIndex);
@@ -32,7 +32,6 @@ esp_err_t ProfileManager::init() {
     } else {
       ESP_LOGW(TAG, "Failed to parse active_profile.txt content");
     }
-    fclose(f);
   } else {
     ESP_LOGW(TAG, "active_profile.txt not found, defaulting to index 0");
   }
@@ -63,10 +62,9 @@ void ProfileManager::next() {
 }
 
 void ProfileManager::saveActiveIndex() {
-  FILE *f = fopen("/sdcard/active_profile.txt", "w");
-  if (f) {
-    fprintf(f, "%u\n", (unsigned int)m_activeIndex);
-    fclose(f);
+  if (System::UniqueFile file = System::openFile("/sdcard/active_profile.txt", "w")) {
+    fprintf(file.get(), "%u\n", (unsigned int)m_activeIndex);
+    file.reset();
     ESP_LOGI(TAG, "Saved active profile index: %u", (unsigned)m_activeIndex);
   } else {
     ESP_LOGE(TAG, "Failed to open active_profile.txt for writing");

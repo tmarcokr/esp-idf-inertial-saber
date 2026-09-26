@@ -10,6 +10,15 @@ static constexpr const char* TAG = "MemoryVfs";
 
 namespace Espressif::Wrappers {
 
+MemoryFile MemoryFile::allocate(size_t size, uint32_t caps) {
+    MemoryFile file;
+    file.bytes.reset(static_cast<uint8_t*>(heap_caps_malloc(size, caps)));
+    if (file.bytes) {
+        file.size = size;
+    }
+    return file;
+}
+
 MemoryVfs::MemoryVfs(std::string_view mountPoint, uint8_t maxFiles, uint8_t maxFds)
     : m_mountPoint(mountPoint)
     , m_files(maxFiles)
