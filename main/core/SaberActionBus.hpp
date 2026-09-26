@@ -10,6 +10,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -36,7 +37,7 @@ struct InputEvent {
  * Thread safety:
  *   - registerEffect() / clearEffects(): call only when the bus is stopped
  *     or from the bus task context (profile loading).
- *   - updateMotion(): safe from any task (atomic field writes).
+ *   - updateMotion(): safe from any task (spinlock-guarded sample copy).
  *   - pushInputEvent(): safe from any task (FreeRTOS queue).
  */
 class SaberActionBus {
@@ -82,7 +83,7 @@ public:
     /**
      * @brief Inject updated motion data from an external IMU adapter.
      *
-     * Fields are copied individually (small POD). Safe to call from any task.
+     * The whole sample is published atomically. Safe to call from any task.
      * @param sample Latest motion sample.
      */
     void updateMotion(const MotionSample& sample);
@@ -104,9 +105,9 @@ private:
 
     const BusConfig m_config;
 
-    TaskHandle_t m_taskHandle = nullptr;
-    QueueHandle_t m_inputQueue = nullptr;
-    volatile bool m_running = false;
+    std::atomic<TaskHandle_t> m_taskHandle{nullptr};
+    std::atomic<QueueHandle_t> m_inputQueue{nullptr};
+    std::atomic<bool> m_running{false};
 
     std::vector<std::unique_ptr<InertialEffect>> m_effects;
     std::vector<std::unique_ptr<InertialEffect>> m_effectsPendingDestruction;
@@ -124,10 +125,9 @@ private:
     float m_overloadDrainRate = 0.5f;
     float m_burstCooldownMs = 1500.0f;
 
-    // Atomic-safe motion staging area written by updateMotion()
-    volatile float m_stagedEnergy = 0.0f;
-    volatile float m_stagedRotation[3] = {0.0f, 0.0f, 0.0f};
-    volatile float m_stagedOrientation = 0.0f;
+    // Warning: m_motionLock is a spinlock; keep its critical sections to a plain struct copy.
+    portMUX_TYPE m_motionLock = portMUX_INITIALIZER_UNLOCKED;
+    MotionSample m_stagedMotion{};
 
     static void busTaskEntry(void* arg);
     void busLoop();

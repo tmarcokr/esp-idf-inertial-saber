@@ -2,6 +2,7 @@
 
 #include "profiles/ConfigurableProfile.hpp"
 #include "profiles/SaberServices.hpp"
+#include "esp_err.h"
 #include <vector>
 #include <memory>
 
@@ -20,16 +21,18 @@ public:
 
   /**
    * @brief Discovers and initializes profiles from the SD card.
+   * @return ESP_OK if at least one valid profile was loaded, otherwise the scan error or ESP_ERR_NOT_FOUND.
    */
-  void init();
+  [[nodiscard]] esp_err_t init();
 
   /**
    * @brief Loads the initial active profile onto the bus.
+   * @return ESP_OK, or ESP_ERR_INVALID_STATE if no profile is available.
    */
-  void loadActive();
+  [[nodiscard]] esp_err_t loadActive();
 
   /**
-   * @brief Hot-swaps to the next profile in the list.
+   * @brief Hot-swaps to the next profile in the list; with a single profile, reloads it and re-runs its preload.
    */
   void next();
 

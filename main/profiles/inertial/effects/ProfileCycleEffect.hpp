@@ -14,7 +14,7 @@ class ProfileManager;
 namespace InertialSaber::Effects {
 
 /**
- * @brief Cycles to the next profile on a Click with pressCount=3 while the saber is retracted.
+ * @brief Cycles to the next profile on a Click with pressCount=3 while the saber is retracted or its preload has faulted.
  */
 class ProfileCycleEffect final : public Core::InertialEffect {
 public:
