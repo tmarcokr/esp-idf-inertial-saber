@@ -74,8 +74,9 @@ esp_err_t MemoryVfs::init() {
         return ESP_ERR_INVALID_STATE;
     }
 
-    esp_err_t err = esp_vfs_register_fs(m_mountPoint.c_str(), &VfsHooks::kOps,
-                                        ESP_VFS_FLAG_CONTEXT_PTR | ESP_VFS_FLAG_STATIC, this);
+    esp_err_t err = esp_vfs_register_fs(
+        m_mountPoint.c_str(), &VfsHooks::kOps,
+        ESP_VFS_FLAG_CONTEXT_PTR | ESP_VFS_FLAG_READONLY_FS | ESP_VFS_FLAG_STATIC, this);
     if (err == ESP_OK) {
         m_initialized = true;
         ESP_LOGI(TAG, "Mounted MemoryVfs at '%s'", m_mountPoint.c_str());

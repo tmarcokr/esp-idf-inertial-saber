@@ -32,6 +32,8 @@ public:
     [[nodiscard]] bool isFinished() const override;
 
 private:
+    [[nodiscard]] bool fadeRequested() const;
+
     uint16_t m_numLeds;
     uint16_t m_dragLedCount;
     std::shared_ptr<const std::atomic<bool>> m_fadeRequest;

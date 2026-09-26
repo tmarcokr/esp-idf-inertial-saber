@@ -22,8 +22,7 @@ BladeDragEffect::BladeDragEffect(uint16_t numLeds, uint16_t dragLedCount,
     , m_fadeRequest(std::move(fadeRequest)) {}
 
 void BladeDragEffect::update(uint32_t deltaMs) {
-    // use_count() == 1: the drag owner released the request without setting it.
-    if (!m_fading && m_fadeRequest && (m_fadeRequest->load() || m_fadeRequest.use_count() == 1)) {
+    if (!m_fading && fadeRequested()) {
         m_fading = true;
     }
 
@@ -66,6 +65,10 @@ void BladeDragEffect::render(Canvas& canvas) {
 
         canvas.blendPixel(i, thermalColor, alpha);
     }
+}
+
+bool BladeDragEffect::fadeRequested() const {
+    return m_fadeRequest && (m_fadeRequest->load() || m_fadeRequest.use_count() == 1);
 }
 
 bool BladeDragEffect::isFinished() const {
