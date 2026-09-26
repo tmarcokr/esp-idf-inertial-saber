@@ -38,59 +38,21 @@ void ProfileManager::init() {
   ESP_LOGI(TAG, "Initialized %u profile(s), active index: %u", (unsigned)m_profiles.size(), (unsigned)m_activeIndex);
 }
 
-void ProfileManager::loadActive(Core::SaberActionBus &bus,
-                               Espressif::Wrappers::Audio::AudioEngine &audio,
-                               Espressif::Wrappers::SmartLed::Engine &led) {
+void ProfileManager::loadActive() {
   if (m_profiles.empty()) return;
-  m_profiles[m_activeIndex]->load(bus, audio, led, *this, m_statusLed
-                                  , m_psramCache
-
-  );
+  m_profiles[m_activeIndex]->load(m_services, *this);
 }
 
-void ProfileManager::nextProfile(Core::SaberActionBus &bus,
-                                 Espressif::Wrappers::Audio::AudioEngine &audio,
-                                 Espressif::Wrappers::SmartLed::Engine &led) {
+void ProfileManager::next() {
   if (m_profiles.size() <= 1) return;
 
   ESP_LOGI(TAG, "Hot-swapping profile: unloading active index %u", m_activeIndex);
-  m_profiles[m_activeIndex]->unload(bus
-                                    , m_psramCache
-
-  );
+  m_profiles[m_activeIndex]->unload(m_services);
 
   m_activeIndex = (m_activeIndex + 1) % m_profiles.size();
 
   ESP_LOGI(TAG, "Loading next profile at index %u...", m_activeIndex);
-  m_profiles[m_activeIndex]->load(bus, audio, led, *this, m_statusLed
-                                  , m_psramCache
-
-  );
-  saveActiveIndex();
-}
-
-void ProfileManager::prevProfile(Core::SaberActionBus &bus,
-                                 Espressif::Wrappers::Audio::AudioEngine &audio,
-                                 Espressif::Wrappers::SmartLed::Engine &led) {
-  if (m_profiles.size() <= 1) return;
-
-  ESP_LOGI(TAG, "Hot-swapping profile: unloading active index %u", m_activeIndex);
-  m_profiles[m_activeIndex]->unload(bus
-                                    , m_psramCache
-
-  );
-
-  if (m_activeIndex == 0) {
-    m_activeIndex = m_profiles.size() - 1;
-  } else {
-    m_activeIndex--;
-  }
-
-  ESP_LOGI(TAG, "Loading previous profile at index %u...", m_activeIndex);
-  m_profiles[m_activeIndex]->load(bus, audio, led, *this, m_statusLed
-                                  , m_psramCache
-
-  );
+  m_profiles[m_activeIndex]->load(m_services, *this);
   saveActiveIndex();
 }
 
@@ -103,14 +65,6 @@ void ProfileManager::saveActiveIndex() {
   } else {
     ESP_LOGE(TAG, "Failed to open active_profile.txt for writing");
   }
-}
-
-ConfigurableProfile &ProfileManager::getActiveProfile() const {
-  return *m_profiles[m_activeIndex];
-}
-
-size_t ProfileManager::getProfileCount() const {
-  return m_profiles.size();
 }
 
 } // namespace InertialSaber::Profiles

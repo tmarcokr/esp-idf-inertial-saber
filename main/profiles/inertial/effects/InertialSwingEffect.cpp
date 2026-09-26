@@ -8,32 +8,25 @@
 
 #include "system/PsramAudioCache.hpp"
 
-
 namespace InertialSaber::Effects {
 
 using Espressif::Wrappers::Audio::INVALID_CHANNEL;
 
 InertialSwingEffect::InertialSwingEffect(
     Espressif::Wrappers::Audio::AudioEngine& engine,
-    const InertialSaber::Profiles::Inertial::InertialDefinition& definition
-    , InertialSaber::System::PsramAudioCache* psramCache
-
-    )
+    const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+    const InertialSaber::System::PsramAudioCache& audioCache)
     : InertialEffect(0)
     , m_engine(engine)
     , m_def(definition)
-    , m_psramCache(psramCache)
-
-    , m_humPath(std::string("/sdcard/") + definition.profileRoot + "/hum.wav")
-    {
-}
+    , m_audioCache(audioCache)
+{}
 
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
 
-    m_humPath = "/mem/hum.wav";
-    m_chHum = m_engine.play(m_humPath, true, m_def.humBaseVolume);
-    
+    m_chHum = m_engine.play(kHumPath, true, m_def.humBaseVolume);
+
     auto paths = provideSwingPaths();
     m_chSwingL = m_engine.play(paths.low, true, 0);
     m_chSwingH = m_engine.play(paths.high, true, 0);
@@ -85,15 +78,13 @@ bool InertialSwingEffect::test(const Core::SaberDataPacket& packet) {
 void InertialSwingEffect::run() {
     if (m_chHum == INVALID_CHANNEL || m_chSwingL == INVALID_CHANNEL || m_chSwingH == INVALID_CHANNEL) return;
 
-
-
     float masterVolume = computeMasterVolume();
     float finalMix = computeFinalMix();
 
     applySwingVolumes(masterVolume, finalMix);
     applyHumDucking(masterVolume);
     handleInertialBurst();
-    
+
     if (evaluateSwap(masterVolume)) {
         executeSwap();
     }
@@ -147,7 +138,7 @@ void InertialSwingEffect::handleInertialBurst() {
 }
 
 InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
-    uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->loadedSwingPairCount() : 0;
+    uint8_t availablePairs = m_audioCache.loadedSwingPairCount();
     if (availablePairs > 1) {
         uint8_t newPair;
         do {
@@ -159,8 +150,6 @@ InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
     }
     std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
     return { "/mem/swingl" + suffix, "/mem/swingh" + suffix };
-
-
 }
 
 std::string InertialSwingEffect::provideBurstPath() const {
@@ -194,7 +183,7 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
 }
 
 void InertialSwingEffect::executeSwap() {
-    uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->loadedSwingPairCount() : 0;
+    uint8_t availablePairs = m_audioCache.loadedSwingPairCount();
     if (availablePairs <= 1) return;
 
     if (m_chSwingL != INVALID_CHANNEL) m_engine.stop(m_chSwingL);

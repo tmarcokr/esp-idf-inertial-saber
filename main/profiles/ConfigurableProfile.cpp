@@ -11,9 +11,6 @@
 #include "profiles/inertial/effects/PreloadWaitEffect.hpp"
 #include "core/SaberDataPacket.hpp"
 
-#include "system/PsramAudioCache.hpp"
-
-
 #include "esp_log.h"
 
 namespace InertialSaber::Profiles {
@@ -43,88 +40,61 @@ void ConfigurableProfile::setPowerState(PowerState state) {
   m_powerState = state;
 }
 
-void ConfigurableProfile::load(Core::SaberActionBus &bus,
-                               Espressif::Wrappers::Audio::AudioEngine &audio,
-                               Espressif::Wrappers::SmartLed::Engine &led,
-                               ProfileManager &profileManager,
-                               Espressif::Wrappers::RgbLed* statusLed
-                               , InertialSaber::System::PsramAudioCache* psramCache
-
-  ) {
+void ConfigurableProfile::load(const SaberServices &services, ProfileManager &profileManager) {
   ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName);
 
   m_powerState = PowerState::PRELOADING;
-  bus.setPhysicsConfig(m_def);
+  services.bus.setPhysicsConfig(m_def);
 
-  if (psramCache) {
-      psramCache->requestProfilePreload(m_def.profileRoot, m_def.fontSwingPairCount);
-  }
+  services.audioCache.requestProfilePreload(m_def.profileRoot, m_def.fontSwingPairCount);
 
+  services.bus.registerEffect(std::make_unique<Effects::PreloadWaitEffect>(
+      *this, services.audio, services.audioCache, services.status));
 
-  bus.registerEffect(std::make_unique<Effects::PreloadWaitEffect>(
-      *this, audio, statusLed
-      , psramCache
+  auto swingFx = std::make_unique<Effects::InertialSwingEffect>(services.audio, m_def,
+                                                                services.audioCache);
+  m_swingEffect = swingFx.get();
+  services.bus.registerEffect(std::move(swingFx));
 
-  ));
-
-  auto swingFx =
-      std::make_unique<Effects::InertialSwingEffect>(audio, m_def
-                                                     , psramCache
-
-      );
-  swingEffect = swingFx.get();
-  bus.registerEffect(std::move(swingFx));
-
-  auto lightFx =
-      std::make_unique<Effects::InertialLightEffect>(led, m_def);
-  lightEffect = lightFx.get();
-  bus.registerEffect(std::move(lightFx));
+  auto lightFx = std::make_unique<Effects::InertialLightEffect>(services.blade, m_def);
+  m_lightEffect = lightFx.get();
+  services.bus.registerEffect(std::move(lightFx));
 
   auto powerFx = std::make_unique<Effects::PowerToggleEffect>(
-      *this, *swingEffect, *lightEffect, audio, led, m_def, Core::kMainButtonInputId);
+      *this, *m_swingEffect, *m_lightEffect, services.audio, services.blade, m_def,
+      Core::kMainButtonInputId);
   auto &powerRef = *powerFx;
-  bus.registerEffect(std::move(powerFx));
+  services.bus.registerEffect(std::move(powerFx));
 
-  bus.registerEffect(std::make_unique<Effects::BlasterEffect>(
-      powerRef, audio, led, m_def, Core::kMainButtonInputId));
+  services.bus.registerEffect(std::make_unique<Effects::BlasterEffect>(
+      powerRef, services.audio, services.blade, m_def, Core::kMainButtonInputId));
 
-  bus.registerEffect(std::make_unique<Effects::KineticImpactEffect>(
-      powerRef, audio, led, m_def));
+  services.bus.registerEffect(std::make_unique<Effects::KineticImpactEffect>(
+      powerRef, services.audio, services.blade, m_def));
 
-  bus.registerEffect(std::make_unique<Effects::DragEffect>(
-      powerRef, audio, led, m_def, Core::kMainButtonInputId));
+  services.bus.registerEffect(std::make_unique<Effects::DragEffect>(
+      powerRef, services.audio, services.blade, m_def, Core::kMainButtonInputId));
 
-  bus.registerEffect(std::make_unique<Effects::ProfileCycleEffect>(
-      *this,
-      profileManager,
-      bus,
-      audio,
-      led,
-      Core::kMainButtonInputId));
+  services.bus.registerEffect(std::make_unique<Effects::ProfileCycleEffect>(
+      *this, profileManager, Core::kMainButtonInputId));
 }
 
-void ConfigurableProfile::unload(Core::SaberActionBus &bus
-                                 , InertialSaber::System::PsramAudioCache* psramCache
-
-  ) {
+void ConfigurableProfile::unload(const SaberServices &services) {
   ESP_LOGI(TAG, "Unloading configurable profile '%s'", m_def.profileName);
 
-  if (swingEffect) {
-    swingEffect->deactivate();
+  if (m_swingEffect) {
+    m_swingEffect->deactivate();
   }
-  if (lightEffect) {
-    lightEffect->deactivate();
-  }
-
-  bus.clearEffects();
-
-  if (psramCache) {
-      psramCache->unloadAll();
+  if (m_lightEffect) {
+    m_lightEffect->deactivate();
   }
 
+  services.bus.clearEffects();
 
-  swingEffect = nullptr;
-  lightEffect = nullptr;
+  services.audioCache.unloadAll();
+
+  m_swingEffect = nullptr;
+  m_lightEffect = nullptr;
 }
 
 } // namespace InertialSaber::Profiles

@@ -1,8 +1,5 @@
 #pragma once
 
-#include "sdkconfig.h"
-
-
 #include "system/MemoryVfs.hpp"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"

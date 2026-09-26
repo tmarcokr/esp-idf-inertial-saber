@@ -5,17 +5,10 @@
 
 namespace InertialSaber::Core {
 struct SaberDataPacket;
-class SaberActionBus;
 }
 namespace InertialSaber::Profiles {
 class ConfigurableProfile;
 class ProfileManager;
-}
-namespace Espressif::Wrappers::Audio {
-class AudioEngine;
-}
-namespace Espressif::Wrappers::SmartLed {
-class Engine;
 }
 
 namespace InertialSaber::Effects {
@@ -28,13 +21,9 @@ public:
     /**
      * @brief Construct a new ProfileCycleEffect.
      */
-    ProfileCycleEffect(
-        Profiles::ConfigurableProfile&           profile,
-        Profiles::ProfileManager&                profileManager,
-        Core::SaberActionBus&                    bus,
-        Espressif::Wrappers::Audio::AudioEngine& audio,
-        Espressif::Wrappers::SmartLed::Engine&   led,
-        uint8_t                                  buttonId);
+    ProfileCycleEffect(Profiles::ConfigurableProfile& profile,
+                       Profiles::ProfileManager& profileManager,
+                       uint8_t buttonId);
 
     /**
      * @brief Test if the profile cycle gesture is triggered.
@@ -47,12 +36,9 @@ public:
     void run() override;
 
 private:
-    Profiles::ConfigurableProfile&           m_profile;
-    Profiles::ProfileManager&                m_profileManager;
-    Core::SaberActionBus&                    m_bus;
-    Espressif::Wrappers::Audio::AudioEngine& m_audio;
-    Espressif::Wrappers::SmartLed::Engine&   m_led;
-    uint8_t                                  m_buttonId;
+    Profiles::ConfigurableProfile& m_profile;
+    Profiles::ProfileManager&      m_profileManager;
+    uint8_t                        m_buttonId;
 };
 
 } // namespace InertialSaber::Effects

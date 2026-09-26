@@ -3,25 +3,17 @@
 #include "profiles/ProfileManager.hpp"
 #include "core/SaberDataPacket.hpp"
 #include "esp_log.h"
-#include <string>
 
 namespace InertialSaber::Effects {
 
 static constexpr const char* TAG = "ProfileCycle";
 
-ProfileCycleEffect::ProfileCycleEffect(
-    Profiles::ConfigurableProfile&           profile,
-    Profiles::ProfileManager&                profileManager,
-    Core::SaberActionBus&                    bus,
-    Espressif::Wrappers::Audio::AudioEngine& audio,
-    Espressif::Wrappers::SmartLed::Engine&   led,
-    uint8_t                                  buttonId)
+ProfileCycleEffect::ProfileCycleEffect(Profiles::ConfigurableProfile& profile,
+                                       Profiles::ProfileManager& profileManager,
+                                       uint8_t buttonId)
     : InertialEffect(1)
     , m_profile(profile)
     , m_profileManager(profileManager)
-    , m_bus(bus)
-    , m_audio(audio)
-    , m_led(led)
     , m_buttonId(buttonId)
 {}
 
@@ -37,7 +29,7 @@ bool ProfileCycleEffect::test(const Core::SaberDataPacket& packet) {
 
 void ProfileCycleEffect::run() {
     ESP_LOGI(TAG, "Profile cycle triggered");
-    m_profileManager.nextProfile(m_bus, m_audio, m_led);
+    m_profileManager.next();
 }
 
 } // namespace InertialSaber::Effects

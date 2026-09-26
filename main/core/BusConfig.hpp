@@ -36,11 +36,8 @@ struct BusConfig {
  * @brief Raw motion sample published by an IMU adapter.
  */
 struct MotionSample {
-    /// Linear acceleration magnitude in G (gravity subtracted).
     float kineticEnergyG;
-    /// Angular velocity across XYZ axes in degrees per second.
     std::array<float, 3> axisRotationDps;
-    /// Roll angle in degrees, before offset correction and normalization.
     float orientationDeg;
 };
 

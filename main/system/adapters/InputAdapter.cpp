@@ -1,4 +1,5 @@
 #include "InputAdapter.hpp"
+#include "system/board/Board.hpp"
 #include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -57,7 +58,7 @@ esp_err_t InputAdapter::start() {
                              [this]() { onFirstHoldTick(); });
 
     ESP_LOGI(TAG, "Input Adapter started (GPIO %d, click_window=%u ms, hold_tick=%u ms)",
-             static_cast<int>(Hardware::HardwareConfig::kMainBtn),
+             static_cast<int>(Board::kPins.mainButton),
              static_cast<unsigned int>(Hardware::HardwareConfig::kClickWindowMs),
              static_cast<unsigned int>(Hardware::HardwareConfig::kHoldTickMs));
     return ESP_OK;
