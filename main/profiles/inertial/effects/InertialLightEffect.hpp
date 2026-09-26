@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Engine.hpp"
-#include "InertialBladeEffect.hpp"
+#include "overlays/InertialBladeEffect.hpp"
 #include "profiles/inertial/InertialDefinition.hpp"
 #include "core/InertialEffect.hpp"
 
@@ -20,8 +20,8 @@ public:
       Espressif::Wrappers::SmartLed::Engine& ledEngine,
       const InertialSaber::Profiles::Inertial::InertialDefinition& definition);
 
-  bool Test(const Core::SaberDataPacket &packet) override;
-  void Run() override;
+  bool test(const Core::SaberDataPacket &packet) override;
+  void run() override;
 
   void activate();
   void deactivate();
@@ -34,7 +34,7 @@ private:
 
   uint16_t m_baseHue;
   float m_kineticEnergy = 0.0f;
-  float m_orientationVector = 0.0f;
+  float m_orientation = 0.0f;
   float m_inertialOverload = 0.0f;
   bool m_inertialBurst = false;
 

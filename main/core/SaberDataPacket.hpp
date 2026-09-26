@@ -1,11 +1,12 @@
 #pragma once
 
-#include "system/hardware/HardwareConfig.hpp"
-
 #include <array>
 #include <cstdint>
 
 namespace InertialSaber::Core {
+
+inline constexpr uint8_t kMaxInputs = 4;
+inline constexpr uint8_t kMainButtonInputId = 0;
 
 /**
  * @brief Full state-machine snapshot for a single input peripheral.
@@ -15,23 +16,23 @@ namespace InertialSaber::Core {
  * direct hardware access.
  */
 struct InputDescriptor {
-    enum class State : uint8_t { IDLE, PRESSED, HELD, RELEASED };
+    enum class State : uint8_t { Idle, Pressed, Held, Released };
 
-    State current = State::IDLE;
-    State previous = State::IDLE;
-    uint32_t holdDuration_ms = 0;
-    uint32_t lastTransition_ms = 0;
+    State current = State::Idle;
+    State previous = State::Idle;
+    uint32_t holdDurationMs = 0;
+    uint32_t lastTransitionMs = 0;
 
     /**
      * @brief Semantic gesture resolved by the input adapter.
      */
     enum class Gesture : uint8_t {
-        NONE      = 0,
-        CLICK     = 1,
-        HOLD_TICK = 2
+        None     = 0,
+        Click    = 1,
+        HoldTick = 2
     };
 
-    Gesture gesture = Gesture::NONE;
+    Gesture gesture = Gesture::None;
     uint8_t pressCount = 0;
     uint8_t holdLevel = 0;
 };
@@ -45,25 +46,25 @@ struct InputDescriptor {
  */
 struct SaberDataPacket {
     /// Absolute linear acceleration magnitude in Gs (gravity subtracted).
-    float KineticEnergy = 0.0f;
+    float kineticEnergy = 0.0f;
     
     /// Angular velocity across XYZ axes in degrees per second.
-    float AxisRotation[3] = {0.0f, 0.0f, 0.0f};
+    std::array<float, 3> axisRotation{};
     
     /// Vertical alignment (-1.0 to 1.0) where 1.0 is pointing straight UP and -1.0 is straight DOWN.
-    float OrientationVector = 0.0f;
+    float orientation = 0.0f;
 
     /// Virtual inertia accumulator (0.0f to 1.0f).
-    float InertialOverload = 0.0f;
+    float inertialOverload = 0.0f;
     
-    /// True for exactly one cycle when InertialOverload reaches 1.0f.
-    bool InertialBurst = false;
+    /// True for exactly one cycle when inertialOverload reaches 1.0f.
+    bool inertialBurst = false;
 
     /// Array of input peripheral states (buttons, switches).
-    std::array<InputDescriptor, System::Hardware::HardwareConfig::kMaxInputs> inputs{};
+    std::array<InputDescriptor, kMaxInputs> inputs{};
 
     /// FreeRTOS system time in milliseconds at the start of this bus cycle.
-    uint32_t timestamp_ms = 0;
+    uint32_t timestampMs = 0;
 };
 
 } // namespace InertialSaber::Core

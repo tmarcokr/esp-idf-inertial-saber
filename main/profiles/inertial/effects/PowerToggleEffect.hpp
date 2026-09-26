@@ -3,14 +3,14 @@
 
 #include "core/InertialEffect.hpp"
 #include <cstdint>
-#include <string>
 
 namespace InertialSaber::Core {
 
 struct SaberDataPacket;
 }
 namespace InertialSaber::Profiles {
-class ConfigurableProfile;
+class PowerStateMachine;
+class SoundFont;
 }
 namespace InertialSaber::Effects {
 class InertialSwingEffect;
@@ -31,18 +31,17 @@ namespace InertialSaber::Effects {
 class PowerToggleEffect final : public Core::InertialEffect {
 public:
     PowerToggleEffect(
-        Profiles::ConfigurableProfile&           profile,
+        Profiles::PowerStateMachine&             power,
         InertialSwingEffect&                     swing,
         InertialLightEffect&                     light,
         Espressif::Wrappers::Audio::AudioEngine& audio,
         Espressif::Wrappers::SmartLed::Engine&   ledEngine,
         const InertialSaber::Profiles::Inertial::InertialDefinition&          definition,
+        const Profiles::SoundFont&               font,
         uint8_t                                  buttonId);
 
-    bool Test(const Core::SaberDataPacket& packet) override;
-    void Run() override;
-    [[nodiscard]] bool isIgnited() const;
-    [[nodiscard]] bool isRetracted() const;
+    bool test(const Core::SaberDataPacket& packet) override;
+    void run() override;
 
 private:
     void beginIgnition();
@@ -50,14 +49,13 @@ private:
     void beginRetraction();
     void tickRetraction();
 
-    [[nodiscard]] std::string buildPath(const char* subAndPrefix, uint8_t index) const;
-
-    Profiles::ConfigurableProfile&           m_profile;
+    Profiles::PowerStateMachine&             m_power;
     InertialSwingEffect&                     m_swing;
     InertialLightEffect&                     m_light;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     Espressif::Wrappers::SmartLed::Engine&   m_ledEngine;
     const InertialSaber::Profiles::Inertial::InertialDefinition&          m_def;
+    const Profiles::SoundFont&               m_font;
     uint8_t                                  m_buttonId;
 
     bool     m_pendingTransition = false;

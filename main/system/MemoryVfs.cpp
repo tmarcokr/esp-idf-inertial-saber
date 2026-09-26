@@ -1,28 +1,24 @@
 #include "system/MemoryVfs.hpp"
 #include "esp_log.h"
 #include <fcntl.h>
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
-#include <algorithm>
+#include <utility>
 
 static constexpr const char* TAG = "MemoryVfs";
 
 namespace Espressif::Wrappers {
 
-MemoryVfs::MemoryVfs(const char* mount_point, uint8_t max_files, uint8_t max_fds)
-    : m_mountPoint(mount_point)
-    , m_maxFiles(max_files)
-    , m_maxFds(max_fds) {
-    m_files = new FileEntry[m_maxFiles];
-    m_fds = new FdEntry[m_maxFds];
-}
+MemoryVfs::MemoryVfs(std::string_view mountPoint, uint8_t maxFiles, uint8_t maxFds)
+    : m_mountPoint(mountPoint)
+    , m_files(maxFiles)
+    , m_fds(maxFds) {}
 
 MemoryVfs::~MemoryVfs() {
     if (m_initialized) {
         esp_vfs_unregister(m_mountPoint.c_str());
     }
-    delete[] m_files;
-    delete[] m_fds;
 }
 
 esp_err_t MemoryVfs::init() {
@@ -57,213 +53,191 @@ esp_err_t MemoryVfs::init() {
     return err;
 }
 
-esp_err_t MemoryVfs::registerFile(const char* name, const uint8_t* data, size_t size) {
-    if (!name || name[0] == '\0' || !data || size == 0) {
+esp_err_t MemoryVfs::registerFile(std::string_view name, MemoryFileHandle file) {
+    if (name.empty() || !file || !file->bytes || file->size == 0) {
         return ESP_ERR_INVALID_ARG;
     }
     if (!m_initialized) {
         return ESP_ERR_INVALID_STATE;
     }
 
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    // Check for duplicates
-    for (uint8_t i = 0; i < m_maxFiles; ++i) {
-        if (m_files[i].occupied && m_files[i].name == name) {
-            return ESP_ERR_INVALID_SIZE; // Duplicate name
+    const size_t size = file->size;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        esp_err_t err = insertFile(name, file);
+        if (err != ESP_OK) {
+            return err;
         }
     }
+    ESP_LOGD(TAG, "Registered virtual file '%s/%.*s' (%zu bytes)", m_mountPoint.c_str(),
+             static_cast<int>(name.size()), name.data(), size);
+    return ESP_OK;
+}
 
-    // Find free slot
-    for (uint8_t i = 0; i < m_maxFiles; ++i) {
-        if (!m_files[i].occupied) {
-            m_files[i].name = name;
-            m_files[i].data = data;
-            m_files[i].size = size;
-            m_files[i].occupied = true;
-            ESP_LOGD(TAG, "Registered virtual file '%s/%s' (%zu bytes)", m_mountPoint.c_str(), name, size);
-            return ESP_OK;
+esp_err_t MemoryVfs::insertFile(std::string_view name, MemoryFileHandle& file) {
+    const bool duplicate = std::any_of(m_files.begin(), m_files.end(), [name](const FileEntry& entry) {
+        return entry.file && entry.name == name;
+    });
+    if (duplicate) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    auto freeSlot = std::find_if(m_files.begin(), m_files.end(),
+                                 [](const FileEntry& entry) { return !entry.file; });
+    if (freeSlot == m_files.end()) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    freeSlot->name.assign(name);
+    freeSlot->file = std::move(file);
+    return ESP_OK;
+}
+
+esp_err_t MemoryVfs::unregisterFile(std::string_view name) {
+    MemoryFileHandle released;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto entry = std::find_if(m_files.begin(), m_files.end(), [name](const FileEntry& e) {
+            return e.file && e.name == name;
+        });
+        if (entry == m_files.end()) {
+            return ESP_ERR_NOT_FOUND;
         }
+        released = std::move(entry->file);
+        entry->name.clear();
     }
-
-    return ESP_ERR_NO_MEM;
+    ESP_LOGD(TAG, "Unregistered virtual file '%s/%.*s'", m_mountPoint.c_str(),
+             static_cast<int>(name.size()), name.data());
+    return ESP_OK;
 }
 
-esp_err_t MemoryVfs::unregisterFile(const char* name) {
-    if (!name) return ESP_ERR_INVALID_ARG;
-
+uint8_t MemoryVfs::openDescriptorCount() const {
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    for (uint8_t i = 0; i < m_maxFiles; ++i) {
-        if (m_files[i].occupied && m_files[i].name == name) {
-            m_files[i].occupied = false;
-            m_files[i].name.clear();
-            m_files[i].data = nullptr;
-            m_files[i].size = 0;
-            ESP_LOGD(TAG, "Unregistered virtual file '%s/%s'", m_mountPoint.c_str(), name);
-            return ESP_OK;
-        }
-    }
-
-    return ESP_ERR_NOT_FOUND;
+    return static_cast<uint8_t>(std::count_if(m_fds.begin(), m_fds.end(),
+                                              [](const FdEntry& fd) { return fd.file != nullptr; }));
 }
 
-void MemoryVfs::unregisterAll() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    for (uint8_t i = 0; i < m_maxFiles; ++i) {
-        m_files[i].occupied = false;
-        m_files[i].name.clear();
-        m_files[i].data = nullptr;
-        m_files[i].size = 0;
+MemoryVfs::FdEntry* MemoryVfs::findDescriptor(int fd) {
+    if (fd < 0 || static_cast<size_t>(fd) >= m_fds.size() || !m_fds[fd].file) {
+        return nullptr;
     }
-    for (uint8_t i = 0; i < m_maxFds; ++i) {
-        m_fds[i].occupied = false;
-    }
-    ESP_LOGD(TAG, "Unregistered all virtual files");
+    return &m_fds[fd];
 }
 
-bool MemoryVfs::exists(const char* name) const {
-    if (!name) return false;
-    std::lock_guard<std::mutex> lock(m_mutex);
-    for (uint8_t i = 0; i < m_maxFiles; ++i) {
-        if (m_files[i].occupied && m_files[i].name == name) {
-            return true;
-        }
-    }
-    return false;
-}
-
-uint8_t MemoryVfs::fileCount() const {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    uint8_t count = 0;
-    for (uint8_t i = 0; i < m_maxFiles; ++i) {
-        if (m_files[i].occupied) count++;
-    }
-    return count;
-}
-
-int MemoryVfs::vfsOpen(const char* path, int flags, int mode) {
-    // Read-only filesystem
-    int acc_mode = flags & O_ACCMODE;
-    if (acc_mode != O_RDONLY) {
+int MemoryVfs::vfsOpen(const char* path, int flags, int /*mode*/) {
+    if ((flags & O_ACCMODE) != O_RDONLY) {
         errno = EACCES;
         return -1;
     }
 
-    // Strip leading slash if present
-    const char* reqName = path;
-    if (reqName[0] == '/') {
-        reqName++;
+    std::string_view requested(path);
+    if (!requested.empty() && requested.front() == '/') {
+        requested.remove_prefix(1);
     }
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    // Look up file
-    int fileIdx = -1;
-    for (uint8_t i = 0; i < m_maxFiles; ++i) {
-        if (m_files[i].occupied && m_files[i].name == reqName) {
-            fileIdx = i;
-            break;
-        }
-    }
-
-    if (fileIdx == -1) {
+    auto file = std::find_if(m_files.begin(), m_files.end(), [requested](const FileEntry& entry) {
+        return entry.file && entry.name == requested;
+    });
+    if (file == m_files.end()) {
         errno = ENOENT;
         return -1;
     }
 
-    // Find free fd
-    for (uint8_t i = 0; i < m_maxFds; ++i) {
-        if (!m_fds[i].occupied) {
-            m_fds[i].file_index = fileIdx;
-            m_fds[i].position = 0;
-            m_fds[i].occupied = true;
-            return i;
-        }
+    auto freeFd = std::find_if(m_fds.begin(), m_fds.end(),
+                               [](const FdEntry& fd) { return !fd.file; });
+    if (freeFd == m_fds.end()) {
+        errno = ENFILE;
+        return -1;
     }
 
-    errno = ENFILE;
-    return -1;
+    freeFd->file = file->file;
+    freeFd->position = 0;
+    return static_cast<int>(std::distance(m_fds.begin(), freeFd));
 }
 
 ssize_t MemoryVfs::vfsRead(int fd, void* dst, size_t size) {
-    if (fd < 0 || fd >= m_maxFds || !m_fds[fd].occupied) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    FdEntry* entry = findDescriptor(fd);
+    if (!entry) {
         errno = EBADF;
         return -1;
     }
 
-    FdEntry& entry = m_fds[fd];
-    FileEntry& file = m_files[entry.file_index];
-
-    if (entry.position >= file.size) {
-        return 0; // EOF
+    const MemoryFile& file = *entry->file;
+    if (entry->position >= file.size) {
+        return 0;
     }
 
-    size_t bytes_to_copy = std::min(size, file.size - entry.position);
-    if (bytes_to_copy > 0) {
-        std::memcpy(dst, file.data + entry.position, bytes_to_copy);
-        entry.position += bytes_to_copy;
-    }
-
-    return bytes_to_copy;
+    const size_t bytesToCopy = std::min(size, file.size - entry->position);
+    std::memcpy(dst, file.bytes.get() + entry->position, bytesToCopy);
+    entry->position += bytesToCopy;
+    return static_cast<ssize_t>(bytesToCopy);
 }
 
 int MemoryVfs::vfsClose(int fd) {
-    if (fd < 0 || fd >= m_maxFds || !m_fds[fd].occupied) {
-        errno = EBADF;
-        return -1;
+    MemoryFileHandle released;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        FdEntry* entry = findDescriptor(fd);
+        if (!entry) {
+            errno = EBADF;
+            return -1;
+        }
+        released = std::move(entry->file);
+        entry->position = 0;
     }
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_fds[fd].occupied = false;
     return 0;
 }
 
 off_t MemoryVfs::vfsLseek(int fd, off_t offset, int mode) {
-    if (fd < 0 || fd >= m_maxFds || !m_fds[fd].occupied) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    FdEntry* entry = findDescriptor(fd);
+    if (!entry) {
         errno = EBADF;
         return -1;
     }
 
-    FdEntry& entry = m_fds[fd];
-    FileEntry& file = m_files[entry.file_index];
-
-    off_t new_pos = 0;
+    const auto fileSize = static_cast<off_t>(entry->file->size);
+    off_t newPosition = 0;
     switch (mode) {
         case SEEK_SET:
-            new_pos = offset;
+            newPosition = offset;
             break;
         case SEEK_CUR:
-            new_pos = static_cast<off_t>(entry.position) + offset;
+            newPosition = static_cast<off_t>(entry->position) + offset;
             break;
         case SEEK_END:
-            new_pos = static_cast<off_t>(file.size) + offset;
+            newPosition = fileSize + offset;
             break;
         default:
             errno = EINVAL;
             return -1;
     }
 
-    if (new_pos < 0 || new_pos > static_cast<off_t>(file.size)) {
+    if (newPosition < 0 || newPosition > fileSize) {
         errno = EINVAL;
         return -1;
     }
 
-    entry.position = static_cast<size_t>(new_pos);
-    return new_pos;
+    entry->position = static_cast<size_t>(newPosition);
+    return newPosition;
 }
 
 int MemoryVfs::vfsFstat(int fd, struct stat* st) {
-    if (fd < 0 || fd >= m_maxFds || !m_fds[fd].occupied) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    FdEntry* entry = findDescriptor(fd);
+    if (!entry) {
         errno = EBADF;
         return -1;
     }
 
-    FdEntry& entry = m_fds[fd];
-    FileEntry& file = m_files[entry.file_index];
-
     std::memset(st, 0, sizeof(*st));
-    st->st_size = file.size;
+    st->st_size = static_cast<off_t>(entry->file->size);
     st->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
     return 0;
 }

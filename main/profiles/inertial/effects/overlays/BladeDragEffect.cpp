@@ -14,9 +14,9 @@ BladeDragEffect::BladeDragEffect(uint16_t numLeds, uint16_t dragLedCount)
     : m_numLeds(numLeds)
     , m_dragLedCount(dragLedCount) {}
 
-void BladeDragEffect::update(uint32_t delta_ms) {
+void BladeDragEffect::update(uint32_t deltaMs) {
     if (m_fading) {
-        m_fadeElapsed += delta_ms;
+        m_fadeElapsed += deltaMs;
         if (m_fadeElapsed >= kFadeDurationMs) {
             m_fadeElapsed = kFadeDurationMs;
             m_finished = true;

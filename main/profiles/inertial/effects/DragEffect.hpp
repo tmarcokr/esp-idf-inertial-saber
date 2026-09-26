@@ -4,14 +4,16 @@
 #include "core/InertialEffect.hpp"
 #include "AudioEngine.hpp"
 #include <cstdint>
-#include <string>
 
+namespace InertialSaber::Profiles {
+class PowerStateMachine;
+class SoundFont;
+}
 namespace InertialSaber::Core {
 
 struct SaberDataPacket;
 }
 namespace InertialSaber::Effects {
-class PowerToggleEffect;
 class BladeDragEffect;
 }
 namespace Espressif::Wrappers::Audio {
@@ -30,29 +32,30 @@ class DragEffect final : public Core::InertialEffect {
 public:
     /**
      * @brief Construct a new Drag Effect.
-     * @param power Power toggle effect reference.
+     * @param power Power state machine of the active profile.
      * @param audio Audio engine reference.
      * @param ledEngine SmartLed engine reference.
      * @param definition Active inertial definition.
+     * @param font Sound font of the active profile.
      * @param buttonId Trigger button identifier.
      */
     DragEffect(
-        PowerToggleEffect& power,
+        const Profiles::PowerStateMachine& power,
         Espressif::Wrappers::Audio::AudioEngine& audio,
         Espressif::Wrappers::SmartLed::Engine& ledEngine,
         const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+        const Profiles::SoundFont& font,
         uint8_t buttonId);
 
-    bool Test(const Core::SaberDataPacket& packet) override;
-    void Run() override;
+    bool test(const Core::SaberDataPacket& packet) override;
+    void run() override;
 
 private:
-    [[nodiscard]] std::string buildPath(const char* subAndPrefix, uint8_t index) const;
-
-    PowerToggleEffect& m_power;
+    const Profiles::PowerStateMachine& m_power;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
+    const Profiles::SoundFont& m_font;
     uint8_t m_buttonId;
 
     Espressif::Wrappers::Audio::ChannelId m_audioChannel = Espressif::Wrappers::Audio::INVALID_CHANNEL;

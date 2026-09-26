@@ -1,26 +1,24 @@
 #include "SaberSystem.hpp"
 #include "profiles/ProfileParser.hpp"
-#include "profiles/inertial/effects/InertialSwingEffect.hpp"
-#include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
 
 namespace InertialSaber::System {
 
 static constexpr const char *TAG = "SaberSystem";
 
-SaberSystem::SaberSystem() : m_statusLed(Hardware::HardwareConfig::kStatusLed) {}
+using Status::SystemStatus;
 
 esp_err_t SaberSystem::start() {
-  esp_err_t err;
-  
-  if ((err = m_statusLed.init()) == ESP_OK) {
-      (void)m_statusLed.setColor({128, 128, 0}); // Yellow: Booting (dim)
+  ESP_LOGD(TAG, "sizeof(SaberSystem) = %u", static_cast<unsigned>(sizeof(SaberSystem)));
+
+  if (m_status.init() == ESP_OK) {
+    m_status.show(SystemStatus::Booting);
   }
 
-  err = internalStart();
+  const esp_err_t err = internalStart();
 
   if (err != ESP_OK) {
-      (void)m_statusLed.setColor({255, 0, 0}); // Red: Error
+    m_status.show(SystemStatus::Error);
   }
   return err;
 }
@@ -33,28 +31,40 @@ esp_err_t SaberSystem::internalStart() {
 #endif
 
   ESP_LOGI(TAG, "Initializing InertialSaber OS Hardware...");
-  
-  if ((err = m_sdHardware.init()) != ESP_OK) return err;
-  if ((err = m_audioHardware.init()) != ESP_OK) return err;
-  if ((err = m_ledHardware.init()) != ESP_OK) return err;
-  if ((err = m_imuHardware.init()) != ESP_OK) return err;
-  if ((err = m_btnHardware.init()) != ESP_OK) return err;
+  ESP_LOGI(TAG, "Board: %.*s", static_cast<int>(Board::kName.size()), Board::kName.data());
 
-  if ((err = m_psramCache.init()) != ESP_OK) return err;
-  m_profileManager.setPsramCache(&m_psramCache);
+  if ((err = m_sdCard.init()) != ESP_OK) {
+    ESP_LOGE(TAG, "SD Card init failed: %s", esp_err_to_name(err));
+    return err;
+  }
+  ESP_LOGI(TAG, "SD Card ready");
 
+  if ((err = bringUpAudio()) != ESP_OK) return err;
+  if ((err = bringUpBlade()) != ESP_OK) return err;
+
+  if ((err = m_imu.initialize()) != ESP_OK) {
+    ESP_LOGE(TAG, "IMU initialization failed");
+    return err;
+  }
+  ESP_LOGI(TAG, "IMU ready");
+
+  if ((err = m_audioCache.init()) != ESP_OK) return err;
 
   ESP_LOGI(TAG, "Starting Adapters...");
-  m_imuAdapter = std::make_unique<Adapters::ImuAdapter>(m_bus, *m_imuHardware.getMpu());
-  if ((err = m_imuAdapter->start()) != ESP_OK) return err;
+  if ((err = m_imuAdapter.start()) != ESP_OK) return err;
+  if ((err = m_inputAdapter.start()) != ESP_OK) return err;
 
-  m_inputAdapter = std::make_unique<Adapters::InputAdapter>(m_bus, *m_btnHardware.getButton());
-  if ((err = m_inputAdapter->start()) != ESP_OK) return err;
+  // Warning: GpioButton::init() starts the poll task that iterates the callback
+  // maps unlocked, so all callbacks must be registered before it.
+  if ((err = m_button.init()) != ESP_OK) {
+    ESP_LOGE(TAG, "Button initialization failed");
+    return err;
+  }
+  ESP_LOGI(TAG, "Button ready (GPIO %d)", static_cast<int>(Board::kPins.mainButton));
 
   ESP_LOGI(TAG, "Loading Profiles...");
-  m_profileManager.setStatusLed(&m_statusLed);
-  m_profileManager.init();
-  m_profileManager.loadActive(m_bus, *m_audioHardware.getEngine(), *m_ledHardware.getEngine());
+  m_profiles.init();
+  m_profiles.loadActive();
 
   ESP_LOGI(TAG, "Starting Action Bus...");
   if ((err = m_bus.start()) != ESP_OK) {
@@ -63,6 +73,41 @@ esp_err_t SaberSystem::internalStart() {
   }
 
   ESP_LOGI(TAG, "InertialSaber OS active — all systems nominal");
+  return ESP_OK;
+}
+
+esp_err_t SaberSystem::bringUpAudio() {
+  esp_err_t err = m_audio.init();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "AudioEngine init failed: %s", esp_err_to_name(err));
+    return err;
+  }
+
+  err = m_audio.start();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "AudioEngine start failed: %s", esp_err_to_name(err));
+    return err;
+  }
+
+  m_audio.setGlobalVolume(Hardware::HardwareConfig::kAudioGlobalVolume);
+
+  ESP_LOGI(TAG, "Audio Engine ready (9 channels, 44.1kHz)");
+  return ESP_OK;
+}
+
+esp_err_t SaberSystem::bringUpBlade() {
+  const esp_err_t err = m_blade.init();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "SmartLed init failed: %s", esp_err_to_name(err));
+    return err;
+  }
+
+  m_blade.setGlobalBrightness(Hardware::HardwareConfig::kBladeBrightness);
+  m_blade.setTargetFps(Hardware::HardwareConfig::kBladeTargetFps);
+  m_blade.start();
+
+  ESP_LOGI(TAG, "SmartLed Engine ready (%d LEDs on GPIO %d)",
+           Hardware::HardwareConfig::kNumLeds, static_cast<int>(Board::kPins.bladeData));
   return ESP_OK;
 }
 

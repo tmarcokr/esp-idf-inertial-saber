@@ -1,4 +1,5 @@
 #include "InputAdapter.hpp"
+#include "system/board/Board.hpp"
 #include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -57,7 +58,7 @@ esp_err_t InputAdapter::start() {
                              [this]() { onFirstHoldTick(); });
 
     ESP_LOGI(TAG, "Input Adapter started (GPIO %d, click_window=%u ms, hold_tick=%u ms)",
-             static_cast<int>(Hardware::HardwareConfig::kMainBtn),
+             static_cast<int>(Board::kPins.mainButton),
              static_cast<unsigned int>(Hardware::HardwareConfig::kClickWindowMs),
              static_cast<unsigned int>(Hardware::HardwareConfig::kHoldTickMs));
     return ESP_OK;
@@ -66,9 +67,9 @@ esp_err_t InputAdapter::start() {
 void InputAdapter::onPressDown() {
     const uint32_t now = esp_timer_get_time() / 1000;
 
-    m_btnState.previous          = m_btnState.current;
-    m_btnState.current           = Core::InputDescriptor::State::PRESSED;
-    m_btnState.lastTransition_ms = now;
+    m_btnState.previous         = m_btnState.current;
+    m_btnState.current          = Core::InputDescriptor::State::Pressed;
+    m_btnState.lastTransitionMs = now;
 
     m_pendingClicks.fetch_add(1, std::memory_order_relaxed);
 
@@ -76,9 +77,9 @@ void InputAdapter::onPressDown() {
     esp_timer_start_once(m_clickTimer,
                          static_cast<uint64_t>(Hardware::HardwareConfig::kClickWindowMs) * 1000ULL);
 
-    m_btnState.gesture = Core::InputDescriptor::Gesture::NONE;
-    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
-    m_btnState.gesture = Core::InputDescriptor::Gesture::NONE;
+    m_btnState.gesture = Core::InputDescriptor::Gesture::None;
+    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
+    m_btnState.gesture = Core::InputDescriptor::Gesture::None;
 }
 
 void InputAdapter::onPressUp() {
@@ -87,15 +88,15 @@ void InputAdapter::onPressUp() {
     esp_timer_stop(m_holdTimer);
     m_holdLevel.store(0, std::memory_order_relaxed);
 
-    m_btnState.previous          = m_btnState.current;
-    m_btnState.current           = Core::InputDescriptor::State::RELEASED;
-    m_btnState.holdDuration_ms   = now - m_btnState.lastTransition_ms;
-    m_btnState.lastTransition_ms = now;
-    m_btnState.holdLevel         = 0;
+    m_btnState.previous         = m_btnState.current;
+    m_btnState.current          = Core::InputDescriptor::State::Released;
+    m_btnState.holdDurationMs   = now - m_btnState.lastTransitionMs;
+    m_btnState.lastTransitionMs = now;
+    m_btnState.holdLevel        = 0;
 
-    m_btnState.gesture = Core::InputDescriptor::Gesture::NONE;
-    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
-    m_btnState.gesture = Core::InputDescriptor::Gesture::NONE;
+    m_btnState.gesture = Core::InputDescriptor::Gesture::None;
+    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
+    m_btnState.gesture = Core::InputDescriptor::Gesture::None;
 }
 
 void InputAdapter::onFirstHoldTick() {
@@ -113,27 +114,27 @@ void InputAdapter::resolveClickGesture() {
 
     using Gesture = Core::InputDescriptor::Gesture;
     m_btnState.pressCount = count;
-    m_btnState.gesture    = Gesture::CLICK;
+    m_btnState.gesture    = Gesture::Click;
 
-    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
-    m_btnState.gesture    = Gesture::NONE;
+    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
+    m_btnState.gesture    = Gesture::None;
     m_btnState.pressCount = 0;
 
-    ESP_LOGD(TAG, "Gesture resolved: CLICK x%u", static_cast<unsigned>(count));
+    ESP_LOGD(TAG, "Gesture resolved: Click x%u", static_cast<unsigned>(count));
 }
 
 void InputAdapter::resolveHoldTick() {
     const uint8_t level = m_holdLevel.fetch_add(1, std::memory_order_relaxed) + 1;
 
-    m_btnState.current         = Core::InputDescriptor::State::HELD;
-    m_btnState.holdDuration_ms = level * Hardware::HardwareConfig::kHoldTickMs;
-    m_btnState.holdLevel       = level;
-    m_btnState.gesture         = Core::InputDescriptor::Gesture::HOLD_TICK;
+    m_btnState.current        = Core::InputDescriptor::State::Held;
+    m_btnState.holdDurationMs = level * Hardware::HardwareConfig::kHoldTickMs;
+    m_btnState.holdLevel      = level;
+    m_btnState.gesture        = Core::InputDescriptor::Gesture::HoldTick;
 
-    m_bus.pushInputEvent(Hardware::HardwareConfig::kMainBtnInputId, m_btnState);
-    m_btnState.gesture = Core::InputDescriptor::Gesture::NONE;
+    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
+    m_btnState.gesture = Core::InputDescriptor::Gesture::None;
 
-    ESP_LOGD(TAG, "Gesture resolved: HOLD_TICK level=%u (%u ms)",
+    ESP_LOGD(TAG, "Gesture resolved: HoldTick level=%u (%u ms)",
              static_cast<unsigned>(level),
              static_cast<unsigned>(level * Hardware::HardwareConfig::kHoldTickMs));
 }

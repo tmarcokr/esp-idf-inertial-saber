@@ -1,4 +1,5 @@
 #include "InertialSwingEffect.hpp"
+#include "AudioLevels.hpp"
 
 #include "esp_log.h"
 #include "esp_random.h"
@@ -6,8 +7,8 @@
 #include <cmath>
 #include <string>
 
+#include "profiles/SoundFont.hpp"
 #include "system/PsramAudioCache.hpp"
-
 
 namespace InertialSaber::Effects {
 
@@ -15,25 +16,21 @@ using Espressif::Wrappers::Audio::INVALID_CHANNEL;
 
 InertialSwingEffect::InertialSwingEffect(
     Espressif::Wrappers::Audio::AudioEngine& engine,
-    const InertialSaber::Profiles::Inertial::InertialDefinition& definition
-    , InertialSaber::System::PsramAudioCache* psramCache
-
-    )
-    : m_engine(engine)
+    const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+    const InertialSaber::Profiles::SoundFont& font,
+    const InertialSaber::System::PsramAudioCache& audioCache)
+    : InertialEffect(0)
+    , m_engine(engine)
     , m_def(definition)
-    , m_psramCache(psramCache)
-
-    , m_humPath(std::string("/sdcard/") + definition.profileRoot + "/hum.wav")
-    {
-    Priority = 0;
-}
+    , m_font(font)
+    , m_audioCache(audioCache)
+{}
 
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
 
-    m_humPath = "/mem/hum.wav";
-    m_chHum = m_engine.play(m_humPath, true, m_def.humBaseVolume);
-    
+    m_chHum = m_engine.play(InertialSaber::System::PsramAudioCache::humPath(), true, m_def.humBaseVolume);
+
     auto paths = provideSwingPaths();
     m_chSwingL = m_engine.play(paths.low, true, 0);
     m_chSwingH = m_engine.play(paths.high, true, 0);
@@ -72,20 +69,18 @@ bool InertialSwingEffect::isActive() const {
     return m_active.load();
 }
 
-bool InertialSwingEffect::Test(const Core::SaberDataPacket& packet) {
-    m_kineticEnergy = packet.KineticEnergy;
-    m_orientationVector = packet.OrientationVector;
-    m_inertialOverload = packet.InertialOverload;
-    m_inertialBurst = packet.InertialBurst;
-    m_timestampMs = packet.timestamp_ms;
+bool InertialSwingEffect::test(const Core::SaberDataPacket& packet) {
+    m_kineticEnergy = packet.kineticEnergy;
+    m_orientation = packet.orientation;
+    m_inertialOverload = packet.inertialOverload;
+    m_inertialBurst = packet.inertialBurst;
+    m_timestampMs = packet.timestampMs;
 
     return m_active.load();
 }
 
-void InertialSwingEffect::Run() {
+void InertialSwingEffect::run() {
     if (m_chHum == INVALID_CHANNEL || m_chSwingL == INVALID_CHANNEL || m_chSwingH == INVALID_CHANNEL) return;
-
-
 
     float masterVolume = computeMasterVolume();
     float finalMix = computeFinalMix();
@@ -93,7 +88,7 @@ void InertialSwingEffect::Run() {
     applySwingVolumes(masterVolume, finalMix);
     applyHumDucking(masterVolume);
     handleInertialBurst();
-    
+
     if (evaluateSwap(masterVolume)) {
         executeSwap();
     }
@@ -110,13 +105,13 @@ float InertialSwingEffect::computeFinalMix() const {
     float baseMix = (m_kineticEnergy - m_def.swingCrossfadeLowG) / crossfadeRange;
     baseMix = std::clamp(baseMix, 0.0f, 1.0f);
 
-    float gravityMod = m_orientationVector * m_def.gravityInfluence;
+    float gravityMod = m_orientation * m_def.gravityInfluence;
     return std::clamp(baseMix + gravityMod, 0.0f, 1.0f);
 }
 
 void InertialSwingEffect::applySwingVolumes(float masterVolume, float finalMix) {
-    auto volL = static_cast<uint16_t>(masterVolume * (1.0f - finalMix) * kMaxVolume14bit);
-    auto volH = static_cast<uint16_t>(masterVolume * finalMix * kMaxVolume14bit);
+    auto volL = static_cast<uint16_t>(masterVolume * (1.0f - finalMix) * kFullVolume);
+    auto volH = static_cast<uint16_t>(masterVolume * finalMix * kFullVolume);
 
     m_engine.setChannelVolume(m_chSwingL, volL);
     m_engine.setChannelVolume(m_chSwingH, volH);
@@ -139,15 +134,15 @@ void InertialSwingEffect::applyHumDucking(float masterVolume) {
 }
 
 void InertialSwingEffect::handleInertialBurst() {
-    if (!m_inertialBurst || m_def.fontBurstCount == 0) return;
+    if (!m_inertialBurst || m_font.count(Profiles::FontCategory::Burst) == 0) return;
 
-    m_engine.play(provideBurstPath(), false, kMaxVolume14bit);
+    m_engine.play(m_font.randomPath(Profiles::FontCategory::Burst), false, kFullVolume);
 
     ESP_LOGI(TAG, "Inertial Burst triggered");
 }
 
 InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
-    uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->getLoadedSwingPairCount() : 0;
+    uint8_t availablePairs = m_audioCache.loadedSwingPairCount();
     if (availablePairs > 1) {
         uint8_t newPair;
         do {
@@ -157,15 +152,9 @@ InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
     } else {
         m_currentPairIndex = 0;
     }
-    std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
-    return { "/mem/swingl" + suffix, "/mem/swingh" + suffix };
-
-
-}
-
-std::string InertialSwingEffect::provideBurstPath() const {
-    uint8_t idx = static_cast<uint8_t>(esp_random() % m_def.fontBurstCount) + 1;
-    return std::string("/sdcard/") + m_def.profileRoot + "/swng/swng" + std::to_string(idx) + ".wav";
+    const auto pairNumber = static_cast<uint8_t>(m_currentPairIndex + 1);
+    return { InertialSaber::System::PsramAudioCache::swingLowPath(pairNumber),
+             InertialSaber::System::PsramAudioCache::swingHighPath(pairNumber) };
 }
 
 bool InertialSwingEffect::evaluateSwap(float masterVolume) {
@@ -194,7 +183,7 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
 }
 
 void InertialSwingEffect::executeSwap() {
-    uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->getLoadedSwingPairCount() : 0;
+    uint8_t availablePairs = m_audioCache.loadedSwingPairCount();
     if (availablePairs <= 1) return;
 
     if (m_chSwingL != INVALID_CHANNEL) m_engine.stop(m_chSwingL);

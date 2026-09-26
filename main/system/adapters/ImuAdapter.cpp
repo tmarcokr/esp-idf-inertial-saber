@@ -7,10 +7,14 @@ namespace InertialSaber::System::Adapters {
 
 static constexpr const char* TAG = "ImuAdapter";
 
-ImuAdapter::ImuAdapter(Core::SaberActionBus& bus, Espressif::Wrappers::Sensors::Mpu6050& imu)
-    : m_bus(bus), m_imu(imu) {}
+ImuAdapter::ImuAdapter(Core::SaberActionBus& bus, Espressif::Wrappers::Sensors::Mpu6050& imu,
+                       gpio_num_t interruptPin)
+    : m_bus(bus), m_imu(imu), m_interruptPin(interruptPin) {}
 
 ImuAdapter::~ImuAdapter() {
+    if (m_isrHandlerAdded) {
+        (void)gpio_isr_handler_remove(m_interruptPin);
+    }
     if (m_imuTaskHandle != nullptr) {
         vTaskDelete(m_imuTaskHandle);
     }
@@ -19,8 +23,8 @@ ImuAdapter::~ImuAdapter() {
 esp_err_t ImuAdapter::start() {
     BaseType_t result = xTaskCreatePinnedToCore(
         imuAdapterTask, "imu_adapter", 4096, this,
-        Hardware::HardwareConfig::kBusTaskPriority + 1,
-        &m_imuTaskHandle, Hardware::HardwareConfig::kBusTaskCore);
+        Hardware::HardwareConfig::kImuAdapterPriority,
+        &m_imuTaskHandle, Hardware::HardwareConfig::kImuAdapterCore);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "IMU adapter task creation failed");
@@ -29,7 +33,7 @@ esp_err_t ImuAdapter::start() {
 
     // ── IMU Interrupt Configuration ──
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << Hardware::HardwareConfig::kImuInt),
+        .pin_bit_mask = (1ULL << m_interruptPin),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -41,7 +45,12 @@ esp_err_t ImuAdapter::start() {
     if (isr_err != ESP_OK && isr_err != ESP_ERR_INVALID_STATE) {
         ESP_LOGE(TAG, "Failed to install GPIO ISR service: %s", esp_err_to_name(isr_err));
     }
-    gpio_isr_handler_add(Hardware::HardwareConfig::kImuInt, imuIsrHandler, this);
+    const esp_err_t add_err = gpio_isr_handler_add(m_interruptPin, imuIsrHandler, this);
+    if (add_err == ESP_OK) {
+        m_isrHandlerAdded = true;
+    } else {
+        ESP_LOGE(TAG, "Failed to add IMU ISR handler: %s", esp_err_to_name(add_err));
+    }
 
     ESP_LOGI(TAG, "IMU Adapter started successfully");
     return ESP_OK;
@@ -77,14 +86,18 @@ void ImuAdapter::imuLoop() {
                                      linAccel.y * linAccel.y +
                                      linAccel.z * linAccel.z);
 
-            float rotation[3] = {static_cast<float>(data->gyro_x),
-                                 static_cast<float>(data->gyro_y),
-                                 static_cast<float>(data->gyro_z)};
-
             auto angles = data->getEulerAngles();
             float orientation = angles.roll * (180.0f / M_PI);
 
-            m_bus.updateMotion(energy, rotation, orientation);
+            const Core::MotionSample sample{
+                .kineticEnergyG  = energy,
+                .axisRotationDps = {static_cast<float>(data->gyro_x),
+                                    static_cast<float>(data->gyro_y),
+                                    static_cast<float>(data->gyro_z)},
+                .orientationDeg  = orientation,
+            };
+
+            m_bus.updateMotion(sample);
         }
     }
 }

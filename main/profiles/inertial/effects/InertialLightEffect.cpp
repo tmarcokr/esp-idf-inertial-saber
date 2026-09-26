@@ -19,11 +19,10 @@ using namespace Espressif::Wrappers::SmartLed;
 InertialLightEffect::InertialLightEffect(
     Engine& ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition)
-    : m_ledEngine(ledEngine)
+    : InertialEffect(0)
+    , m_ledEngine(ledEngine)
     , m_def(definition)
-    , m_baseHue(definition.bladeBaseHue) {
-  Priority = 0;
-}
+    , m_baseHue(definition.bladeBaseHue) {}
 
 void InertialLightEffect::activate() {
   if (m_active)
@@ -34,7 +33,7 @@ void InertialLightEffect::activate() {
 
   auto blade = std::make_unique<InertialBladeEffect>();
   m_bladeEffect = blade.get();
-  m_bladeEffect->setHSB(m_baseHue, 255, 255);
+  m_bladeEffect->setHsb(m_baseHue, 255, 255);
   m_ledEngine.setBaseEffect(std::move(blade));
 }
 
@@ -47,25 +46,25 @@ void InertialLightEffect::deactivate() {
   m_ledEngine.setBaseEffect(nullptr);
 }
 
-bool InertialLightEffect::Test(const Core::SaberDataPacket &packet) {
+bool InertialLightEffect::test(const Core::SaberDataPacket &packet) {
   if (!m_active)
     return false;
 
-  m_kineticEnergy = packet.KineticEnergy;
-  m_orientationVector = packet.OrientationVector;
-  m_inertialOverload = packet.InertialOverload;
-  m_inertialBurst = packet.InertialBurst;
+  m_kineticEnergy = packet.kineticEnergy;
+  m_orientation = packet.orientation;
+  m_inertialOverload = packet.inertialOverload;
+  m_inertialBurst = packet.inertialBurst;
 
   if (m_lastTimestampMs == 0) {
-    m_lastTimestampMs = packet.timestamp_ms;
+    m_lastTimestampMs = packet.timestampMs;
   }
-  m_deltaMs = packet.timestamp_ms - m_lastTimestampMs;
-  m_lastTimestampMs = packet.timestamp_ms;
+  m_deltaMs = packet.timestampMs - m_lastTimestampMs;
+  m_lastTimestampMs = packet.timestampMs;
 
   return m_active;
 }
 
-void InertialLightEffect::Run() {
+void InertialLightEffect::run() {
   if (!m_bladeEffect)
     return;
 
@@ -83,7 +82,7 @@ void InertialLightEffect::Run() {
 
   uint8_t s_u8 = static_cast<uint8_t>(saturation * 255.0f);
   uint8_t v_u8 = static_cast<uint8_t>(brightness * 255.0f);
-  m_bladeEffect->setHSB(m_baseHue, s_u8, v_u8);
+  m_bladeEffect->setHsb(m_baseHue, s_u8, v_u8);
 
   if (m_inertialBurst) {
     triggerPlasmaRuptureOverlay();
@@ -91,7 +90,7 @@ void InertialLightEffect::Run() {
 }
 
 void InertialLightEffect::updateBreathPhase() {
-  float angleRad = m_orientationVector * (static_cast<float>(M_PI) / 180.0f);
+  float angleRad = m_orientation * (static_cast<float>(M_PI) / 180.0f);
   float freq = m_def.lightIdleBaseFreq + (std::sin(angleRad) * 0.5f);
   
   m_breathPhase += (static_cast<float>(m_deltaMs) / 1000.0f) * freq * 2.0f * static_cast<float>(M_PI);

@@ -10,8 +10,8 @@ BladeIgniteSweep::BladeIgniteSweep(uint16_t numLeds, uint16_t hue, uint32_t dura
     , m_durationMs(durationMs > 0 ? durationMs : 1)
 {}
 
-void BladeIgniteSweep::update(uint32_t delta_ms) {
-    m_elapsed = std::min(m_elapsed + delta_ms, m_durationMs);
+void BladeIgniteSweep::update(uint32_t deltaMs) {
+    m_elapsed = std::min(m_elapsed + deltaMs, m_durationMs);
 }
 
 void BladeIgniteSweep::render(Espressif::Wrappers::SmartLed::Canvas& canvas) {

@@ -1,49 +1,50 @@
 #include "DragEffect.hpp"
 #include "AudioEngine.hpp"
+#include "AudioLevels.hpp"
 #include "overlays/BladeDragEffect.hpp"
 #include "Engine.hpp"
-#include "PowerToggleEffect.hpp"
 #include "profiles/inertial/InertialDefinition.hpp"
+#include "profiles/PowerStateMachine.hpp"
+#include "profiles/SoundFont.hpp"
 #include "core/SaberDataPacket.hpp"
-#include "system/hardware/HardwareConfig.hpp"
 
 #include "esp_log.h"
-#include "esp_random.h"
 
-#include <algorithm>
+#include <string>
 
 namespace InertialSaber::Effects {
 
 static constexpr const char* TAG = "DragEffect";
 
 DragEffect::DragEffect(
-    PowerToggleEffect& power,
+    const Profiles::PowerStateMachine& power,
     Espressif::Wrappers::Audio::AudioEngine& audio,
     Espressif::Wrappers::SmartLed::Engine& ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+    const Profiles::SoundFont& font,
     uint8_t buttonId)
-    : m_power(power)
+    : InertialEffect(1)
+    , m_power(power)
     , m_audio(audio)
     , m_ledEngine(ledEngine)
     , m_def(definition)
-    , m_buttonId(buttonId) {
-    Priority = 1;
-}
+    , m_font(font)
+    , m_buttonId(buttonId) {}
 
-bool DragEffect::Test(const Core::SaberDataPacket& packet) {
+bool DragEffect::test(const Core::SaberDataPacket& packet) {
     if (!m_power.isIgnited()) {
         m_triggerMet = false;
         return m_active;
     }
 
-    if (m_buttonId < System::Hardware::HardwareConfig::kMaxInputs) {
+    if (m_buttonId < Core::kMaxInputs) {
         const auto& input = packet.inputs[m_buttonId];
         using Gesture    = Core::InputDescriptor::Gesture;
         using InputState = Core::InputDescriptor::State;
 
-        if (input.gesture == Gesture::HOLD_TICK && input.holdLevel == 1) {
+        if (input.gesture == Gesture::HoldTick && input.holdLevel == 1) {
             m_triggerMet = true;
-        } else if (input.current == InputState::RELEASED && m_active) {
+        } else if (input.current == InputState::Released && m_active) {
             m_triggerMet = false;
         }
     }
@@ -51,15 +52,13 @@ bool DragEffect::Test(const Core::SaberDataPacket& packet) {
     return m_triggerMet || m_active;
 }
 
-void DragEffect::Run() {
+void DragEffect::run() {
     if (m_triggerMet && !m_active) {
         m_active = true;
 
-        const uint8_t index = static_cast<uint8_t>(
-            esp_random() % std::max<uint8_t>(m_def.fontDragCount, 1));
-        const std::string path = buildPath("drag/drag", index);
+        const std::string path = m_font.randomPath(Profiles::FontCategory::Drag);
 
-        m_audioChannel = m_audio.play(path, true, 16384);
+        m_audioChannel = m_audio.play(path, true, kFullVolume);
 
         auto overlay = std::make_unique<BladeDragEffect>(
             m_ledEngine.numLeds(), m_def.dragLedCount);
@@ -78,10 +77,8 @@ void DragEffect::Run() {
             m_audioChannel = Espressif::Wrappers::Audio::INVALID_CHANNEL;
         }
 
-        const uint8_t endIdx = static_cast<uint8_t>(
-            esp_random() % std::max<uint8_t>(m_def.fontDragEndCount, 1));
-        const std::string endPath = buildPath("enddrag/enddrag", endIdx);
-        m_audio.play(endPath, false, 16384);
+        const std::string endPath = m_font.randomPath(Profiles::FontCategory::DragEnd);
+        m_audio.play(endPath, false, kFullVolume);
 
         if (m_ledEffect != nullptr) {
             m_ledEffect->terminate();
@@ -90,11 +87,6 @@ void DragEffect::Run() {
 
         ESP_LOGI(TAG, "Drag inactive, playing end: %s", endPath.c_str());
     }
-}
-
-std::string DragEffect::buildPath(const char* subAndPrefix, uint8_t index) const {
-    return std::string("/sdcard/") + m_def.profileRoot + subAndPrefix +
-           std::to_string(index + 1) + ".wav";
 }
 
 } // namespace InertialSaber::Effects

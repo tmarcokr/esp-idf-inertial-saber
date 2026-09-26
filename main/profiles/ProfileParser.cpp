@@ -1,7 +1,8 @@
 #include "profiles/ProfileParser.hpp"
+#include "profiles/SoundFont.hpp"
 #include "cJSON.h"
 #include "esp_log.h"
-#include <cstring>
+#include <memory>
 
 namespace InertialSaber::Profiles {
 
@@ -45,32 +46,31 @@ uint32_t getUint32(const cJSON *parent, const char *key, uint32_t defaultValue) 
 
 } // namespace
 
-esp_err_t ProfileParser::parse(const char *jsonStr, InertialSaber::Profiles::Inertial::InertialDefinition &outDef,
-                               std::string &outName, std::string &outRoot) {
-  if (!jsonStr) {
+esp_err_t ProfileParser::parse(std::string_view json, Inertial::InertialDefinition &outDef) {
+  if (json.empty()) {
     return ESP_ERR_INVALID_ARG;
   }
 
-  cJSON *root = cJSON_Parse(jsonStr);
-  if (!root) {
+  std::unique_ptr<cJSON, decltype(&cJSON_Delete)> document(
+      cJSON_ParseWithLength(json.data(), json.size()), &cJSON_Delete);
+  if (!document) {
     return ESP_FAIL;
   }
+  const cJSON *root = document.get();
 
   cJSON *nameItem = cJSON_GetObjectItemCaseSensitive(root, "name");
   if (cJSON_IsString(nameItem) && nameItem->valuestring) {
-    outName = nameItem->valuestring;
+    outDef.profileName = nameItem->valuestring;
   } else {
-    outName = "unnamed";
+    outDef.profileName = "unnamed";
   }
-  outDef.profileName = outName.c_str();
 
   cJSON *rootPathItem = cJSON_GetObjectItemCaseSensitive(root, "root_path");
   if (cJSON_IsString(rootPathItem) && rootPathItem->valuestring) {
-    outRoot = rootPathItem->valuestring;
+    outDef.profileRoot = rootPathItem->valuestring;
   } else {
-    outRoot = "profiles/unnamed/";
+    outDef.profileRoot = "profiles/unnamed/";
   }
-  outDef.profileRoot = outRoot.c_str();
 
   cJSON *overload = cJSON_GetObjectItemCaseSensitive(root, "overload");
   outDef.overloadThresholdG = getFloat(overload, "threshold_g", 1.0f);
@@ -95,15 +95,15 @@ esp_err_t ProfileParser::parse(const char *jsonStr, InertialSaber::Profiles::Ine
   outDef.clashThresholdG = getFloat(swing, "clash_threshold_g", 2.0f);
 
   cJSON *fontCounts = cJSON_GetObjectItemCaseSensitive(root, "font_counts");
-  outDef.fontHumCount = getUint8(fontCounts, "hum", 1);
-  outDef.fontSwingPairCount = getUint8(fontCounts, "swing_pair", 3);
-  outDef.fontBurstCount = getUint8(fontCounts, "burst", 16);
-  outDef.fontInCount = getUint8(fontCounts, "in", 2);
-  outDef.fontOutCount = getUint8(fontCounts, "out", 4);
-  outDef.fontBlasterCount = getUint8(fontCounts, "blaster", 8);
-  outDef.fontClashCount = getUint8(fontCounts, "clash", 16);
-  outDef.fontDragCount = getUint8(fontCounts, "drag", 1);
-  outDef.fontDragEndCount = getUint8(fontCounts, "drag_end", 4);
+  outDef.fontCounts.hum = getUint8(fontCounts, "hum", 1);
+  outDef.fontCounts.swingPair = getUint8(fontCounts, "swing_pair", 3);
+  outDef.fontCounts.burst = getUint8(fontCounts, "burst", 16);
+  outDef.fontCounts.in = getUint8(fontCounts, "in", 2);
+  outDef.fontCounts.out = getUint8(fontCounts, "out", 4);
+  outDef.fontCounts.blaster = getUint8(fontCounts, "blaster", 8);
+  outDef.fontCounts.clash = getUint8(fontCounts, "clash", 16);
+  outDef.fontCounts.drag = getUint8(fontCounts, "drag", 1);
+  outDef.fontCounts.dragEnd = getUint8(fontCounts, "drag_end", 4);
 
   cJSON *bladeTimings = cJSON_GetObjectItemCaseSensitive(root, "blade_timings");
   outDef.ignitionDurationMs = getUint32(bladeTimings, "ignition_duration_ms", 800);
@@ -123,7 +123,6 @@ esp_err_t ProfileParser::parse(const char *jsonStr, InertialSaber::Profiles::Ine
   outDef.lightFlickerIntensity = getFloat(light, "flicker_intensity", 0.20f);
   outDef.lightBurstDurationMs = getUint32(light, "burst_duration_ms", 150);
 
-  cJSON_Delete(root);
   return ESP_OK;
 }
 
@@ -188,37 +187,45 @@ esp_err_t ProfileParser::runSelfTest() {
     }
   })";
 
-  InertialSaber::Profiles::Inertial::InertialDefinition def{};
-  std::string name;
-  std::string root;
-
-  if (parse(testJson, def, name, root) != ESP_OK) {
+  Inertial::InertialDefinition def{};
+  if (parse(testJson, def) != ESP_OK) {
     ESP_LOGE(TAG, "Test parse failed");
     return ESP_FAIL;
   }
 
-  if (name != "test_sith" || std::strcmp(def.profileName, "test_sith") != 0) return ESP_FAIL;
-  if (root != "profiles/sith/" || std::strcmp(def.profileRoot, "profiles/sith/") != 0) return ESP_FAIL;
+  if (def.profileName != "test_sith" || def.profileRoot != "profiles/sith/") return ESP_FAIL;
   if (def.kineticEnergyDeadbandG != 0.35f || def.rotationDeadbandDps != 18.0f) return ESP_FAIL;
   if (def.overloadThresholdG != 1.5f || def.overloadChargeRate != 2.5f) return ESP_FAIL;
   if (def.swingIdleThresholdG != 0.2f || def.humBaseVolume != 9000 || def.clashThresholdG != 2.5f) return ESP_FAIL;
-  if (def.fontHumCount != 2 || def.fontSwingPairCount != 4) return ESP_FAIL;
+  if (def.fontCounts.hum != 2 || def.fontCounts.swingPair != 4 || def.fontCounts.dragEnd != 3) return ESP_FAIL;
   if (def.ignitionDurationMs != 700 || def.retractionDurationMs != 400) return ESP_FAIL;
   if (def.blasterLedCount != 4 || def.dragLedCount != 6) return ESP_FAIL;
   if (def.bladeBaseHue != 120 || def.lightIdleBaseFreq != 1.5f) return ESP_FAIL;
 
-  InertialSaber::Profiles::Inertial::InertialDefinition fallbackDef{};
-  std::string fallbackName;
-  std::string fallbackRoot;
-
-  if (parse("{}", fallbackDef, fallbackName, fallbackRoot) != ESP_OK) {
+  Inertial::InertialDefinition fallbackDef{};
+  if (parse("{}", fallbackDef) != ESP_OK) {
     ESP_LOGE(TAG, "Fallback test parse failed");
     return ESP_FAIL;
   }
 
-  if (fallbackName != "unnamed" || fallbackDef.overloadThresholdG != 1.0f) return ESP_FAIL;
+  if (fallbackDef.profileName != "unnamed" || fallbackDef.profileRoot != "profiles/unnamed/") return ESP_FAIL;
+  if (fallbackDef.overloadThresholdG != 1.0f) return ESP_FAIL;
   if (fallbackDef.kineticEnergyDeadbandG != 0.25f || fallbackDef.rotationDeadbandDps != 15.0f) return ESP_FAIL;
-  if (fallbackDef.fontHumCount != 1 || fallbackDef.bladeBaseHue != 240 || fallbackDef.clashThresholdG != 2.0f) return ESP_FAIL;
+  if (fallbackDef.fontCounts.hum != 1 || fallbackDef.bladeBaseHue != 240 || fallbackDef.clashThresholdG != 2.0f) return ESP_FAIL;
+
+  Inertial::InertialDefinition unslashedDef{};
+  if (parse(R"({"root_path": "/profiles/sith"})", unslashedDef) != ESP_OK) {
+    ESP_LOGE(TAG, "Unslashed root test parse failed");
+    return ESP_FAIL;
+  }
+  const SoundFont unslashedFont(unslashedDef.profileRoot, unslashedDef.fontCounts);
+  if (unslashedFont.root() != "profiles/sith/") return ESP_FAIL;
+  if (unslashedFont.pathFor(FontCategory::Blaster, 1) != "/sdcard/profiles/sith/blst/blst1.wav") return ESP_FAIL;
+  if (unslashedFont.selectionPath() != "/sdcard/profiles/sith/font.wav") return ESP_FAIL;
+
+  if (SoundFont::normalizeRoot("a") != "a/" || SoundFont::normalizeRoot("a/") != "a/") return ESP_FAIL;
+  if (SoundFont::normalizeRoot("/a/") != "a/" || SoundFont::normalizeRoot("a//") != "a/") return ESP_FAIL;
+  if (!SoundFont::normalizeRoot("").empty()) return ESP_FAIL;
 
   ESP_LOGI(TAG, "All parser self-tests passed successfully!");
   return ESP_OK;

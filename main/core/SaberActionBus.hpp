@@ -1,7 +1,7 @@
 #pragma once
 
+#include "BusConfig.hpp"
 #include "InertialEffect.hpp"
-#include "system/hardware/HardwareConfig.hpp"
 #include "SaberDataPacket.hpp"
 #include "PhysicsConfig.hpp"
 
@@ -41,7 +41,11 @@ struct InputEvent {
  */
 class SaberActionBus {
 public:
-    SaberActionBus();
+    /**
+     * @brief Construct a stopped bus.
+     * @param config Task and motion filter parameters, copied and immutable afterwards.
+     */
+    explicit SaberActionBus(const BusConfig& config);
     ~SaberActionBus();
 
     SaberActionBus(const SaberActionBus&) = delete;
@@ -79,8 +83,9 @@ public:
      * @brief Inject updated motion data from an external IMU adapter.
      *
      * Fields are copied individually (small POD). Safe to call from any task.
+     * @param sample Latest motion sample.
      */
-    void updateMotion(float energy, const float rotation[3], float orientation);
+    void updateMotion(const MotionSample& sample);
 
     /**
      * @brief Push a button state change into the bus input queue.
@@ -93,14 +98,11 @@ public:
      */
     void pushInputEvent(uint8_t inputId, const InputDescriptor& descriptor);
 
-    /**
-     * @brief Get the bus task handle for external notification sources.
-     */
-    TaskHandle_t getTaskHandle() const;
-
 private:
     static constexpr uint32_t kBusTimeoutMs    = 10;
     static constexpr uint8_t  kInputQueueDepth = 8;
+
+    const BusConfig m_config;
 
     TaskHandle_t m_taskHandle = nullptr;
     QueueHandle_t m_inputQueue = nullptr;

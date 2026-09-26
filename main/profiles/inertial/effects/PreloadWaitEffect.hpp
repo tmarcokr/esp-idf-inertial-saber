@@ -1,17 +1,15 @@
 #pragma once
 
 #include "core/InertialEffect.hpp"
-#include <string>
 
 namespace InertialSaber::Core {
 struct SaberDataPacket;
 }
 
 namespace InertialSaber::Profiles {
-class ConfigurableProfile;
+class PowerStateMachine;
+class SoundFont;
 }
-
-namespace Espressif::Wrappers { class RgbLed; }
 
 namespace Espressif::Wrappers::Audio {
 class AudioEngine;
@@ -21,6 +19,9 @@ namespace InertialSaber::System {
 class PsramAudioCache;
 }
 
+namespace InertialSaber::System::Status {
+class StatusIndicator;
+}
 
 namespace InertialSaber::Effects {
 
@@ -29,23 +30,21 @@ namespace InertialSaber::Effects {
  */
 class PreloadWaitEffect final : public Core::InertialEffect {
 public:
-    PreloadWaitEffect(
-        Profiles::ConfigurableProfile&           profile,
-        Espressif::Wrappers::Audio::AudioEngine& audio,
-        Espressif::Wrappers::RgbLed*             statusLed
-        , System::PsramAudioCache*               psramCache
+    PreloadWaitEffect(Profiles::PowerStateMachine& power,
+                      Espressif::Wrappers::Audio::AudioEngine& audio,
+                      const System::PsramAudioCache& audioCache,
+                      System::Status::StatusIndicator& status,
+                      const Profiles::SoundFont& font);
 
-    );
-
-    bool Test(const Core::SaberDataPacket& packet) override;
-    void Run() override;
+    bool test(const Core::SaberDataPacket& packet) override;
+    void run() override;
 
 private:
-    Profiles::ConfigurableProfile&           m_profile;
+    Profiles::PowerStateMachine&             m_power;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
-    Espressif::Wrappers::RgbLed*             m_statusLed;
-    System::PsramAudioCache*                 m_psramCache;
-
+    const System::PsramAudioCache&           m_audioCache;
+    System::Status::StatusIndicator&         m_status;
+    const Profiles::SoundFont&               m_font;
 };
 
 } // namespace InertialSaber::Effects

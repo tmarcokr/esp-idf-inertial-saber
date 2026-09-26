@@ -4,12 +4,16 @@
 #include "core/InertialEffect.hpp"
 #include "AudioEngine.hpp"
 
-namespace InertialSaber::System { class PsramAudioCache; }
-
-
 #include <atomic>
 #include <cstdint>
 #include <string>
+
+namespace InertialSaber::System {
+class PsramAudioCache;
+}
+namespace InertialSaber::Profiles {
+class SoundFont;
+}
 
 namespace InertialSaber::Effects {
 
@@ -23,10 +27,9 @@ namespace InertialSaber::Effects {
 class InertialSwingEffect final : public Core::InertialEffect {
 public:
     InertialSwingEffect(Espressif::Wrappers::Audio::AudioEngine& engine,
-                        const InertialSaber::Profiles::Inertial::InertialDefinition& definition
-                        , InertialSaber::System::PsramAudioCache* psramCache = nullptr
-
-    );
+                        const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+                        const InertialSaber::Profiles::SoundFont& font,
+                        const InertialSaber::System::PsramAudioCache& audioCache);
 
     /**
      * @brief Start audio playback: hum loop + initial random swing pair at volume 0.
@@ -44,19 +47,17 @@ public:
      */
     [[nodiscard]] bool isActive() const;
 
-    bool Test(const Core::SaberDataPacket& packet) override;
-    void Run() override;
+    bool test(const Core::SaberDataPacket& packet) override;
+    void run() override;
 
 private:
     static constexpr const char* TAG = "InertialSwing";
-    static constexpr uint16_t kMaxVolume14bit = 16384;
 
     Espressif::Wrappers::Audio::AudioEngine& m_engine;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
+    const InertialSaber::Profiles::SoundFont& m_font;
+    const InertialSaber::System::PsramAudioCache& m_audioCache;
 
-    InertialSaber::System::PsramAudioCache* m_psramCache = nullptr;
-
-    
     std::atomic<bool> m_active{false};
 
     Espressif::Wrappers::Audio::ChannelId m_chHum    = Espressif::Wrappers::Audio::INVALID_CHANNEL;
@@ -64,15 +65,13 @@ private:
     Espressif::Wrappers::Audio::ChannelId m_chSwingH = Espressif::Wrappers::Audio::INVALID_CHANNEL;
 
     float m_kineticEnergy = 0.0f;
-    float m_orientationVector = 0.0f;
+    float m_orientation = 0.0f;
     float m_inertialOverload = 0.0f;
     bool m_inertialBurst = false;
     uint32_t m_timestampMs = 0;
 
     uint32_t m_logCounter = 0;
 
-    // Audio Provider state
-    std::string m_humPath;
     uint8_t m_currentPairIndex = 0;
 
     // Swing Swapper state
@@ -90,9 +89,8 @@ private:
     void applySwingVolumes(float masterVolume, float finalMix);
     void applyHumDucking(float masterVolume);
     void handleInertialBurst();
-    
+
     SwingPathPair provideSwingPaths();
-    std::string provideBurstPath() const;
     bool evaluateSwap(float masterVolume);
     void executeSwap();
 };

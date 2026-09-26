@@ -2,7 +2,7 @@
 
 #include "profiles/inertial/InertialDefinition.hpp"
 #include "esp_err.h"
-#include <string>
+#include <string_view>
 
 namespace InertialSaber::Profiles {
 
@@ -12,15 +12,12 @@ namespace InertialSaber::Profiles {
 class ProfileParser {
 public:
   /**
-   * @brief Parses JSON string and populates definition and string storage.
-   * @param jsonStr Raw JSON configuration text.
+   * @brief Parses a profile.json document into a definition, applying defaults for missing keys.
+   * @param json Raw JSON configuration text (no null terminator required).
    * @param outDef Definition structure to populate.
-   * @param outName Output string for profileName to maintain lifetime.
-   * @param outRoot Output string for profileRoot to maintain lifetime.
-   * @return ESP_OK on success, or an error code.
+   * @return ESP_OK on success, ESP_ERR_INVALID_ARG for empty input, ESP_FAIL on malformed JSON.
    */
-  static esp_err_t parse(const char *jsonStr, InertialSaber::Profiles::Inertial::InertialDefinition &outDef,
-                         std::string &outName, std::string &outRoot);
+  static esp_err_t parse(std::string_view json, Inertial::InertialDefinition &outDef);
 
 #ifndef NDEBUG
   /**

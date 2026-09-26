@@ -1,34 +1,36 @@
 #include "KineticImpactEffect.hpp"
 #include "AudioEngine.hpp"
+#include "AudioLevels.hpp"
 #include "overlays/BladeClashFlash.hpp"
 #include "Engine.hpp"
-#include "PowerToggleEffect.hpp"
 #include "profiles/inertial/InertialDefinition.hpp"
+#include "profiles/PowerStateMachine.hpp"
+#include "profiles/SoundFont.hpp"
 #include "core/SaberDataPacket.hpp"
 
 #include "esp_log.h"
-#include "esp_random.h"
 
-#include <algorithm>
+#include <string>
 
 namespace InertialSaber::Effects {
 
 static constexpr const char *TAG = "KineticImpact";
 
 KineticImpactEffect::KineticImpactEffect(
-    PowerToggleEffect &power,
+    const Profiles::PowerStateMachine &power,
     Espressif::Wrappers::Audio::AudioEngine &audio,
     Espressif::Wrappers::SmartLed::Engine &ledEngine,
-    const InertialSaber::Profiles::Inertial::InertialDefinition &definition)
-    : m_power(power)
+    const InertialSaber::Profiles::Inertial::InertialDefinition &definition,
+    const Profiles::SoundFont &font)
+    : InertialEffect(2)
+    , m_power(power)
     , m_audio(audio)
     , m_ledEngine(ledEngine)
     , m_def(definition)
-{
-    Priority = 2;
-}
+    , m_font(font)
+{}
 
-bool KineticImpactEffect::Test(const Core::SaberDataPacket &packet) {
+bool KineticImpactEffect::test(const Core::SaberDataPacket &packet) {
     if (!m_power.isIgnited()) {
         clearKineticEnergyWindow();
         return false;
@@ -41,7 +43,7 @@ void KineticImpactEffect::clearKineticEnergyWindow() {
 }
 
 bool KineticImpactEffect::detectClash(const Core::SaberDataPacket &packet) {
-    m_kineticEnergyWindow[m_windowIdx] = packet.KineticEnergy;
+    m_kineticEnergyWindow[m_windowIdx] = packet.kineticEnergy;
     m_windowIdx = (m_windowIdx + 1) % m_kineticEnergyWindow.size();
 
     float peakKineticEnergyG = 0.0f;
@@ -51,32 +53,24 @@ bool KineticImpactEffect::detectClash(const Core::SaberDataPacket &packet) {
         }
     }
 
-    float decelerationG = peakKineticEnergyG - packet.KineticEnergy;
+    float decelerationG = peakKineticEnergyG - packet.kineticEnergy;
 
-    if (decelerationG > m_def.clashThresholdG && (packet.timestamp_ms - m_lastClashTimeMs) > 500) {
-        m_lastClashTimeMs = packet.timestamp_ms;
+    if (decelerationG > m_def.clashThresholdG && (packet.timestampMs - m_lastClashTimeMs) > 500) {
+        m_lastClashTimeMs = packet.timestampMs;
         return true;
     }
 
     return false;
 }
 
-void KineticImpactEffect::Run() {
-    const uint8_t index = static_cast<uint8_t>(
-        esp_random() % std::max<uint8_t>(m_def.fontClashCount, 1));
-    const std::string path = buildPath("clsh/clsh", index);
+void KineticImpactEffect::run() {
+    const std::string path = m_font.randomPath(Profiles::FontCategory::Clash);
 
-    m_audio.play(path, false, 16384);
+    m_audio.play(path, false, kFullVolume);
     m_ledEngine.pushOverlay(std::make_unique<BladeClashFlash>(
         m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.clashDurationMs));
 
     ESP_LOGI(TAG, "Clash triggered: %s (G drop threshold: %.2f)", path.c_str(), m_def.clashThresholdG);
-}
-
-std::string KineticImpactEffect::buildPath(const char *subAndPrefix,
-                                           uint8_t index) const {
-    return std::string("/sdcard/") + m_def.profileRoot + subAndPrefix +
-           std::to_string(index + 1) + ".wav";
 }
 
 } // namespace InertialSaber::Effects
