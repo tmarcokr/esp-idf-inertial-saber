@@ -7,14 +7,15 @@ namespace InertialSaber::Profiles {
 
 static constexpr const char *TAG = "ProfileManager";
 
-void ProfileManager::init() {
+esp_err_t ProfileManager::init() {
   ESP_LOGI(TAG, "Initializing profiles...");
 
-  esp_err_t err = ProfileLoader::loadFromSd(m_profiles);
+  const esp_err_t err = ProfileLoader::loadFromSd(m_profiles);
 
-  if (err != ESP_OK || m_profiles.empty()) {
-    ESP_LOGE(TAG, "No profiles found on SD (err=%s, count=%u)",
-             esp_err_to_name(err), (unsigned)m_profiles.size());
+  if (m_profiles.empty()) {
+    ESP_LOGE(TAG, "No valid profile on SD (scan: %s). Each profile needs /sdcard/profiles/<name>/profile.json",
+             esp_err_to_name(err));
+    return err != ESP_OK ? err : ESP_ERR_NOT_FOUND;
   }
 
   m_activeIndex = 0;
@@ -36,11 +37,13 @@ void ProfileManager::init() {
     ESP_LOGW(TAG, "active_profile.txt not found, defaulting to index 0");
   }
   ESP_LOGI(TAG, "Initialized %u profile(s), active index: %u", (unsigned)m_profiles.size(), (unsigned)m_activeIndex);
+  return ESP_OK;
 }
 
-void ProfileManager::loadActive() {
-  if (m_profiles.empty()) return;
+esp_err_t ProfileManager::loadActive() {
+  if (m_profiles.empty()) return ESP_ERR_INVALID_STATE;
   m_profiles[m_activeIndex]->load(m_services, *this);
+  return ESP_OK;
 }
 
 void ProfileManager::next() {
