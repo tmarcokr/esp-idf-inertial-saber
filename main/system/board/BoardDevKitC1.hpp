@@ -29,18 +29,18 @@ struct BoardPins {
 inline constexpr std::string_view kName = "ESP32-S3-DevKitC-1";
 
 inline constexpr BoardPins kPins{
-    .imuSda     = GPIO_NUM_4,
-    .imuScl     = GPIO_NUM_5,
-    .imuInt     = GPIO_NUM_6,
+    .imuSda = GPIO_NUM_4,
+    .imuScl = GPIO_NUM_5,
+    .imuInt = GPIO_NUM_6,
     .mainButton = GPIO_NUM_0,
-    .sdClk      = GPIO_NUM_9,
-    .sdCmd      = GPIO_NUM_8,
-    .sdD0       = GPIO_NUM_7,
-    .i2sBclk    = GPIO_NUM_11,
-    .i2sWs      = GPIO_NUM_12,
-    .i2sDout    = GPIO_NUM_13,
-    .i2sSdMode  = GPIO_NUM_14,
-    .bladeData  = GPIO_NUM_21,
+    .sdClk = GPIO_NUM_9,
+    .sdCmd = GPIO_NUM_8,
+    .sdD0 = GPIO_NUM_7,
+    .i2sBclk = GPIO_NUM_11,
+    .i2sWs = GPIO_NUM_12,
+    .i2sDout = GPIO_NUM_13,
+    .i2sSdMode = GPIO_NUM_14,
+    .bladeData = GPIO_NUM_21,
 };
 
 inline constexpr bool kMainButtonActiveLow = true;

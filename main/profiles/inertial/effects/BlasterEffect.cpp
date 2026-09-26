@@ -14,23 +14,20 @@
 
 namespace InertialSaber::Effects {
 
-static constexpr const char *TAG = "BlasterEffect";
+static constexpr const char* TAG = "BlasterEffect";
 
 BlasterEffect::BlasterEffect(
-    const Profiles::PowerStateMachine &power,
-    Espressif::Wrappers::Audio::AudioEngine &audio,
-    Espressif::Wrappers::SmartLed::Engine &ledEngine,
-    const InertialSaber::Profiles::Inertial::InertialDefinition &definition,
-    const Profiles::SoundFont &font,
-    uint8_t buttonId)
+    const Profiles::PowerStateMachine& power, Espressif::Wrappers::Audio::AudioEngine& audio,
+    Espressif::Wrappers::SmartLed::Engine& ledEngine,
+    const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+    const Profiles::SoundFont& font, uint8_t buttonId)
     : InertialEffect(2)
     , m_power(power)
     , m_audio(audio)
     , m_ledEngine(ledEngine)
     , m_def(definition)
     , m_font(font)
-    , m_buttonId(buttonId)
-{}
+    , m_buttonId(buttonId) {}
 
 bool BlasterEffect::test(const Core::SaberDataPacket& packet) {
     if (!m_power.isIgnited()) {
@@ -46,15 +43,15 @@ bool BlasterEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void BlasterEffect::run() {
-  const std::string path = m_font.randomPath(Profiles::FontCategory::Blaster);
+    const std::string path = m_font.randomPath(Profiles::FontCategory::Blaster);
 
-  m_audio.play(path, false, kFullVolume);
-  if (!m_ledEngine.pushOverlay(std::make_unique<BladeBlasterBlock>(
-          m_ledEngine.numLeds(), m_def.blasterLedCount, m_def.blasterDurationMs))) {
-    ESP_LOGW(TAG, "Blaster overlay dropped: no free overlay slot");
-  }
+    m_audio.play(path, false, kFullVolume);
+    if (!m_ledEngine.pushOverlay(std::make_unique<BladeBlasterBlock>(
+            m_ledEngine.numLeds(), m_def.blasterLedCount, m_def.blasterDurationMs))) {
+        ESP_LOGW(TAG, "Blaster overlay dropped: no free overlay slot");
+    }
 
-  ESP_LOGD(TAG, "Blaster block triggered: %s", path.c_str());
+    ESP_LOGD(TAG, "Blaster block triggered: %s", path.c_str());
 }
 
 } // namespace InertialSaber::Effects

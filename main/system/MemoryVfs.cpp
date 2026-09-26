@@ -108,9 +108,9 @@ esp_err_t MemoryVfs::registerFile(std::string_view name, MemoryFileHandle file) 
 }
 
 esp_err_t MemoryVfs::insertFile(std::string_view name, MemoryFileHandle& file) {
-    const bool duplicate = std::any_of(m_files.begin(), m_files.end(), [name](const FileEntry& entry) {
-        return entry.file && entry.name == name;
-    });
+    const bool duplicate =
+        std::any_of(m_files.begin(), m_files.end(),
+                    [name](const FileEntry& entry) { return entry.file && entry.name == name; });
     if (duplicate) {
         return ESP_ERR_INVALID_SIZE;
     }
@@ -130,9 +130,8 @@ esp_err_t MemoryVfs::unregisterFile(std::string_view name) {
     MemoryFileHandle released;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        auto entry = std::find_if(m_files.begin(), m_files.end(), [name](const FileEntry& e) {
-            return e.file && e.name == name;
-        });
+        auto entry = std::find_if(m_files.begin(), m_files.end(),
+                                  [name](const FileEntry& e) { return e.file && e.name == name; });
         if (entry == m_files.end()) {
             return ESP_ERR_NOT_FOUND;
         }
@@ -146,8 +145,8 @@ esp_err_t MemoryVfs::unregisterFile(std::string_view name) {
 
 uint8_t MemoryVfs::openDescriptorCount() const {
     std::lock_guard<std::mutex> lock(m_mutex);
-    return static_cast<uint8_t>(std::count_if(m_fds.begin(), m_fds.end(),
-                                              [](const FdEntry& fd) { return fd.file != nullptr; }));
+    return static_cast<uint8_t>(std::count_if(
+        m_fds.begin(), m_fds.end(), [](const FdEntry& fd) { return fd.file != nullptr; }));
 }
 
 MemoryVfs::FdEntry* MemoryVfs::findDescriptor(int fd) {
@@ -178,8 +177,8 @@ int MemoryVfs::vfsOpen(const char* path, int flags, int /*mode*/) {
         return -1;
     }
 
-    auto freeFd = std::find_if(m_fds.begin(), m_fds.end(),
-                               [](const FdEntry& fd) { return !fd.file; });
+    auto freeFd =
+        std::find_if(m_fds.begin(), m_fds.end(), [](const FdEntry& fd) { return !fd.file; });
     if (freeFd == m_fds.end()) {
         errno = ENFILE;
         return -1;
@@ -237,18 +236,18 @@ off_t MemoryVfs::vfsLseek(int fd, off_t offset, int mode) {
     const auto fileSize = static_cast<off_t>(entry->file->size);
     off_t newPosition = 0;
     switch (mode) {
-        case SEEK_SET:
-            newPosition = offset;
-            break;
-        case SEEK_CUR:
-            newPosition = static_cast<off_t>(entry->position) + offset;
-            break;
-        case SEEK_END:
-            newPosition = fileSize + offset;
-            break;
-        default:
-            errno = EINVAL;
-            return -1;
+    case SEEK_SET:
+        newPosition = offset;
+        break;
+    case SEEK_CUR:
+        newPosition = static_cast<off_t>(entry->position) + offset;
+        break;
+    case SEEK_END:
+        newPosition = fileSize + offset;
+        break;
+    default:
+        errno = EINVAL;
+        return -1;
     }
 
     if (newPosition < 0 || newPosition > fileSize) {

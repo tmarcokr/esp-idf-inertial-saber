@@ -25,8 +25,7 @@ PreloadWaitEffect::PreloadWaitEffect(Profiles::PowerStateMachine& power,
     , m_audio(audio)
     , m_audioCache(audioCache)
     , m_status(status)
-    , m_font(font)
-{}
+    , m_font(font) {}
 
 bool PreloadWaitEffect::test(const Core::SaberDataPacket&) {
     return m_power.state() == Profiles::PowerStateMachine::State::Locked;
@@ -41,8 +40,10 @@ void PreloadWaitEffect::run() {
     case PreloadStatus::Failed:
         m_power.handle(Profiles::PowerStateMachine::Event::PreloadFailed);
         m_status.show(SystemStatus::Error);
-        ESP_LOGE(TAG, "Preload failed for '%s'. Ignition disabled; triple-click to reload or cycle profile.",
-                 m_font.root().c_str());
+        ESP_LOGE(
+            TAG,
+            "Preload failed for '%s'. Ignition disabled; triple-click to reload or cycle profile.",
+            m_font.root().c_str());
         return;
     case PreloadStatus::Ready:
         break;

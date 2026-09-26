@@ -14,13 +14,20 @@ constexpr std::string_view kSdMountPoint = "/sdcard/";
 
 constexpr std::string_view layoutFor(FontCategory category) {
     switch (category) {
-    case FontCategory::Ignition:   return "in/in";
-    case FontCategory::Retraction: return "out/out";
-    case FontCategory::Blaster:    return "blst/blst";
-    case FontCategory::Clash:      return "clsh/clsh";
-    case FontCategory::Drag:       return "drag/drag";
-    case FontCategory::DragEnd:    return "enddrag/enddrag";
-    case FontCategory::Burst:      return "swng/swng";
+    case FontCategory::Ignition:
+        return "in/in";
+    case FontCategory::Retraction:
+        return "out/out";
+    case FontCategory::Blaster:
+        return "blst/blst";
+    case FontCategory::Clash:
+        return "clsh/clsh";
+    case FontCategory::Drag:
+        return "drag/drag";
+    case FontCategory::DragEnd:
+        return "enddrag/enddrag";
+    case FontCategory::Burst:
+        return "swng/swng";
     }
     return "";
 }
@@ -30,8 +37,7 @@ constexpr std::string_view layoutFor(FontCategory category) {
 SoundFont::SoundFont(std::string_view rootPath, const Inertial::FontCounts& counts)
     : m_root(normalizeRoot(rootPath))
     , m_sdRoot(std::string(kSdMountPoint).append(m_root))
-    , m_counts(counts)
-{
+    , m_counts(counts) {
     if (m_root.empty()) {
         ESP_LOGW(TAG, "Empty font root '%.*s'; paths resolve to the SD mount point",
                  static_cast<int>(rootPath.size()), rootPath.data());
@@ -55,13 +61,20 @@ const std::string& SoundFont::root() const {
 
 uint8_t SoundFont::count(FontCategory category) const {
     switch (category) {
-    case FontCategory::Ignition:   return m_counts.in;
-    case FontCategory::Retraction: return m_counts.out;
-    case FontCategory::Blaster:    return m_counts.blaster;
-    case FontCategory::Clash:      return m_counts.clash;
-    case FontCategory::Drag:       return m_counts.drag;
-    case FontCategory::DragEnd:    return m_counts.dragEnd;
-    case FontCategory::Burst:      return m_counts.burst;
+    case FontCategory::Ignition:
+        return m_counts.in;
+    case FontCategory::Retraction:
+        return m_counts.out;
+    case FontCategory::Blaster:
+        return m_counts.blaster;
+    case FontCategory::Clash:
+        return m_counts.clash;
+    case FontCategory::Drag:
+        return m_counts.drag;
+    case FontCategory::DragEnd:
+        return m_counts.dragEnd;
+    case FontCategory::Burst:
+        return m_counts.burst;
     }
     return 0;
 }

@@ -26,11 +26,7 @@ struct InputDescriptor {
     /**
      * @brief Semantic gesture resolved by the input adapter.
      */
-    enum class Gesture : uint8_t {
-        None     = 0,
-        Click    = 1,
-        HoldTick = 2
-    };
+    enum class Gesture : uint8_t { None = 0, Click = 1, HoldTick = 2 };
 
     Gesture gesture = Gesture::None;
     uint8_t pressCount = 0;

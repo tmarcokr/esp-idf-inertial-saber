@@ -10,14 +10,15 @@ namespace InertialSaber::Profiles::Inertial {
  * @brief Number of files available per sound category of a font.
  */
 struct FontCounts {
-    uint8_t swingPair;  ///< Number of swingL/H pairs.
-    uint8_t burst;      ///< Number of burst one-shot files (swng/swng1.wav … swngN.wav).
-    uint8_t in;         ///< Number of power-on sound files (in/in1.wav … inN.wav).
-    uint8_t out;        ///< Number of power-off sound files (out/out1.wav … outN.wav).
-    uint8_t blaster;    ///< Number of blaster sound files (blst/blst1.wav … blstN.wav).
-    uint8_t clash;      ///< Number of clash sound files (clsh/clsh1.wav … clshN.wav).
-    uint8_t drag;       ///< Number of looping drag sound files (drag/drag1.wav … dragN.wav).
-    uint8_t dragEnd;    ///< Number of drag deactivation sound files (enddrag/enddrag1.wav … enddragN.wav).
+    uint8_t swingPair; ///< Number of swingL/H pairs.
+    uint8_t burst;     ///< Number of burst one-shot files (swng/swng1.wav … swngN.wav).
+    uint8_t in;        ///< Number of power-on sound files (in/in1.wav … inN.wav).
+    uint8_t out;       ///< Number of power-off sound files (out/out1.wav … outN.wav).
+    uint8_t blaster;   ///< Number of blaster sound files (blst/blst1.wav … blstN.wav).
+    uint8_t clash;     ///< Number of clash sound files (clsh/clsh1.wav … clshN.wav).
+    uint8_t drag;      ///< Number of looping drag sound files (drag/drag1.wav … dragN.wav).
+    /// Number of drag deactivation sound files (enddrag/enddrag1.wav … enddragN.wav).
+    uint8_t dragEnd;
 };
 
 /**
@@ -34,22 +35,23 @@ struct FontCounts {
  */
 struct InertialDefinition : public Core::PhysicsConfig {
 
-    std::string profileName;   ///< Human-readable profile identifier.
-    std::string profileRoot;   ///< Root path on SD relative to /sdcard/, as written in profile.json (e.g. "profiles/inertial/").
+    std::string profileName; ///< Human-readable profile identifier.
+    /// Root path on SD relative to /sdcard/, as written in profile.json (e.g. "profiles/inertial/").
+    std::string profileRoot;
 
     // ── Sensor Sensitivity (per-profile) ─────────────────────────────────────
 
-    float    swingIdleThresholdG;   ///< Below this G-Force, swing volume is zero.
-    float    swingMaxThresholdG;    ///< At or above this G-Force, swing volume is at maximum.
-    float    swingCrossfadeLowG;    ///< Below this G-Force, SwingL dominates the tonal balance.
-    float    swingCrossfadeHighG;   ///< Above this G-Force, SwingH dominates the tonal balance.
-    float    gravityInfluence;      ///< Orientation influence on tonal balance (0.0–1.0).
-    uint16_t humBaseVolume;         ///< Base hum volume (14-bit scale, 0–16384).
-    float    humMaxDucking;         ///< Maximum hum reduction at full swing intensity (0.0–1.0).
-    uint32_t swingSwapCooldownMs;   ///< Minimum idle time before a new swing pair can load.
-    float    swingSwapMinVolume;    ///< Minimum master volume required to trigger a pair swap.
+    float swingIdleThresholdG;    ///< Below this G-Force, swing volume is zero.
+    float swingMaxThresholdG;     ///< At or above this G-Force, swing volume is at maximum.
+    float swingCrossfadeLowG;     ///< Below this G-Force, SwingL dominates the tonal balance.
+    float swingCrossfadeHighG;    ///< Above this G-Force, SwingH dominates the tonal balance.
+    float gravityInfluence;       ///< Orientation influence on tonal balance (0.0–1.0).
+    uint16_t humBaseVolume;       ///< Base hum volume (14-bit scale, 0–16384).
+    float humMaxDucking;          ///< Maximum hum reduction at full swing intensity (0.0–1.0).
+    uint32_t swingSwapCooldownMs; ///< Minimum idle time before a new swing pair can load.
+    float swingSwapMinVolume;     ///< Minimum master volume required to trigger a pair swap.
 
-    FontCounts fontCounts;         ///< Number of files per sound category.
+    FontCounts fontCounts; ///< Number of files per sound category.
 
     uint32_t ignitionDurationMs;   ///< Duration of the blade ignition sequence in milliseconds.
     uint32_t retractionDurationMs; ///< Duration of the blade retraction sequence in milliseconds.
@@ -58,13 +60,13 @@ struct InertialDefinition : public Core::PhysicsConfig {
     float clashThresholdG;         ///< Sudden negative spike/deceleration threshold in Gs.
     uint32_t clashDurationMs;      ///< Duration of the clash flash visual effect in milliseconds.
 
-    uint16_t dragLedCount;          ///< Number of LEDs to light up at the tip for the thermal glow.
+    uint16_t dragLedCount; ///< Number of LEDs to light up at the tip for the thermal glow.
 
     uint16_t bladeBaseHue;         ///< Blade colour hue (HSB, 0–359). Blue = 240.
-    float    lightIdleBaseFreq;    ///< Breathing cycles per second when horizontal.
-    float    lightIdlePulseDepth;  ///< Oscillator depth in idle state (0.0–1.0).
-    float    lightMaxThermalBleed; ///< Saturation loss at 100% Inertial Overload (0.0–1.0).
-    float    lightFlickerIntensity;///< Brightness chaos introduced by G-forces (0.0–1.0).
+    float lightIdleBaseFreq;       ///< Breathing cycles per second when horizontal.
+    float lightIdlePulseDepth;     ///< Oscillator depth in idle state (0.0–1.0).
+    float lightMaxThermalBleed;    ///< Saturation loss at 100% Inertial Overload (0.0–1.0).
+    float lightFlickerIntensity;   ///< Brightness chaos introduced by G-forces (0.0–1.0).
     uint32_t lightBurstDurationMs; ///< Visual duration of the Plasma Rupture flash in ms.
 };
 

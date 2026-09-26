@@ -47,9 +47,9 @@ esp_err_t PsramAudioCache::init() {
     esp_err_t err = m_vfs.init();
     if (err != ESP_OK) return err;
 
-    BaseType_t ret = xTaskCreatePinnedToCore(&PsramAudioCache::loaderTaskFn, "psram_loader",
-                                             kLoaderStackSize, this, kLoaderPriority,
-                                             &m_loaderTask, kLoaderCore);
+    BaseType_t ret =
+        xTaskCreatePinnedToCore(&PsramAudioCache::loaderTaskFn, "psram_loader", kLoaderStackSize,
+                                this, kLoaderPriority, &m_loaderTask, kLoaderCore);
     if (ret != pdPASS) {
         return ESP_ERR_NO_MEM;
     }
@@ -143,7 +143,8 @@ void PsramAudioCache::waitForDescriptorsClosed() {
 void PsramAudioCache::runPreload(const PreloadJob& job) {
     configASSERT(xTaskGetCurrentTaskHandle() == m_loaderTask);
     const auto generation = static_cast<unsigned long>(job.generation);
-    ESP_LOGI(TAG, "Starting PSRAM preload gen %lu for profile: %s", generation, job.font.root().c_str());
+    ESP_LOGI(TAG, "Starting PSRAM preload gen %lu for profile: %s", generation,
+             job.font.root().c_str());
 
     m_loadedSwingPairs.store(0, std::memory_order_release);
     unloadAll();
@@ -221,8 +222,8 @@ esp_err_t PsramAudioCache::loadFile(const std::string& sdPath, const std::string
     }
 
     if (heap_caps_get_free_size(MALLOC_CAP_SPIRAM) < size + kPsramHeadroomBytes) {
-        ESP_LOGW(TAG, "Not enough PSRAM for '%s' (requires %zu + %zu bytes headroom)", vfsName.c_str(), size,
-                 kPsramHeadroomBytes);
+        ESP_LOGW(TAG, "Not enough PSRAM for '%s' (requires %zu + %zu bytes headroom)",
+                 vfsName.c_str(), size, kPsramHeadroomBytes);
         return ESP_ERR_NO_MEM;
     }
 
@@ -235,19 +236,21 @@ esp_err_t PsramAudioCache::loadFile(const std::string& sdPath, const std::string
     const size_t readBytes = fread(file.bytes.get(), 1, size, source.get());
     source.reset();
     if (readBytes != size) {
-        ESP_LOGE(TAG, "Read size mismatch for '%s' (read %zu/%zu)", sdPath.c_str(), readBytes, size);
+        ESP_LOGE(TAG, "Read size mismatch for '%s' (read %zu/%zu)", sdPath.c_str(), readBytes,
+                 size);
         return ESP_ERR_INVALID_STATE;
     }
 
-    esp_err_t err = m_vfs.registerFile(vfsName, std::make_shared<const MemoryFile>(std::move(file)));
+    esp_err_t err =
+        m_vfs.registerFile(vfsName, std::make_shared<const MemoryFile>(std::move(file)));
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to register '%s' (err=%s)", vfsName.c_str(), esp_err_to_name(err));
         return err;
     }
     m_registeredNames.push_back(vfsName);
 
-    ESP_LOGD(TAG, "Preloaded '%s' to PSRAM (%zu bytes). Free PSRAM: %zu bytes", vfsName.c_str(), size,
-             heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+    ESP_LOGD(TAG, "Preloaded '%s' to PSRAM (%zu bytes). Free PSRAM: %zu bytes", vfsName.c_str(),
+             size, heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
     return ESP_OK;
 }
 

@@ -15,7 +15,9 @@ static constexpr uint32_t kPollTimeoutMs = 20;
 
 ImuAdapter::ImuAdapter(Core::SaberActionBus& bus, Espressif::Wrappers::Sensors::Mpu6050& imu,
                        gpio_num_t interruptPin)
-    : m_bus(bus), m_imu(imu), m_interruptPin(interruptPin) {}
+    : m_bus(bus)
+    , m_imu(imu)
+    , m_interruptPin(interruptPin) {}
 
 ImuAdapter::~ImuAdapter() {
     if (m_isrHandlerAdded) {
@@ -27,10 +29,10 @@ ImuAdapter::~ImuAdapter() {
 }
 
 esp_err_t ImuAdapter::start() {
-    BaseType_t result = xTaskCreatePinnedToCore(
-        imuAdapterTask, "imu_adapter", kTaskStackSize, this,
-        Hardware::HardwareConfig::kImuAdapterPriority,
-        &m_imuTaskHandle, Hardware::HardwareConfig::kImuAdapterCore);
+    BaseType_t result =
+        xTaskCreatePinnedToCore(imuAdapterTask, "imu_adapter", kTaskStackSize, this,
+                                Hardware::HardwareConfig::kImuAdapterPriority, &m_imuTaskHandle,
+                                Hardware::HardwareConfig::kImuAdapterCore);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "IMU adapter task creation failed");
@@ -60,7 +62,8 @@ esp_err_t ImuAdapter::start() {
         ESP_LOGE(TAG, "Failed to add IMU ISR handler: %s", esp_err_to_name(add_err));
     }
     if (config_err != ESP_OK || !m_isrHandlerAdded) {
-        ESP_LOGW(TAG, "IMU interrupt unavailable, polling every %lu ms", static_cast<unsigned long>(kPollTimeoutMs));
+        ESP_LOGW(TAG, "IMU interrupt unavailable, polling every %lu ms",
+                 static_cast<unsigned long>(kPollTimeoutMs));
     }
 
     ESP_LOGI(TAG, "IMU Adapter started successfully");
@@ -93,19 +96,18 @@ void ImuAdapter::imuLoop() {
         auto data = m_imu.readData();
         if (data) {
             auto linAccel = data->getLinearAcceleration();
-            float energy = std::sqrt(linAccel.x * linAccel.x +
-                                     linAccel.y * linAccel.y +
+            float energy = std::sqrt(linAccel.x * linAccel.x + linAccel.y * linAccel.y +
                                      linAccel.z * linAccel.z);
 
             auto angles = data->getEulerAngles();
             float orientation = angles.roll * kRadToDeg;
 
             const Core::MotionSample sample{
-                .kineticEnergyG  = energy,
+                .kineticEnergyG = energy,
                 .axisRotationDps = {static_cast<float>(data->gyro_x),
                                     static_cast<float>(data->gyro_y),
                                     static_cast<float>(data->gyro_z)},
-                .orientationDeg  = orientation,
+                .orientationDeg = orientation,
             };
 
             m_bus.updateMotion(sample);

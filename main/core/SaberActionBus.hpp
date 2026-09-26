@@ -101,8 +101,8 @@ public:
     void pushInputEvent(uint8_t inputId, const InputDescriptor& descriptor);
 
 private:
-    static constexpr uint32_t kBusTimeoutMs    = 10;
-    static constexpr uint8_t  kInputQueueDepth = 8;
+    static constexpr uint32_t kBusTimeoutMs = 10;
+    static constexpr uint8_t kInputQueueDepth = 8;
 
     const BusConfig m_config;
 

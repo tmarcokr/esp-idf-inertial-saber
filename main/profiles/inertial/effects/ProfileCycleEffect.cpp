@@ -9,13 +9,11 @@ namespace InertialSaber::Effects {
 static constexpr const char* TAG = "ProfileCycle";
 
 ProfileCycleEffect::ProfileCycleEffect(const Profiles::PowerStateMachine& power,
-                                       Profiles::ProfileManager& profileManager,
-                                       uint8_t buttonId)
+                                       Profiles::ProfileManager& profileManager, uint8_t buttonId)
     : InertialEffect(1)
     , m_power(power)
     , m_profileManager(profileManager)
-    , m_buttonId(buttonId)
-{}
+    , m_buttonId(buttonId) {}
 
 bool ProfileCycleEffect::test(const Core::SaberDataPacket& packet) {
     if (!m_power.isRetracted() && !m_power.isFaulted()) return false;

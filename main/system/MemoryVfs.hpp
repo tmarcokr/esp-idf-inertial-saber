@@ -32,8 +32,7 @@ using MemoryFileHandle = std::shared_ptr<const MemoryFile>;
 /** @brief Virtual filesystem driver serving in-memory buffers as read-only files. Thread-safe; never call from an ISR. */
 class MemoryVfs {
 public:
-    explicit MemoryVfs(std::string_view mountPoint = "/mem",
-                       uint8_t maxFiles = 16,
+    explicit MemoryVfs(std::string_view mountPoint = "/mem", uint8_t maxFiles = 16,
                        uint8_t maxFds = 8);
     ~MemoryVfs();
 

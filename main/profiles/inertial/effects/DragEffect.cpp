@@ -16,13 +16,11 @@ namespace InertialSaber::Effects {
 
 static constexpr const char* TAG = "DragEffect";
 
-DragEffect::DragEffect(
-    const Profiles::PowerStateMachine& power,
-    Espressif::Wrappers::Audio::AudioEngine& audio,
-    Espressif::Wrappers::SmartLed::Engine& ledEngine,
-    const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
-    const Profiles::SoundFont& font,
-    uint8_t buttonId)
+DragEffect::DragEffect(const Profiles::PowerStateMachine& power,
+                       Espressif::Wrappers::Audio::AudioEngine& audio,
+                       Espressif::Wrappers::SmartLed::Engine& ledEngine,
+                       const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+                       const Profiles::SoundFont& font, uint8_t buttonId)
     : InertialEffect(1)
     , m_power(power)
     , m_audio(audio)
@@ -39,7 +37,7 @@ bool DragEffect::test(const Core::SaberDataPacket& packet) {
 
     if (m_buttonId < Core::kMaxInputs) {
         const auto& input = packet.inputs[m_buttonId];
-        using Gesture    = Core::InputDescriptor::Gesture;
+        using Gesture = Core::InputDescriptor::Gesture;
         using InputState = Core::InputDescriptor::State;
 
         if (input.gesture == Gesture::HoldTick && input.holdLevel == 1) {
@@ -61,8 +59,8 @@ void DragEffect::run() {
         m_audioChannel = m_audio.play(path, true, kFullVolume);
 
         m_overlayFadeRequest = std::make_shared<std::atomic<bool>>(false);
-        auto overlay = std::make_unique<BladeDragEffect>(
-            m_ledEngine.numLeds(), m_def.dragLedCount, m_overlayFadeRequest);
+        auto overlay = std::make_unique<BladeDragEffect>(m_ledEngine.numLeds(), m_def.dragLedCount,
+                                                         m_overlayFadeRequest);
 
         if (!m_ledEngine.pushOverlay(std::move(overlay))) {
             m_overlayFadeRequest.reset();

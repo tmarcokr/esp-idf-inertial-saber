@@ -8,7 +8,7 @@
 namespace InertialSaber::Profiles {
 class PowerStateMachine;
 class SoundFont;
-}
+} // namespace InertialSaber::Profiles
 namespace InertialSaber::Profiles::Inertial {
 struct InertialDefinition;
 }

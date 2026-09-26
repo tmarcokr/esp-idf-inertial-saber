@@ -55,7 +55,7 @@ private:
 
     std::atomic<bool> m_active{false};
 
-    Espressif::Wrappers::Audio::ChannelId m_chHum    = Espressif::Wrappers::Audio::INVALID_CHANNEL;
+    Espressif::Wrappers::Audio::ChannelId m_chHum = Espressif::Wrappers::Audio::INVALID_CHANNEL;
     Espressif::Wrappers::Audio::ChannelId m_chSwingL = Espressif::Wrappers::Audio::INVALID_CHANNEL;
     Espressif::Wrappers::Audio::ChannelId m_chSwingH = Espressif::Wrappers::Audio::INVALID_CHANNEL;
 

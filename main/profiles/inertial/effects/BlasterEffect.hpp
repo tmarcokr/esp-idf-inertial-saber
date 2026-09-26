@@ -6,7 +6,7 @@
 namespace InertialSaber::Profiles {
 class PowerStateMachine;
 class SoundFont;
-}
+} // namespace InertialSaber::Profiles
 namespace InertialSaber::Profiles::Inertial {
 struct InertialDefinition;
 }
@@ -31,8 +31,7 @@ public:
                   Espressif::Wrappers::Audio::AudioEngine& audio,
                   Espressif::Wrappers::SmartLed::Engine& ledEngine,
                   const Profiles::Inertial::InertialDefinition& definition,
-                  const Profiles::SoundFont& font,
-                  uint8_t buttonId);
+                  const Profiles::SoundFont& font, uint8_t buttonId);
 
     bool test(const Core::SaberDataPacket& packet) override;
     void run() override;

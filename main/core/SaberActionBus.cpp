@@ -33,15 +33,9 @@ esp_err_t SaberActionBus::start() {
     m_lastLoopTimeUs = esp_timer_get_time();
 
     TaskHandle_t handle = nullptr;
-    BaseType_t result = xTaskCreatePinnedToCore(
-        busTaskEntry,
-        "saber_bus",
-        m_config.task.stackSize,
-        this,
-        m_config.task.priority,
-        &handle,
-        m_config.task.core
-    );
+    BaseType_t result =
+        xTaskCreatePinnedToCore(busTaskEntry, "saber_bus", m_config.task.stackSize, this,
+                                m_config.task.priority, &handle, m_config.task.core);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "Failed to create bus task");
@@ -51,8 +45,7 @@ esp_err_t SaberActionBus::start() {
     }
     m_taskHandle = handle;
 
-    ESP_LOGI(TAG, "Bus started on core %d (priority %d)",
-             static_cast<int>(m_config.task.core),
+    ESP_LOGI(TAG, "Bus started on core %d (priority %d)", static_cast<int>(m_config.task.core),
              static_cast<int>(m_config.task.priority));
     return ESP_OK;
 }
@@ -79,11 +72,11 @@ void SaberActionBus::stop() {
 
 void SaberActionBus::setPhysicsConfig(const Core::PhysicsConfig& def) {
     m_kineticEnergyDeadbandG = def.kineticEnergyDeadbandG;
-    m_rotationDeadbandDps    = def.rotationDeadbandDps;
-    m_overloadThresholdG     = def.overloadThresholdG;
-    m_overloadChargeRate     = def.overloadChargeRate;
-    m_overloadDrainRate      = def.overloadDrainRate;
-    m_burstCooldownMs        = def.burstCooldownMs;
+    m_rotationDeadbandDps = def.rotationDeadbandDps;
+    m_overloadThresholdG = def.overloadThresholdG;
+    m_overloadChargeRate = def.overloadChargeRate;
+    m_overloadDrainRate = def.overloadDrainRate;
+    m_burstCooldownMs = def.burstCooldownMs;
 }
 
 void SaberActionBus::registerEffect(std::unique_ptr<InertialEffect> effect) {
@@ -92,9 +85,7 @@ void SaberActionBus::registerEffect(std::unique_ptr<InertialEffect> effect) {
     }
     m_effects.push_back(std::move(effect));
     std::sort(m_effects.begin(), m_effects.end(),
-              [](const auto& a, const auto& b) {
-                  return a->priority() < b->priority();
-              });
+              [](const auto& a, const auto& b) { return a->priority() < b->priority(); });
     m_effectsChanged = true;
 }
 
@@ -184,8 +175,10 @@ void SaberActionBus::drainInputQueue() {
         }
     }
 
-    if (const uint32_t dropped = m_droppedInputEvents.exchange(0, std::memory_order_relaxed); dropped > 0) {
-        ESP_LOGW(TAG, "Input queue full: dropped %lu event(s)", static_cast<unsigned long>(dropped));
+    if (const uint32_t dropped = m_droppedInputEvents.exchange(0, std::memory_order_relaxed);
+        dropped > 0) {
+        ESP_LOGW(TAG, "Input queue full: dropped %lu event(s)",
+                 static_cast<unsigned long>(dropped));
     }
 }
 
