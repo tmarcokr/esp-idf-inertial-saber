@@ -91,7 +91,7 @@ void InertialLightEffect::run() {
 
 void InertialLightEffect::updateBreathPhase() {
   float bladeAngleRad = m_orientation * (static_cast<float>(M_PI) / 2.0f);
-  float freq = m_def.lightIdleBaseFreq + (std::sin(bladeAngleRad) * 0.5f);
+  float freq = m_def.lightIdleBaseFreq + (std::sin(bladeAngleRad) * kGravityBreathModulationHz);
   
   m_breathPhase += (static_cast<float>(m_deltaMs) / 1000.0f) * freq * 2.0f * static_cast<float>(M_PI);
 

@@ -22,7 +22,11 @@ public:
 
     enum class PreloadStatus : uint8_t { Pending, Ready, Failed };
 
-    explicit PsramAudioCache(uint8_t maxFiles = 40, uint8_t maxFds = 8);
+    static constexpr uint8_t kDefaultMaxFiles = 40;
+    /** @brief Swing pairs that fit in the default /mem file table next to hum.wav. */
+    static constexpr uint8_t kMaxSwingPairs = (kDefaultMaxFiles - 1) / 2;
+
+    explicit PsramAudioCache(uint8_t maxFiles = kDefaultMaxFiles, uint8_t maxFds = 8);
     ~PsramAudioCache();
 
     PsramAudioCache(const PsramAudioCache&) = delete;

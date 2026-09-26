@@ -1,52 +1,119 @@
 #include "profiles/ProfileParser.hpp"
 #include "profiles/SoundFont.hpp"
+#include "profiles/inertial/effects/AudioLevels.hpp"
+#include "InertialLightEffect.hpp"
+#include "system/PsramAudioCache.hpp"
 #include "cJSON.h"
 #include "esp_log.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <memory>
+#include <type_traits>
 
 namespace InertialSaber::Profiles {
 
 namespace {
 
-float getFloat(const cJSON *parent, const char *key, float defaultValue) {
-  if (!parent) return defaultValue;
-  cJSON *item = cJSON_GetObjectItemCaseSensitive(parent, key);
-  if (cJSON_IsNumber(item)) {
-    return static_cast<float>(item->valuedouble);
-  }
-  return defaultValue;
+constexpr const char *TAG = "ProfileParser";
+
+constexpr float kMaxG = 16.0f;
+constexpr float kMinGSpan = 0.05f;
+constexpr float kMaxSensorDeadbandG = 2.0f;
+constexpr float kMaxRotationDeadbandDps = 2000.0f;
+constexpr float kMaxOverloadRatePerS = 100.0f;
+constexpr float kMinClashThresholdG = 0.1f;
+constexpr float kMaxCooldownMs = 60000.0f;
+constexpr uint32_t kMaxSwapCooldownMs = 60000;
+constexpr uint32_t kMinDurationMs = 1;
+constexpr uint32_t kMaxDurationMs = 30000;
+constexpr uint16_t kMinLedCount = 1;
+constexpr uint16_t kMaxHue = 359;
+constexpr float kMinIdleBaseFreqHz = Effects::InertialLightEffect::kGravityBreathModulationHz;
+constexpr float kMaxIdleBaseFreqHz = 10.0f;
+constexpr uint8_t kMaxFontCount = std::numeric_limits<uint8_t>::max();
+
+struct Section {
+  const cJSON *node;
+  const char *name;
+};
+
+Section section(const cJSON *root, const char *name) {
+  return {cJSON_GetObjectItemCaseSensitive(root, name), name};
 }
 
-uint8_t getUint8(const cJSON *parent, const char *key, uint8_t defaultValue) {
-  if (!parent) return defaultValue;
-  cJSON *item = cJSON_GetObjectItemCaseSensitive(parent, key);
-  if (cJSON_IsNumber(item)) {
-    return static_cast<uint8_t>(item->valueint);
-  }
-  return defaultValue;
-}
+class FieldReader {
+public:
+  FieldReader(const char *profileName, bool logCorrections)
+      : m_profileName(profileName), m_logCorrections(logCorrections) {}
 
-uint16_t getUint16(const cJSON *parent, const char *key, uint16_t defaultValue) {
-  if (!parent) return defaultValue;
-  cJSON *item = cJSON_GetObjectItemCaseSensitive(parent, key);
-  if (cJSON_IsNumber(item)) {
-    return static_cast<uint16_t>(item->valueint);
-  }
-  return defaultValue;
-}
+  template <typename T>
+  T read(const Section &parent, const char *key, T defaultValue, T minValue, T maxValue) {
+    if (!parent.node) return defaultValue;
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(parent.node, key);
+    if (!item) return defaultValue;
 
-uint32_t getUint32(const cJSON *parent, const char *key, uint32_t defaultValue) {
-  if (!parent) return defaultValue;
-  cJSON *item = cJSON_GetObjectItemCaseSensitive(parent, key);
-  if (cJSON_IsNumber(item)) {
-    return static_cast<uint32_t>(item->valueint);
+    if (!cJSON_IsNumber(item) || std::isnan(item->valuedouble)) {
+      ++m_corrections;
+      if (m_logCorrections) {
+        ESP_LOGW(TAG, "'%s': %s.%s is not a number, using default %g", m_profileName, parent.name,
+                 key, static_cast<double>(defaultValue));
+      }
+      return defaultValue;
+    }
+
+    double raw = item->valuedouble;
+    if constexpr (std::is_integral_v<T>) {
+      raw = std::trunc(raw);
+    } else {
+      constexpr auto kLowest = static_cast<double>(std::numeric_limits<T>::lowest());
+      constexpr auto kHighest = static_cast<double>(std::numeric_limits<T>::max());
+      raw = static_cast<double>(static_cast<T>(std::clamp(raw, kLowest, kHighest)));
+    }
+    const double clamped =
+        std::clamp(raw, static_cast<double>(minValue), static_cast<double>(maxValue));
+    if (clamped != raw) {
+      ++m_corrections;
+      if (m_logCorrections) {
+        ESP_LOGW(TAG, "'%s': %s.%s = %g out of range [%g, %g], clamped to %g", m_profileName,
+                 parent.name, key, raw, static_cast<double>(minValue),
+                 static_cast<double>(maxValue), clamped);
+      }
+    }
+    return static_cast<T>(clamped);
   }
-  return defaultValue;
-}
+
+  void enforceSpan(const Section &parent, const char *lowKey, float low, const char *highKey,
+                   float &high) {
+    if (high > low) return;
+    const float corrected = low + kMinGSpan;
+    ++m_corrections;
+    if (m_logCorrections) {
+      ESP_LOGW(TAG, "'%s': %s.%s = %g must exceed %s = %g, raised to %g", m_profileName,
+               parent.name, highKey, static_cast<double>(high), lowKey, static_cast<double>(low),
+               static_cast<double>(corrected));
+    }
+    high = corrected;
+  }
+
+  [[nodiscard]] size_t corrections() const { return m_corrections; }
+
+private:
+  const char *m_profileName;
+  bool m_logCorrections;
+  size_t m_corrections = 0;
+};
 
 } // namespace
 
 esp_err_t ProfileParser::parse(std::string_view json, Inertial::InertialDefinition &outDef) {
+  size_t corrections = 0;
+  return parse(json, outDef, Diagnostics::Log, corrections);
+}
+
+esp_err_t ProfileParser::parse(std::string_view json, Inertial::InertialDefinition &outDef,
+                               Diagnostics diagnostics, size_t &corrections) {
+  corrections = 0;
   if (json.empty()) {
     return ESP_ERR_INVALID_ARG;
   }
@@ -72,64 +139,71 @@ esp_err_t ProfileParser::parse(std::string_view json, Inertial::InertialDefiniti
     outDef.profileRoot = "profiles/unnamed/";
   }
 
-  cJSON *overload = cJSON_GetObjectItemCaseSensitive(root, "overload");
-  outDef.overloadThresholdG = getFloat(overload, "threshold_g", 1.0f);
-  outDef.overloadChargeRate = getFloat(overload, "charge_rate", 2.0f);
-  outDef.overloadDrainRate = getFloat(overload, "drain_rate", 0.5f);
-  outDef.burstCooldownMs = getFloat(overload, "burst_cooldown_ms", 1500.0f);
+  FieldReader reader(outDef.profileName.c_str(), diagnostics == Diagnostics::Log);
 
-  cJSON *sensor = cJSON_GetObjectItemCaseSensitive(root, "sensor");
-  outDef.kineticEnergyDeadbandG = getFloat(sensor, "kinetic_deadband_g",    0.25f);
-  outDef.rotationDeadbandDps    = getFloat(sensor, "rotation_deadband_dps", 15.0f);
+  const Section overload = section(root, "overload");
+  outDef.overloadThresholdG = reader.read(overload, "threshold_g", 1.0f, 0.0f, kMaxG);
+  outDef.overloadChargeRate = reader.read(overload, "charge_rate", 2.0f, 0.0f, kMaxOverloadRatePerS);
+  outDef.overloadDrainRate = reader.read(overload, "drain_rate", 0.5f, 0.0f, kMaxOverloadRatePerS);
+  outDef.burstCooldownMs = reader.read(overload, "burst_cooldown_ms", 1500.0f, 0.0f, kMaxCooldownMs);
 
-  cJSON *swing = cJSON_GetObjectItemCaseSensitive(root, "swing");
-  outDef.swingIdleThresholdG = getFloat(swing, "idle_threshold_g", 0.15f);
-  outDef.swingMaxThresholdG = getFloat(swing, "max_threshold_g", 1.0f);
-  outDef.swingCrossfadeLowG = getFloat(swing, "crossfade_low_g", 0.4f);
-  outDef.swingCrossfadeHighG = getFloat(swing, "crossfade_high_g", 1.0f);
-  outDef.gravityInfluence = getFloat(swing, "gravity_influence", 0.2f);
-  outDef.humBaseVolume = getUint16(swing, "hum_base_volume", 8000);
-  outDef.humMaxDucking = getFloat(swing, "hum_max_ducking", 0.75f);
-  outDef.swingSwapCooldownMs = getUint32(swing, "swap_cooldown_ms", 1000);
-  outDef.swingSwapMinVolume = getFloat(swing, "swap_min_volume", 0.40f);
-  outDef.clashThresholdG = getFloat(swing, "clash_threshold_g", 2.0f);
+  const Section sensor = section(root, "sensor");
+  outDef.kineticEnergyDeadbandG = reader.read(sensor, "kinetic_deadband_g",    0.25f, 0.0f, kMaxSensorDeadbandG);
+  outDef.rotationDeadbandDps    = reader.read(sensor, "rotation_deadband_dps", 15.0f, 0.0f, kMaxRotationDeadbandDps);
 
-  cJSON *fontCounts = cJSON_GetObjectItemCaseSensitive(root, "font_counts");
-  outDef.fontCounts.hum = getUint8(fontCounts, "hum", 1);
-  outDef.fontCounts.swingPair = getUint8(fontCounts, "swing_pair", 3);
-  outDef.fontCounts.burst = getUint8(fontCounts, "burst", 16);
-  outDef.fontCounts.in = getUint8(fontCounts, "in", 2);
-  outDef.fontCounts.out = getUint8(fontCounts, "out", 4);
-  outDef.fontCounts.blaster = getUint8(fontCounts, "blaster", 8);
-  outDef.fontCounts.clash = getUint8(fontCounts, "clash", 16);
-  outDef.fontCounts.drag = getUint8(fontCounts, "drag", 1);
-  outDef.fontCounts.dragEnd = getUint8(fontCounts, "drag_end", 4);
+  const Section swing = section(root, "swing");
+  outDef.swingIdleThresholdG = reader.read(swing, "idle_threshold_g", 0.15f, 0.0f, kMaxG - kMinGSpan);
+  outDef.swingMaxThresholdG = reader.read(swing, "max_threshold_g", 1.0f, 0.0f, kMaxG);
+  reader.enforceSpan(swing, "idle_threshold_g", outDef.swingIdleThresholdG, "max_threshold_g",
+                     outDef.swingMaxThresholdG);
+  outDef.swingCrossfadeLowG = reader.read(swing, "crossfade_low_g", 0.4f, 0.0f, kMaxG - kMinGSpan);
+  outDef.swingCrossfadeHighG = reader.read(swing, "crossfade_high_g", 1.0f, 0.0f, kMaxG);
+  reader.enforceSpan(swing, "crossfade_low_g", outDef.swingCrossfadeLowG, "crossfade_high_g",
+                     outDef.swingCrossfadeHighG);
+  outDef.gravityInfluence = reader.read(swing, "gravity_influence", 0.2f, 0.0f, 1.0f);
+  outDef.humBaseVolume = reader.read<uint16_t>(swing, "hum_base_volume", 8000, 0, Effects::kFullVolume);
+  outDef.humMaxDucking = reader.read(swing, "hum_max_ducking", 0.75f, 0.0f, 1.0f);
+  outDef.swingSwapCooldownMs = reader.read<uint32_t>(swing, "swap_cooldown_ms", 1000, 0, kMaxSwapCooldownMs);
+  outDef.swingSwapMinVolume = reader.read(swing, "swap_min_volume", 0.40f, 0.0f, 1.0f);
+  outDef.clashThresholdG = reader.read(swing, "clash_threshold_g", 2.0f, kMinClashThresholdG, kMaxG);
 
-  cJSON *bladeTimings = cJSON_GetObjectItemCaseSensitive(root, "blade_timings");
-  outDef.ignitionDurationMs = getUint32(bladeTimings, "ignition_duration_ms", 800);
-  outDef.retractionDurationMs = getUint32(bladeTimings, "retraction_duration_ms", 500);
-  outDef.blasterDurationMs = getUint32(bladeTimings, "blaster_duration_ms", 250);
-  outDef.clashDurationMs = getUint32(bladeTimings, "clash_duration_ms", 150);
+  const Section fontCounts = section(root, "font_counts");
+  outDef.fontCounts.hum = reader.read<uint8_t>(fontCounts, "hum", 1, 0, kMaxFontCount);
+  outDef.fontCounts.swingPair = reader.read<uint8_t>(fontCounts, "swing_pair", 3, 0, System::PsramAudioCache::kMaxSwingPairs);
+  outDef.fontCounts.burst = reader.read<uint8_t>(fontCounts, "burst", 16, 0, kMaxFontCount);
+  outDef.fontCounts.in = reader.read<uint8_t>(fontCounts, "in", 2, 0, kMaxFontCount);
+  outDef.fontCounts.out = reader.read<uint8_t>(fontCounts, "out", 4, 0, kMaxFontCount);
+  outDef.fontCounts.blaster = reader.read<uint8_t>(fontCounts, "blaster", 8, 0, kMaxFontCount);
+  outDef.fontCounts.clash = reader.read<uint8_t>(fontCounts, "clash", 16, 0, kMaxFontCount);
+  outDef.fontCounts.drag = reader.read<uint8_t>(fontCounts, "drag", 1, 0, kMaxFontCount);
+  outDef.fontCounts.dragEnd = reader.read<uint8_t>(fontCounts, "drag_end", 4, 0, kMaxFontCount);
 
-  cJSON *bladeLeds = cJSON_GetObjectItemCaseSensitive(root, "blade_leds");
-  outDef.blasterLedCount = getUint16(bladeLeds, "blaster_count", 3);
-  outDef.dragLedCount = getUint16(bladeLeds, "drag_count", 8);
+  const Section bladeTimings = section(root, "blade_timings");
+  outDef.ignitionDurationMs = reader.read<uint32_t>(bladeTimings, "ignition_duration_ms", 800, kMinDurationMs, kMaxDurationMs);
+  outDef.retractionDurationMs = reader.read<uint32_t>(bladeTimings, "retraction_duration_ms", 500, kMinDurationMs, kMaxDurationMs);
+  outDef.blasterDurationMs = reader.read<uint32_t>(bladeTimings, "blaster_duration_ms", 250, kMinDurationMs, kMaxDurationMs);
+  outDef.clashDurationMs = reader.read<uint32_t>(bladeTimings, "clash_duration_ms", 150, kMinDurationMs, kMaxDurationMs);
 
-  cJSON *light = cJSON_GetObjectItemCaseSensitive(root, "light");
-  outDef.bladeBaseHue = getUint16(light, "blade_base_hue", 240);
-  outDef.lightIdleBaseFreq = getFloat(light, "idle_base_freq", 1.0f);
-  outDef.lightIdlePulseDepth = getFloat(light, "idle_pulse_depth", 0.15f);
-  outDef.lightMaxThermalBleed = getFloat(light, "max_thermal_bleed", 0.80f);
-  outDef.lightFlickerIntensity = getFloat(light, "flicker_intensity", 0.20f);
-  outDef.lightBurstDurationMs = getUint32(light, "burst_duration_ms", 150);
+  const Section bladeLeds = section(root, "blade_leds");
+  outDef.blasterLedCount = reader.read<uint16_t>(bladeLeds, "blaster_count", 3, kMinLedCount, std::numeric_limits<uint16_t>::max());
+  outDef.dragLedCount = reader.read<uint16_t>(bladeLeds, "drag_count", 8, kMinLedCount, std::numeric_limits<uint16_t>::max());
 
+  const Section light = section(root, "light");
+  outDef.bladeBaseHue = reader.read<uint16_t>(light, "blade_base_hue", 240, 0, kMaxHue);
+  outDef.lightIdleBaseFreq = reader.read(light, "idle_base_freq", 1.0f, kMinIdleBaseFreqHz, kMaxIdleBaseFreqHz);
+  outDef.lightIdlePulseDepth = reader.read(light, "idle_pulse_depth", 0.15f, 0.0f, 1.0f);
+  outDef.lightMaxThermalBleed = reader.read(light, "max_thermal_bleed", 0.80f, 0.0f, 1.0f);
+  outDef.lightFlickerIntensity = reader.read(light, "flicker_intensity", 0.20f, 0.0f, 1.0f);
+  outDef.lightBurstDurationMs = reader.read<uint32_t>(light, "burst_duration_ms", 150, kMinDurationMs, kMaxDurationMs);
+
+  corrections = reader.corrections();
   return ESP_OK;
 }
 
 #ifndef NDEBUG
 esp_err_t ProfileParser::runSelfTest() {
-  static const char *TAG = "ParserTest";
-  ESP_LOGI(TAG, "Running parser self-tests...");
+  static const char *testTag = "ParserTest";
+  ESP_LOGI(testTag, "Running parser self-tests...");
 
   const char *testJson = R"({
     "name": "test_sith",
@@ -187,11 +261,13 @@ esp_err_t ProfileParser::runSelfTest() {
     }
   })";
 
+  size_t corrections = 0;
   Inertial::InertialDefinition def{};
-  if (parse(testJson, def) != ESP_OK) {
-    ESP_LOGE(TAG, "Test parse failed");
+  if (parse(testJson, def, Diagnostics::Silent, corrections) != ESP_OK) {
+    ESP_LOGE(testTag, "Test parse failed");
     return ESP_FAIL;
   }
+  if (corrections != 0) return ESP_FAIL;
 
   if (def.profileName != "test_sith" || def.profileRoot != "profiles/sith/") return ESP_FAIL;
   if (def.kineticEnergyDeadbandG != 0.35f || def.rotationDeadbandDps != 18.0f) return ESP_FAIL;
@@ -203,19 +279,53 @@ esp_err_t ProfileParser::runSelfTest() {
   if (def.bladeBaseHue != 120 || def.lightIdleBaseFreq != 1.5f) return ESP_FAIL;
 
   Inertial::InertialDefinition fallbackDef{};
-  if (parse("{}", fallbackDef) != ESP_OK) {
-    ESP_LOGE(TAG, "Fallback test parse failed");
+  if (parse("{}", fallbackDef, Diagnostics::Silent, corrections) != ESP_OK) {
+    ESP_LOGE(testTag, "Fallback test parse failed");
     return ESP_FAIL;
   }
+  if (corrections != 0) return ESP_FAIL;
 
   if (fallbackDef.profileName != "unnamed" || fallbackDef.profileRoot != "profiles/unnamed/") return ESP_FAIL;
   if (fallbackDef.overloadThresholdG != 1.0f) return ESP_FAIL;
   if (fallbackDef.kineticEnergyDeadbandG != 0.25f || fallbackDef.rotationDeadbandDps != 15.0f) return ESP_FAIL;
   if (fallbackDef.fontCounts.hum != 1 || fallbackDef.bladeBaseHue != 240 || fallbackDef.clashThresholdG != 2.0f) return ESP_FAIL;
 
+  const char *invalidJson = R"({
+    "swing": {
+      "idle_threshold_g": 0.5,
+      "max_threshold_g": 0.5,
+      "crossfade_low_g": 0.8,
+      "crossfade_high_g": 0.3,
+      "hum_base_volume": 70000,
+      "clash_threshold_g": -1
+    },
+    "font_counts": { "swing_pair": 50, "blaster": 300 },
+    "blade_timings": { "ignition_duration_ms": -5 },
+    "blade_leds": { "blaster_count": 0 },
+    "light": {
+      "blade_base_hue": 400,
+      "idle_base_freq": 0.2,
+      "idle_pulse_depth": 1.5,
+      "flicker_intensity": "high"
+    }
+  })";
+
+  Inertial::InertialDefinition invalidDef{};
+  if (parse(invalidJson, invalidDef, Diagnostics::Silent, corrections) != ESP_OK) {
+    ESP_LOGE(testTag, "Invalid-value test parse failed");
+    return ESP_FAIL;
+  }
+  if (corrections != 12) return ESP_FAIL;
+  if (invalidDef.swingMaxThresholdG != 0.5f + kMinGSpan || invalidDef.swingCrossfadeHighG != 0.8f + kMinGSpan) return ESP_FAIL;
+  if (invalidDef.humBaseVolume != Effects::kFullVolume || invalidDef.clashThresholdG != kMinClashThresholdG) return ESP_FAIL;
+  if (invalidDef.fontCounts.swingPair != System::PsramAudioCache::kMaxSwingPairs || invalidDef.fontCounts.blaster != 255) return ESP_FAIL;
+  if (invalidDef.ignitionDurationMs != kMinDurationMs || invalidDef.blasterLedCount != kMinLedCount) return ESP_FAIL;
+  if (invalidDef.bladeBaseHue != kMaxHue || invalidDef.lightIdleBaseFreq != kMinIdleBaseFreqHz) return ESP_FAIL;
+  if (invalidDef.lightIdlePulseDepth != 1.0f || invalidDef.lightFlickerIntensity != 0.20f) return ESP_FAIL;
+
   Inertial::InertialDefinition unslashedDef{};
   if (parse(R"({"root_path": "/profiles/sith"})", unslashedDef) != ESP_OK) {
-    ESP_LOGE(TAG, "Unslashed root test parse failed");
+    ESP_LOGE(testTag, "Unslashed root test parse failed");
     return ESP_FAIL;
   }
   const SoundFont unslashedFont(unslashedDef.profileRoot, unslashedDef.fontCounts);
@@ -227,7 +337,7 @@ esp_err_t ProfileParser::runSelfTest() {
   if (SoundFont::normalizeRoot("/a/") != "a/" || SoundFont::normalizeRoot("a//") != "a/") return ESP_FAIL;
   if (!SoundFont::normalizeRoot("").empty()) return ESP_FAIL;
 
-  ESP_LOGI(TAG, "All parser self-tests passed successfully!");
+  ESP_LOGI(testTag, "All parser self-tests passed successfully!");
   return ESP_OK;
 }
 #endif

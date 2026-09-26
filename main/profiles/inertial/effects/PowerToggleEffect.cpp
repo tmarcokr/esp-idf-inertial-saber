@@ -116,7 +116,7 @@ void PowerToggleEffect::tickIgnition() {
   const uint32_t elapsed = nowMs() - m_sequenceStartMs;
 
   if (!m_enginesStarted &&
-      elapsed >= (m_def.ignitionDurationMs - kSwingPreStartMs)) {
+      elapsed + kSwingPreStartMs >= m_def.ignitionDurationMs) {
     m_swing.activate();
     m_light.activate();
     m_enginesStarted = true;
