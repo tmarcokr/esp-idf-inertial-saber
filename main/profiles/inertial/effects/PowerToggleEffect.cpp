@@ -1,21 +1,22 @@
 #include "PowerToggleEffect.hpp"
 #include "profiles/ConfigurableProfile.hpp"
 #include "AudioEngine.hpp"
+#include "AudioLevels.hpp"
 #include "overlays/BladeIgniteSweep.hpp"
 #include "overlays/BladeRetractSweep.hpp"
 #include "Engine.hpp"
 #include "InertialLightEffect.hpp"
 #include "InertialSwingEffect.hpp"
 #include "profiles/inertial/InertialDefinition.hpp"
+#include "profiles/SoundFont.hpp"
 #include "core/SaberDataPacket.hpp"
 
 #include "esp_log.h"
-#include "esp_random.h"
 #include "esp_timer.h"
 
-#include <algorithm>
 #include <cinttypes>
 #include <memory>
+#include <string>
 
 namespace InertialSaber::Effects {
 
@@ -31,9 +32,10 @@ PowerToggleEffect::PowerToggleEffect(
     InertialSwingEffect &swing, InertialLightEffect &light,
     Espressif::Wrappers::Audio::AudioEngine &audio,
     Espressif::Wrappers::SmartLed::Engine &ledEngine,
-    const InertialSaber::Profiles::Inertial::InertialDefinition &definition, uint8_t buttonId)
+    const InertialSaber::Profiles::Inertial::InertialDefinition &definition,
+    const Profiles::SoundFont &font, uint8_t buttonId)
     : InertialEffect(1), m_profile(profile), m_swing(swing), m_light(light), m_audio(audio), m_ledEngine(ledEngine),
-      m_def(definition), m_buttonId(buttonId) {}
+      m_def(definition), m_font(font), m_buttonId(buttonId) {}
 
 bool PowerToggleEffect::test(const Core::SaberDataPacket& packet) {
     if (m_buttonId >= Core::kMaxInputs) {
@@ -96,11 +98,9 @@ void PowerToggleEffect::run() {
 }
 
 void PowerToggleEffect::beginIgnition() {
-  const uint8_t index = static_cast<uint8_t>(
-      esp_random() % std::max<uint8_t>(m_def.fontInCount, 1));
-  const std::string path = buildPath("in/in", index);
+  const std::string path = m_font.randomPath(Profiles::FontCategory::Ignition);
 
-  m_audio.play(path, false, 16384);
+  m_audio.play(path, false, kFullVolume);
   m_ledEngine.pushOverlay(std::make_unique<BladeIgniteSweep>(
       m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.ignitionDurationMs));
 
@@ -132,12 +132,9 @@ void PowerToggleEffect::beginRetraction() {
   m_swing.deactivate();
   m_light.deactivate();
 
-  const uint8_t index = static_cast<uint8_t>(
-      esp_random() % std::max<uint8_t>(m_def.fontOutCount, 1));
-  const std::string path = buildPath("out/out", index);
+  const std::string path = m_font.randomPath(Profiles::FontCategory::Retraction);
 
-  // Set to 11468 (70% volume) for the out effect to balance power and distortion
-  m_audio.play(path, false, 11468);
+  m_audio.play(path, false, kRetractionVolume);
   m_ledEngine.pushOverlay(std::make_unique<BladeRetractSweep>(
       m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.retractionDurationMs));
 
@@ -152,12 +149,6 @@ void PowerToggleEffect::tickRetraction() {
     m_profile.setPowerState(Profiles::ConfigurableProfile::PowerState::RETRACTED);
     ESP_LOGI(TAG, "Saber OFF");
   }
-}
-
-std::string PowerToggleEffect::buildPath(const char *subAndPrefix,
-                                         uint8_t index) const {
-  return std::string("/sdcard/") + m_def.profileRoot + subAndPrefix +
-         std::to_string(index + 1) + ".wav";
 }
 
 bool PowerToggleEffect::isIgnited() const {

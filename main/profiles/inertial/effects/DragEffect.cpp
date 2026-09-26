@@ -1,15 +1,16 @@
 #include "DragEffect.hpp"
 #include "AudioEngine.hpp"
+#include "AudioLevels.hpp"
 #include "overlays/BladeDragEffect.hpp"
 #include "Engine.hpp"
 #include "PowerToggleEffect.hpp"
 #include "profiles/inertial/InertialDefinition.hpp"
+#include "profiles/SoundFont.hpp"
 #include "core/SaberDataPacket.hpp"
 
 #include "esp_log.h"
-#include "esp_random.h"
 
-#include <algorithm>
+#include <string>
 
 namespace InertialSaber::Effects {
 
@@ -20,12 +21,14 @@ DragEffect::DragEffect(
     Espressif::Wrappers::Audio::AudioEngine& audio,
     Espressif::Wrappers::SmartLed::Engine& ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+    const Profiles::SoundFont& font,
     uint8_t buttonId)
     : InertialEffect(1)
     , m_power(power)
     , m_audio(audio)
     , m_ledEngine(ledEngine)
     , m_def(definition)
+    , m_font(font)
     , m_buttonId(buttonId) {}
 
 bool DragEffect::test(const Core::SaberDataPacket& packet) {
@@ -53,11 +56,9 @@ void DragEffect::run() {
     if (m_triggerMet && !m_active) {
         m_active = true;
 
-        const uint8_t index = static_cast<uint8_t>(
-            esp_random() % std::max<uint8_t>(m_def.fontDragCount, 1));
-        const std::string path = buildPath("drag/drag", index);
+        const std::string path = m_font.randomPath(Profiles::FontCategory::Drag);
 
-        m_audioChannel = m_audio.play(path, true, 16384);
+        m_audioChannel = m_audio.play(path, true, kFullVolume);
 
         auto overlay = std::make_unique<BladeDragEffect>(
             m_ledEngine.numLeds(), m_def.dragLedCount);
@@ -76,10 +77,8 @@ void DragEffect::run() {
             m_audioChannel = Espressif::Wrappers::Audio::INVALID_CHANNEL;
         }
 
-        const uint8_t endIdx = static_cast<uint8_t>(
-            esp_random() % std::max<uint8_t>(m_def.fontDragEndCount, 1));
-        const std::string endPath = buildPath("enddrag/enddrag", endIdx);
-        m_audio.play(endPath, false, 16384);
+        const std::string endPath = m_font.randomPath(Profiles::FontCategory::DragEnd);
+        m_audio.play(endPath, false, kFullVolume);
 
         if (m_ledEffect != nullptr) {
             m_ledEffect->terminate();
@@ -88,11 +87,6 @@ void DragEffect::run() {
 
         ESP_LOGI(TAG, "Drag inactive, playing end: %s", endPath.c_str());
     }
-}
-
-std::string DragEffect::buildPath(const char* subAndPrefix, uint8_t index) const {
-    return std::string("/sdcard/") + m_def.profileRoot + subAndPrefix +
-           std::to_string(index + 1) + ".wav";
 }
 
 } // namespace InertialSaber::Effects

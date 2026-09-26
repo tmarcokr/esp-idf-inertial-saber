@@ -190,39 +190,40 @@ void PsramAudioCache::loaderTaskFn(void* pvParameters) {
 }
 
 void PsramAudioCache::runPreload(const std::string& profileRoot, uint8_t totalSwingPairs) {
-    ESP_LOGI(TAG, "Iniciando carga a PSRAM para profile: %s", profileRoot.c_str());
+    ESP_LOGI(TAG, "Starting PSRAM preload for profile: %s", profileRoot.c_str());
     unloadAll();
 
-    std::string humSd = "/sdcard/" + profileRoot + "/hum.wav";
-    if (loadFile(humSd, "hum.wav") != ESP_OK) {
+    const std::string sdRoot = "/sdcard/" + profileRoot;
+
+    if (loadFile(sdRoot + "hum.wav", "hum.wav") != ESP_OK) {
         ESP_LOGE(TAG, "Failed to load hum.wav to PSRAM. Aborting preload.");
         m_preloadComplete.store(true);
         return;
     }
-    ESP_LOGI(TAG, "Cargado a PSRAM: hum.wav");
+    ESP_LOGI(TAG, "Loaded to PSRAM: hum.wav");
 
     for (uint8_t i = 1; i <= totalSwingPairs; ++i) {
         std::string suffix = std::to_string(i) + ".wav";
-        std::string swlSd = "/sdcard/" + profileRoot + "/swingl/swingl" + suffix;
-        std::string swhSd = "/sdcard/" + profileRoot + "/swingh/swingh" + suffix;
+        std::string swlSd = sdRoot + "swingl/swingl" + suffix;
+        std::string swhSd = sdRoot + "swingh/swingh" + suffix;
         std::string vfsL = "swingl" + std::to_string(i) + ".wav";
         std::string vfsH = "swingh" + std::to_string(i) + ".wav";
 
         if (loadFile(swlSd, vfsL.c_str()) != ESP_OK) {
-            ESP_LOGW(TAG, "Memoria PSRAM llena. Carga detenida en el par %d", i);
+            ESP_LOGW(TAG, "PSRAM full. Preload stopped at pair %d", i);
             break;
         }
         if (loadFile(swhSd, vfsH.c_str()) != ESP_OK) {
             unloadFile(vfsL.c_str());
-            ESP_LOGW(TAG, "Memoria PSRAM llena. Carga detenida en el par %d", i);
+            ESP_LOGW(TAG, "PSRAM full. Preload stopped at pair %d", i);
             break;
         }
         m_loadedSwingPairs.store(i);
-        ESP_LOGI(TAG, "Cargado a PSRAM: par swing %d", i);
+        ESP_LOGI(TAG, "Loaded to PSRAM: swing pair %d", i);
     }
 
     m_preloadComplete.store(true);
-    ESP_LOGI(TAG, "Carga a PSRAM completada. Pares totales cargados: %d", m_loadedSwingPairs.load());
+    ESP_LOGI(TAG, "PSRAM preload complete. Total pairs loaded: %d", m_loadedSwingPairs.load());
 }
 
 } // namespace InertialSaber::System

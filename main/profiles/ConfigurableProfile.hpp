@@ -2,8 +2,10 @@
 
 #include "profiles/inertial/InertialDefinition.hpp"
 #include "profiles/SaberServices.hpp"
+#include "profiles/SoundFont.hpp"
 #include <cstdint>
-#include <string>
+#include <memory>
+#include <string_view>
 
 namespace InertialSaber::Effects {
     class InertialSwingEffect;
@@ -31,16 +33,20 @@ public:
   };
 
   /**
-   * @brief Constructor that binds this profile to an external configuration definition.
+   * @brief Parses a profile.json document once and builds the profile from it.
+   * @return The profile, or nullptr if the JSON cannot be parsed.
    */
-  explicit ConfigurableProfile(const InertialSaber::Profiles::Inertial::InertialDefinition &def);
+  [[nodiscard]] static std::unique_ptr<ConfigurableProfile> fromJson(std::string_view json);
 
-  /**
-   * @brief Constructor that parses a JSON configuration string.
-   */
-  explicit ConfigurableProfile(const std::string &jsonStr);
+  explicit ConfigurableProfile(Inertial::InertialDefinition definition);
 
-  [[nodiscard]] const InertialSaber::Profiles::Inertial::InertialDefinition &definition() const;
+  ConfigurableProfile(const ConfigurableProfile &) = delete;
+  ConfigurableProfile &operator=(const ConfigurableProfile &) = delete;
+  ConfigurableProfile(ConfigurableProfile &&) = delete;
+  ConfigurableProfile &operator=(ConfigurableProfile &&) = delete;
+
+  [[nodiscard]] const Inertial::InertialDefinition &definition() const;
+  [[nodiscard]] const SoundFont &soundFont() const;
 
   [[nodiscard]] PowerState getPowerState() const;
   void setPowerState(PowerState state);
@@ -56,12 +62,12 @@ public:
   void unload(const SaberServices &services);
 
 private:
+  void logFontPaths() const;
+
   Effects::InertialSwingEffect *m_swingEffect = nullptr;
   Effects::InertialLightEffect *m_lightEffect = nullptr;
-  std::string m_profileNameStorage;
-  std::string m_profileRootStorage;
-  InertialSaber::Profiles::Inertial::InertialDefinition m_allocatedDef{};
-  const InertialSaber::Profiles::Inertial::InertialDefinition &m_def;
+  Inertial::InertialDefinition m_def;
+  SoundFont m_font;
   PowerState m_powerState = PowerState::RETRACTED;
 };
 

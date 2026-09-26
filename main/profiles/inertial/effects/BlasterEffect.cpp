@@ -1,15 +1,16 @@
 #include "BlasterEffect.hpp"
 #include "AudioEngine.hpp"
+#include "AudioLevels.hpp"
 #include "overlays/BladeBlasterBlock.hpp"
 #include "Engine.hpp"
 #include "PowerToggleEffect.hpp"
 #include "profiles/inertial/InertialDefinition.hpp"
+#include "profiles/SoundFont.hpp"
 #include "core/SaberDataPacket.hpp"
 
 #include "esp_log.h"
-#include "esp_random.h"
 
-#include <algorithm>
+#include <string>
 
 namespace InertialSaber::Effects {
 
@@ -20,12 +21,14 @@ BlasterEffect::BlasterEffect(
     Espressif::Wrappers::Audio::AudioEngine &audio,
     Espressif::Wrappers::SmartLed::Engine &ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition &definition,
+    const Profiles::SoundFont &font,
     uint8_t buttonId)
     : InertialEffect(2)
     , m_power(power)
     , m_audio(audio)
     , m_ledEngine(ledEngine)
     , m_def(definition)
+    , m_font(font)
     , m_buttonId(buttonId)
 {}
 
@@ -43,21 +46,13 @@ bool BlasterEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void BlasterEffect::run() {
-  const uint8_t index = static_cast<uint8_t>(
-      esp_random() % std::max<uint8_t>(m_def.fontBlasterCount, 1));
-  const std::string path = buildPath("blst/blst", index);
+  const std::string path = m_font.randomPath(Profiles::FontCategory::Blaster);
 
-  m_audio.play(path, false, 16384);
+  m_audio.play(path, false, kFullVolume);
   m_ledEngine.pushOverlay(std::make_unique<BladeBlasterBlock>(
       m_ledEngine.numLeds(), m_def.blasterLedCount, m_def.blasterDurationMs));
 
   ESP_LOGI(TAG, "Blaster block triggered: %s", path.c_str());
-}
-
-std::string BlasterEffect::buildPath(const char *subAndPrefix,
-                                     uint8_t index) const {
-  return std::string("/sdcard/") + m_def.profileRoot + subAndPrefix +
-         std::to_string(index + 1) + ".wav";
 }
 
 } // namespace InertialSaber::Effects

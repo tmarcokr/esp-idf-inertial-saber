@@ -8,6 +8,7 @@ struct SaberDataPacket;
 
 namespace InertialSaber::Profiles {
 class ConfigurableProfile;
+class SoundFont;
 }
 
 namespace Espressif::Wrappers::Audio {
@@ -32,7 +33,8 @@ public:
     PreloadWaitEffect(Profiles::ConfigurableProfile& profile,
                       Espressif::Wrappers::Audio::AudioEngine& audio,
                       const System::PsramAudioCache& audioCache,
-                      System::Status::StatusIndicator& status);
+                      System::Status::StatusIndicator& status,
+                      const Profiles::SoundFont& font);
 
     bool test(const Core::SaberDataPacket& packet) override;
     void run() override;
@@ -42,6 +44,7 @@ private:
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     const System::PsramAudioCache&           m_audioCache;
     System::Status::StatusIndicator&         m_status;
+    const Profiles::SoundFont&               m_font;
 };
 
 } // namespace InertialSaber::Effects

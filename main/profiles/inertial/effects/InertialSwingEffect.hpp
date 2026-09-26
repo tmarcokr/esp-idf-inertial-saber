@@ -11,6 +11,9 @@
 namespace InertialSaber::System {
 class PsramAudioCache;
 }
+namespace InertialSaber::Profiles {
+class SoundFont;
+}
 
 namespace InertialSaber::Effects {
 
@@ -25,6 +28,7 @@ class InertialSwingEffect final : public Core::InertialEffect {
 public:
     InertialSwingEffect(Espressif::Wrappers::Audio::AudioEngine& engine,
                         const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+                        const InertialSaber::Profiles::SoundFont& font,
                         const InertialSaber::System::PsramAudioCache& audioCache);
 
     /**
@@ -53,6 +57,7 @@ private:
 
     Espressif::Wrappers::Audio::AudioEngine& m_engine;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
+    const InertialSaber::Profiles::SoundFont& m_font;
     const InertialSaber::System::PsramAudioCache& m_audioCache;
 
     std::atomic<bool> m_active{false};
@@ -88,7 +93,6 @@ private:
     void handleInertialBurst();
 
     SwingPathPair provideSwingPaths();
-    std::string provideBurstPath() const;
     bool evaluateSwap(float masterVolume);
     void executeSwap();
 };

@@ -1,5 +1,7 @@
 #include "PreloadWaitEffect.hpp"
 #include "profiles/ConfigurableProfile.hpp"
+#include "profiles/SoundFont.hpp"
+#include "AudioLevels.hpp"
 #include "system/PsramAudioCache.hpp"
 #include "system/status/StatusIndicator.hpp"
 #include "AudioEngine.hpp"
@@ -16,12 +18,14 @@ using System::Status::SystemStatus;
 PreloadWaitEffect::PreloadWaitEffect(Profiles::ConfigurableProfile& profile,
                                      Espressif::Wrappers::Audio::AudioEngine& audio,
                                      const System::PsramAudioCache& audioCache,
-                                     System::Status::StatusIndicator& status)
+                                     System::Status::StatusIndicator& status,
+                                     const Profiles::SoundFont& font)
     : InertialEffect(0)
     , m_profile(profile)
     , m_audio(audio)
     , m_audioCache(audioCache)
     , m_status(status)
+    , m_font(font)
 {}
 
 bool PreloadWaitEffect::test(const Core::SaberDataPacket&) {
@@ -38,10 +42,9 @@ void PreloadWaitEffect::run() {
 
     m_status.show(SystemStatus::Ready);
 
-    const auto& def = m_profile.definition();
-    std::string fontPath = std::string("/sdcard/") + def.profileRoot + "font.wav";
+    const std::string fontPath = m_font.selectionPath();
     ESP_LOGI(TAG, "Preload complete. Playing selection sound: %s", fontPath.c_str());
-    m_audio.play(fontPath, false, 16384);
+    m_audio.play(fontPath, false, kFullVolume);
 }
 
 } // namespace InertialSaber::Effects

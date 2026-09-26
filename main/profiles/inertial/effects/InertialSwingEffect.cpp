@@ -6,6 +6,7 @@
 #include <cmath>
 #include <string>
 
+#include "profiles/SoundFont.hpp"
 #include "system/PsramAudioCache.hpp"
 
 namespace InertialSaber::Effects {
@@ -15,10 +16,12 @@ using Espressif::Wrappers::Audio::INVALID_CHANNEL;
 InertialSwingEffect::InertialSwingEffect(
     Espressif::Wrappers::Audio::AudioEngine& engine,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+    const InertialSaber::Profiles::SoundFont& font,
     const InertialSaber::System::PsramAudioCache& audioCache)
     : InertialEffect(0)
     , m_engine(engine)
     , m_def(definition)
+    , m_font(font)
     , m_audioCache(audioCache)
 {}
 
@@ -130,9 +133,9 @@ void InertialSwingEffect::applyHumDucking(float masterVolume) {
 }
 
 void InertialSwingEffect::handleInertialBurst() {
-    if (!m_inertialBurst || m_def.fontBurstCount == 0) return;
+    if (!m_inertialBurst || m_font.count(Profiles::FontCategory::Burst) == 0) return;
 
-    m_engine.play(provideBurstPath(), false, kMaxVolume14bit);
+    m_engine.play(m_font.randomPath(Profiles::FontCategory::Burst), false, kMaxVolume14bit);
 
     ESP_LOGI(TAG, "Inertial Burst triggered");
 }
@@ -150,11 +153,6 @@ InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
     }
     std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
     return { "/mem/swingl" + suffix, "/mem/swingh" + suffix };
-}
-
-std::string InertialSwingEffect::provideBurstPath() const {
-    uint8_t idx = static_cast<uint8_t>(esp_random() % m_def.fontBurstCount) + 1;
-    return std::string("/sdcard/") + m_def.profileRoot + "/swng/swng" + std::to_string(idx) + ".wav";
 }
 
 bool InertialSwingEffect::evaluateSwap(float masterVolume) {

@@ -3,8 +3,10 @@
 
 #include "core/InertialEffect.hpp"
 #include <cstdint>
-#include <string>
 
+namespace InertialSaber::Profiles {
+class SoundFont;
+}
 namespace InertialSaber::Core {
 
 struct SaberDataPacket;
@@ -31,18 +33,18 @@ public:
         Espressif::Wrappers::Audio::AudioEngine& audio,
         Espressif::Wrappers::SmartLed::Engine&   ledEngine,
         const InertialSaber::Profiles::Inertial::InertialDefinition&          definition,
+        const Profiles::SoundFont&               font,
         uint8_t                                  buttonId);
 
     bool test(const Core::SaberDataPacket& packet) override;
     void run() override;
 
 private:
-    [[nodiscard]] std::string buildPath(const char* subAndPrefix, uint8_t index) const;
-
     PowerToggleEffect&                       m_power;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     Espressif::Wrappers::SmartLed::Engine&   m_ledEngine;
     const InertialSaber::Profiles::Inertial::InertialDefinition&          m_def;
+    const Profiles::SoundFont&               m_font;
     uint8_t                                  m_buttonId;
 };
 

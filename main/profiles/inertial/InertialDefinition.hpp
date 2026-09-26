@@ -1,15 +1,31 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include "core/PhysicsConfig.hpp"
 
 namespace InertialSaber::Profiles::Inertial {
 
 /**
+ * @brief Number of files available per sound category of a font.
+ */
+struct FontCounts {
+    uint8_t hum;        ///< Number of hum.wav files in the font directory.
+    uint8_t swingPair;  ///< Number of swingL/H pairs.
+    uint8_t burst;      ///< Number of burst one-shot files (swng/swng1.wav … swngN.wav).
+    uint8_t in;         ///< Number of power-on sound files (in/in1.wav … inN.wav).
+    uint8_t out;        ///< Number of power-off sound files (out/out1.wav … outN.wav).
+    uint8_t blaster;    ///< Number of blaster sound files (blst/blst1.wav … blstN.wav).
+    uint8_t clash;      ///< Number of clash sound files (clsh/clsh1.wav … clshN.wav).
+    uint8_t drag;       ///< Number of looping drag sound files (drag/drag1.wav … dragN.wav).
+    uint8_t dragEnd;    ///< Number of drag deactivation sound files (enddrag/enddrag1.wav … enddragN.wav).
+};
+
+/**
  * @brief Per-profile physics, audio, and visual configuration.
  *
  * Plain-data struct passed by const reference to engine effects at profile
- * load time. Decouples per-personality parameters from PlatformConfig.hpp,
+ * load time. Decouples per-personality parameters from HardwareConfig.hpp,
  * which retains only hardware-level and task-scheduling constants.
  *
  * Field groups follow the three engine domains:
@@ -19,8 +35,8 @@ namespace InertialSaber::Profiles::Inertial {
  */
 struct InertialDefinition : public Core::PhysicsConfig {
 
-    const char* profileName;   ///< Human-readable profile identifier.
-    const char* profileRoot;   ///< Root path on SD relative to /sdcard/ (e.g. "profiles/inertial/").
+    std::string profileName;   ///< Human-readable profile identifier.
+    std::string profileRoot;   ///< Root path on SD relative to /sdcard/, as written in profile.json (e.g. "profiles/inertial/").
 
     // ── Sensor Sensitivity (per-profile) ─────────────────────────────────────
 
@@ -34,22 +50,15 @@ struct InertialDefinition : public Core::PhysicsConfig {
     uint32_t swingSwapCooldownMs;   ///< Minimum idle time before a new swing pair can load.
     float    swingSwapMinVolume;    ///< Minimum master volume required to trigger a pair swap.
 
-    uint8_t fontHumCount;          ///< Number of hum.wav files in the font directory.
-    uint8_t fontSwingPairCount;    ///< Number of swingL/H pairs.
-    uint8_t fontBurstCount;        ///< Number of burst one-shot files (swng1–N).
-    uint8_t fontInCount;           ///< Number of power-on sound files (in/in1.wav … inN.wav).
-    uint8_t fontOutCount;          ///< Number of power-off sound files (out/out1.wav … outN.wav).
+    FontCounts fontCounts;         ///< Number of files per sound category.
+
     uint32_t ignitionDurationMs;   ///< Duration of the blade ignition sequence in milliseconds.
     uint32_t retractionDurationMs; ///< Duration of the blade retraction sequence in milliseconds.
-    uint8_t fontBlasterCount;      ///< Number of blaster sound files.
     uint16_t blasterLedCount;      ///< Number of LEDs to light up for the blaster block.
     uint32_t blasterDurationMs;    ///< Duration of the blaster block visual effect in milliseconds.
-    uint8_t fontClashCount;        ///< Number of clash sound files (clsh/clsh1.wav … clshN.wav).
     float clashThresholdG;         ///< Sudden negative spike/deceleration threshold in Gs.
     uint32_t clashDurationMs;      ///< Duration of the clash flash visual effect in milliseconds.
 
-    uint8_t fontDragCount;          ///< Number of looping drag sound files (drag/drag*.wav).
-    uint8_t fontDragEndCount;       ///< Number of drag deactivation sound files (enddrag/enddrag*.wav).
     uint16_t dragLedCount;          ///< Number of LEDs to light up at the tip for the thermal glow.
 
     uint16_t bladeBaseHue;         ///< Blade colour hue (HSB, 0–359). Blue = 240.

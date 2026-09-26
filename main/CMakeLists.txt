@@ -11,6 +11,7 @@ idf_component_register(
          "profiles/inertial/effects/InertialLightEffect.cpp"
          "profiles/ConfigurableProfile.cpp"
          "profiles/ProfileParser.cpp"
+         "profiles/SoundFont.cpp"
          "profiles/ProfileLoader.cpp"
          "profiles/ProfileManager.cpp"
          "profiles/inertial/effects/overlays/BladeIgniteSweep.cpp"

@@ -4,8 +4,10 @@
 #include "core/InertialEffect.hpp"
 #include <array>
 #include <cstdint>
-#include <string>
 
+namespace InertialSaber::Profiles {
+class SoundFont;
+}
 namespace InertialSaber::Core {
 
 struct SaberDataPacket;
@@ -31,14 +33,13 @@ public:
         PowerToggleEffect&                      power,
         Espressif::Wrappers::Audio::AudioEngine& audio,
         Espressif::Wrappers::SmartLed::Engine&  ledEngine,
-        const InertialSaber::Profiles::Inertial::InertialDefinition&         definition);
+        const InertialSaber::Profiles::Inertial::InertialDefinition&         definition,
+        const Profiles::SoundFont&              font);
 
     bool test(const Core::SaberDataPacket& packet) override;
     void run() override;
 
 private:
-    [[nodiscard]] std::string buildPath(const char* subAndPrefix, uint8_t index) const;
-
     void clearKineticEnergyWindow();
     bool detectClash(const Core::SaberDataPacket& packet);
 
@@ -46,6 +47,7 @@ private:
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     Espressif::Wrappers::SmartLed::Engine&   m_ledEngine;
     const InertialSaber::Profiles::Inertial::InertialDefinition&          m_def;
+    const Profiles::SoundFont&               m_font;
 
     std::array<float, 4> m_kineticEnergyWindow{};
     size_t               m_windowIdx = 0;
