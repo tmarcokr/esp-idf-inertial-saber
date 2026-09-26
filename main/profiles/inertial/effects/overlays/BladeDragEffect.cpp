@@ -3,6 +3,7 @@
 #include "esp_random.h"
 
 #include <algorithm>
+#include <utility>
 
 namespace InertialSaber::Effects {
 
@@ -10,11 +11,17 @@ using namespace Espressif::Wrappers::SmartLed;
 
 static constexpr uint32_t kFadeDurationMs = 150;
 
-BladeDragEffect::BladeDragEffect(uint16_t numLeds, uint16_t dragLedCount)
+BladeDragEffect::BladeDragEffect(uint16_t numLeds, uint16_t dragLedCount,
+                                 std::shared_ptr<const std::atomic<bool>> fadeRequest)
     : m_numLeds(numLeds)
-    , m_dragLedCount(dragLedCount) {}
+    , m_dragLedCount(dragLedCount)
+    , m_fadeRequest(std::move(fadeRequest)) {}
 
 void BladeDragEffect::update(uint32_t deltaMs) {
+    if (!m_fading && m_fadeRequest && m_fadeRequest->load()) {
+        m_fading = true;
+    }
+
     if (m_fading) {
         m_fadeElapsed += deltaMs;
         if (m_fadeElapsed >= kFadeDurationMs) {
@@ -58,10 +65,6 @@ void BladeDragEffect::render(Canvas& canvas) {
 
 bool BladeDragEffect::isFinished() const {
     return m_finished;
-}
-
-void BladeDragEffect::terminate() {
-    m_fading = true;
 }
 
 } // namespace InertialSaber::Effects

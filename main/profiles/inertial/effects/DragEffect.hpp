@@ -3,7 +3,9 @@
 
 #include "core/InertialEffect.hpp"
 #include "AudioEngine.hpp"
+#include <atomic>
 #include <cstdint>
+#include <memory>
 
 namespace InertialSaber::Profiles {
 class PowerStateMachine;
@@ -12,9 +14,6 @@ class SoundFont;
 namespace InertialSaber::Core {
 
 struct SaberDataPacket;
-}
-namespace InertialSaber::Effects {
-class BladeDragEffect;
 }
 namespace Espressif::Wrappers::Audio {
 class AudioEngine;
@@ -59,7 +58,7 @@ private:
     uint8_t m_buttonId;
 
     Espressif::Wrappers::Audio::ChannelId m_audioChannel = Espressif::Wrappers::Audio::INVALID_CHANNEL;
-    BladeDragEffect* m_ledEffect = nullptr;
+    std::shared_ptr<std::atomic<bool>> m_overlayFadeRequest;
     bool m_active = false;
     bool m_triggerMet = false;
 };
