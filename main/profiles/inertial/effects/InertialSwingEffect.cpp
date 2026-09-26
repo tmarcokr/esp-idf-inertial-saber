@@ -28,7 +28,7 @@ InertialSwingEffect::InertialSwingEffect(
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
 
-    m_chHum = m_engine.play(kHumPath, true, m_def.humBaseVolume);
+    m_chHum = m_engine.play(InertialSaber::System::PsramAudioCache::humPath(), true, m_def.humBaseVolume);
 
     auto paths = provideSwingPaths();
     m_chSwingL = m_engine.play(paths.low, true, 0);
@@ -151,8 +151,9 @@ InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
     } else {
         m_currentPairIndex = 0;
     }
-    std::string suffix = std::to_string(m_currentPairIndex + 1) + ".wav";
-    return { "/mem/swingl" + suffix, "/mem/swingh" + suffix };
+    const auto pairNumber = static_cast<uint8_t>(m_currentPairIndex + 1);
+    return { InertialSaber::System::PsramAudioCache::swingLowPath(pairNumber),
+             InertialSaber::System::PsramAudioCache::swingHighPath(pairNumber) };
 }
 
 bool InertialSwingEffect::evaluateSwap(float masterVolume) {

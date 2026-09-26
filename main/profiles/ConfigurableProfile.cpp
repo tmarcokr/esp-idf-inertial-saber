@@ -46,12 +46,11 @@ void ConfigurableProfile::setPowerState(PowerState state) {
 
 void ConfigurableProfile::load(const SaberServices &services, ProfileManager &profileManager) {
   ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName.c_str());
-  logFontPaths();
 
   m_powerState = PowerState::PRELOADING;
   services.bus.setPhysicsConfig(m_def);
 
-  services.audioCache.requestProfilePreload(m_font.root(), m_font.swingPairCount());
+  services.audioCache.requestPreload(m_font);
 
   services.bus.registerEffect(std::make_unique<Effects::PreloadWaitEffect>(
       *this, services.audio, services.audioCache, services.status, m_font));
@@ -84,18 +83,6 @@ void ConfigurableProfile::load(const SaberServices &services, ProfileManager &pr
       *this, profileManager, Core::kMainButtonInputId));
 }
 
-void ConfigurableProfile::logFontPaths() const {
-  ESP_LOGD(TAG, "Font paths: %s | %s | %s | %s", m_font.humPath().c_str(),
-           m_font.selectionPath().c_str(), m_font.swingLowPath(1).c_str(),
-           m_font.swingHighPath(1).c_str());
-  for (const auto category : {FontCategory::Ignition, FontCategory::Retraction, FontCategory::Blaster,
-                              FontCategory::Clash, FontCategory::Drag, FontCategory::DragEnd,
-                              FontCategory::Burst}) {
-    ESP_LOGD(TAG, "Font paths: %s (count=%u)", m_font.pathFor(category, 1).c_str(),
-             m_font.count(category));
-  }
-}
-
 void ConfigurableProfile::unload(const SaberServices &services) {
   ESP_LOGI(TAG, "Unloading configurable profile '%s'", m_def.profileName.c_str());
 
@@ -107,8 +94,6 @@ void ConfigurableProfile::unload(const SaberServices &services) {
   }
 
   services.bus.clearEffects();
-
-  services.audioCache.unloadAll();
 
   m_swingEffect = nullptr;
   m_lightEffect = nullptr;

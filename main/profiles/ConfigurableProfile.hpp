@@ -62,8 +62,6 @@ public:
   void unload(const SaberServices &services);
 
 private:
-  void logFontPaths() const;
-
   Effects::InertialSwingEffect *m_swingEffect = nullptr;
   Effects::InertialLightEffect *m_lightEffect = nullptr;
   Inertial::InertialDefinition m_def;

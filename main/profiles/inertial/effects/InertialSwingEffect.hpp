@@ -53,7 +53,6 @@ public:
 private:
     static constexpr const char* TAG = "InertialSwing";
     static constexpr uint16_t kMaxVolume14bit = 16384;
-    static constexpr const char* kHumPath = "/mem/hum.wav";
 
     Espressif::Wrappers::Audio::AudioEngine& m_engine;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
