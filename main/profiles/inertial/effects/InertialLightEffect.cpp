@@ -17,6 +17,9 @@ namespace {
 
 constexpr float kHalfPi = std::numbers::pi_v<float> / 2.0f;
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
+constexpr float kExcitationThresholdG = 0.5f;
+constexpr float kFlickerFullScaleG = 4.0f;
+constexpr float kMinFlickerBrightness = 0.8f;
 
 } // namespace
 
@@ -105,7 +108,7 @@ void InertialLightEffect::updateBreathPhase() {
 }
 
 bool InertialLightEffect::isExcited() const {
-  return (m_kineticEnergy >= 0.5f) || (m_inertialOverload > 0.0f);
+  return (m_kineticEnergy >= kExcitationThresholdG) || (m_inertialOverload > 0.0f);
 }
 
 float InertialLightEffect::calculateIdlePulse() const {
@@ -121,10 +124,10 @@ float InertialLightEffect::calculatePlasmaFlicker() const {
   uint32_t rng = esp_random();
   float r = static_cast<float>(rng) / static_cast<float>(UINT32_MAX);
   float noise = (r * 2.0f) - 1.0f;
-  float energyFactor = std::clamp(m_kineticEnergy / 4.0f, 0.0f, 1.0f);
+  float energyFactor = std::clamp(m_kineticEnergy / kFlickerFullScaleG, 0.0f, 1.0f);
   noise *= energyFactor;
 
-  return std::clamp(1.0f - std::abs(noise * m_def.lightFlickerIntensity), 0.8f, 1.0f);
+  return std::clamp(1.0f - std::abs(noise * m_def.lightFlickerIntensity), kMinFlickerBrightness, 1.0f);
 }
 
 void InertialLightEffect::triggerPlasmaRuptureOverlay() {

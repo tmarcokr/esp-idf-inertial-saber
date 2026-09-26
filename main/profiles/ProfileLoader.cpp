@@ -9,12 +9,13 @@
 namespace InertialSaber::Profiles {
 
 static constexpr const char *TAG = "ProfileLoader";
+static constexpr const char *kProfilesDir = "/sdcard/profiles";
 
 esp_err_t ProfileLoader::loadFromSd(std::vector<std::unique_ptr<ConfigurableProfile>> &profiles) {
-  ESP_LOGI(TAG, "Scanning /sdcard/profiles/ ...");
-  System::UniqueDir dir = System::openDir("/sdcard/profiles");
+  ESP_LOGI(TAG, "Scanning %s/ ...", kProfilesDir);
+  System::UniqueDir dir = System::openDir(kProfilesDir);
   if (!dir) {
-    ESP_LOGE(TAG, "opendir('/sdcard/profiles') FAILED — directory not found");
+    ESP_LOGE(TAG, "opendir('%s') FAILED — directory not found", kProfilesDir);
     return ESP_ERR_NOT_FOUND;
   }
 
@@ -29,7 +30,7 @@ esp_err_t ProfileLoader::loadFromSd(std::vector<std::unique_ptr<ConfigurableProf
 
     ESP_LOGI(TAG, "  entry: '%s' (d_type=%d)", entry->d_name, entry->d_type);
 
-    std::string configPath = std::string("/sdcard/profiles/") + entry->d_name + "/profile.json";
+    std::string configPath = std::string(kProfilesDir) + "/" + entry->d_name + "/profile.json";
     ESP_LOGI(TAG, "  trying: %s", configPath.c_str());
 
     System::UniqueFile file = System::openFile(configPath.c_str(), "r");

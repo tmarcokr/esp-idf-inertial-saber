@@ -7,6 +7,7 @@
 namespace InertialSaber::Profiles {
 
 static constexpr const char *TAG = "ProfileManager";
+static constexpr const char *kActiveProfilePath = "/sdcard/active_profile.txt";
 
 esp_err_t ProfileManager::init() {
   ESP_LOGI(TAG, "Initializing profiles...");
@@ -20,7 +21,7 @@ esp_err_t ProfileManager::init() {
   }
 
   m_activeIndex = 0;
-  if (System::UniqueFile file = System::openFile("/sdcard/active_profile.txt", "r")) {
+  if (System::UniqueFile file = System::openFile(kActiveProfilePath, "r")) {
     unsigned int loadedIndex = 0;
     if (fscanf(file.get(), "%u", &loadedIndex) == 1) {
       if (loadedIndex < m_profiles.size()) {
@@ -64,7 +65,7 @@ void ProfileManager::next() {
 }
 
 void ProfileManager::saveActiveIndex() {
-  if (System::UniqueFile file = System::openFile("/sdcard/active_profile.txt", "w")) {
+  if (System::UniqueFile file = System::openFile(kActiveProfilePath, "w")) {
     fprintf(file.get(), "%u\n", (unsigned int)m_activeIndex);
     file.reset();
     ESP_LOGI(TAG, "Saved active profile index: %u", (unsigned)m_activeIndex);

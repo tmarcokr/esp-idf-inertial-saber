@@ -9,6 +9,9 @@ namespace InertialSaber::System::Adapters {
 
 static constexpr const char* TAG = "ImuAdapter";
 static constexpr float kRadToDeg = 180.0f / std::numbers::pi_v<float>;
+static constexpr uint32_t kTaskStackSize = 4096;
+static constexpr uint32_t kStartupDelayMs = 100;
+static constexpr uint32_t kPollTimeoutMs = 20;
 
 ImuAdapter::ImuAdapter(Core::SaberActionBus& bus, Espressif::Wrappers::Sensors::Mpu6050& imu,
                        gpio_num_t interruptPin)
@@ -25,7 +28,7 @@ ImuAdapter::~ImuAdapter() {
 
 esp_err_t ImuAdapter::start() {
     BaseType_t result = xTaskCreatePinnedToCore(
-        imuAdapterTask, "imu_adapter", 4096, this,
+        imuAdapterTask, "imu_adapter", kTaskStackSize, this,
         Hardware::HardwareConfig::kImuAdapterPriority,
         &m_imuTaskHandle, Hardware::HardwareConfig::kImuAdapterCore);
 
@@ -77,10 +80,10 @@ void ImuAdapter::imuAdapterTask(void* arg) {
 }
 
 void ImuAdapter::imuLoop() {
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(kStartupDelayMs));
 
     while (true) {
-        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(20));
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kPollTimeoutMs));
 
         auto data = m_imu.readData();
         if (data) {

@@ -55,7 +55,7 @@ bool KineticImpactEffect::detectClash(const Core::SaberDataPacket &packet) {
 
     float decelerationG = peakKineticEnergyG - packet.kineticEnergy;
 
-    if (decelerationG > m_def.clashThresholdG && (packet.timestampMs - m_lastClashTimeMs) > 500) {
+    if (decelerationG > m_def.clashThresholdG && (packet.timestampMs - m_lastClashTimeMs) > kClashDebounceMs) {
         m_lastClashTimeMs = packet.timestampMs;
         return true;
     }

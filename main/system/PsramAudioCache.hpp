@@ -59,6 +59,9 @@ private:
     static constexpr uint32_t kCloseWaitMs = 200;
     static constexpr uint32_t kClosePollMs = 10;
     static constexpr size_t kPsramHeadroomBytes = 256 * 1024;
+    static constexpr uint32_t kLoaderStackSize = 4096;
+    static constexpr UBaseType_t kLoaderPriority = 2;
+    static constexpr BaseType_t kLoaderCore = 1;
 
     static void loaderTaskFn(void* pvParameters);
     [[noreturn]] void loaderLoop();

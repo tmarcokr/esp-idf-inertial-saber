@@ -46,6 +46,7 @@ public:
 
 private:
     static constexpr const char* TAG = "InertialSwing";
+    static constexpr uint32_t kTelemetryLogIntervalCycles = 400;
 
     Espressif::Wrappers::Audio::AudioEngine& m_engine;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;

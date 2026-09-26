@@ -113,7 +113,7 @@ void InertialSwingEffect::applySwingVolumes(float masterVolume, float finalMix) 
     m_engine.setChannelVolume(m_chSwingL, volL);
     m_engine.setChannelVolume(m_chSwingH, volH);
 
-    if (++m_logCounter >= 400) {
+    if (++m_logCounter >= kTelemetryLogIntervalCycles) {
         m_logCounter = 0;
         auto humVol = static_cast<uint16_t>(m_def.humBaseVolume * std::max(0.0f, 1.0f - masterVolume * m_def.humMaxDucking));
         ESP_LOGI(TAG, "KE:%.2f | MV:%.2f | Mix:%.2f | L:%u H:%u | Hum:%u | OL:%.2f | Pair:%u",

@@ -47,15 +47,9 @@ esp_err_t PsramAudioCache::init() {
     esp_err_t err = m_vfs.init();
     if (err != ESP_OK) return err;
 
-    BaseType_t ret = xTaskCreatePinnedToCore(
-        &PsramAudioCache::loaderTaskFn,
-        "psram_loader",
-        4096,
-        this,
-        2,
-        &m_loaderTask,
-        1
-    );
+    BaseType_t ret = xTaskCreatePinnedToCore(&PsramAudioCache::loaderTaskFn, "psram_loader",
+                                             kLoaderStackSize, this, kLoaderPriority,
+                                             &m_loaderTask, kLoaderCore);
     if (ret != pdPASS) {
         return ESP_ERR_NO_MEM;
     }
@@ -227,7 +221,8 @@ esp_err_t PsramAudioCache::loadFile(const std::string& sdPath, const std::string
     }
 
     if (heap_caps_get_free_size(MALLOC_CAP_SPIRAM) < size + kPsramHeadroomBytes) {
-        ESP_LOGW(TAG, "Not enough PSRAM for '%s' (requires %zu + 256KB threshold)", vfsName.c_str(), size);
+        ESP_LOGW(TAG, "Not enough PSRAM for '%s' (requires %zu + %zu bytes headroom)", vfsName.c_str(), size,
+                 kPsramHeadroomBytes);
         return ESP_ERR_NO_MEM;
     }
 

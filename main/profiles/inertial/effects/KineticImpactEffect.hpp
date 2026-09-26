@@ -2,6 +2,7 @@
 
 #include "core/InertialEffect.hpp"
 #include <array>
+#include <cstddef>
 #include <cstdint>
 
 namespace InertialSaber::Profiles {
@@ -38,6 +39,9 @@ public:
     void run() override;
 
 private:
+    static constexpr size_t kKineticEnergyWindowSize = 4;
+    static constexpr uint32_t kClashDebounceMs = 500;
+
     void clearKineticEnergyWindow();
     bool detectClash(const Core::SaberDataPacket& packet);
 
@@ -47,9 +51,9 @@ private:
     const Profiles::Inertial::InertialDefinition& m_def;
     const Profiles::SoundFont& m_font;
 
-    std::array<float, 4> m_kineticEnergyWindow{};
-    size_t               m_windowIdx = 0;
-    uint32_t             m_lastClashTimeMs = 0;
+    std::array<float, kKineticEnergyWindowSize> m_kineticEnergyWindow{};
+    size_t m_windowIdx = 0;
+    uint32_t m_lastClashTimeMs = 0;
 };
 
 } // namespace InertialSaber::Effects

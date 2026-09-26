@@ -10,6 +10,10 @@ namespace InertialSaber::Effects {
 using namespace Espressif::Wrappers::SmartLed;
 
 static constexpr uint32_t kFadeDurationMs = 150;
+static constexpr uint16_t kThermalHueRoot = 25;
+static constexpr uint16_t kThermalHueSpan = 20;
+static constexpr float kThermalSaturationDrop = 30.0f;
+static constexpr uint8_t kMaxFlickerDrop = 50;
 
 BladeDragEffect::BladeDragEffect(uint16_t numLeds, uint16_t dragLedCount,
                                  std::shared_ptr<const std::atomic<bool>> fadeRequest)
@@ -18,7 +22,8 @@ BladeDragEffect::BladeDragEffect(uint16_t numLeds, uint16_t dragLedCount,
     , m_fadeRequest(std::move(fadeRequest)) {}
 
 void BladeDragEffect::update(uint32_t deltaMs) {
-    if (!m_fading && m_fadeRequest && m_fadeRequest->load()) {
+    // use_count() == 1: the drag owner released the request without setting it.
+    if (!m_fading && m_fadeRequest && (m_fadeRequest->load() || m_fadeRequest.use_count() == 1)) {
         m_fading = true;
     }
 
@@ -51,10 +56,10 @@ void BladeDragEffect::render(Canvas& canvas) {
             factor = static_cast<float>(i - startIdx) / (m_dragLedCount - 1);
         }
 
-        uint8_t flickerOffset = static_cast<uint8_t>(esp_random() % 51);
+        uint8_t flickerOffset = static_cast<uint8_t>(esp_random() % (kMaxFlickerDrop + 1u));
         uint8_t value = 255 - flickerOffset;
-        uint16_t hue = 25 + static_cast<uint16_t>(20.0f * factor);
-        uint8_t saturation = static_cast<uint8_t>(255.0f - (30.0f * factor));
+        uint16_t hue = kThermalHueRoot + static_cast<uint16_t>(kThermalHueSpan * factor);
+        uint8_t saturation = static_cast<uint8_t>(255.0f - (kThermalSaturationDrop * factor));
 
         Color thermalColor = hsvToRgb(hue, saturation, value);
         uint8_t alpha = static_cast<uint8_t>(255.0f * factor * fadeScale);
