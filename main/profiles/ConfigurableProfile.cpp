@@ -36,24 +36,24 @@ const SoundFont &ConfigurableProfile::soundFont() const {
   return m_font;
 }
 
-ConfigurableProfile::PowerState ConfigurableProfile::getPowerState() const {
-  return m_powerState;
+PowerStateMachine &ConfigurableProfile::power() {
+  return m_power;
 }
 
-void ConfigurableProfile::setPowerState(PowerState state) {
-  m_powerState = state;
+const PowerStateMachine &ConfigurableProfile::power() const {
+  return m_power;
 }
 
 void ConfigurableProfile::load(const SaberServices &services, ProfileManager &profileManager) {
   ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName.c_str());
 
-  m_powerState = PowerState::PRELOADING;
+  m_power.handle(PowerStateMachine::Event::Lock);
   services.bus.setPhysicsConfig(m_def);
 
   services.audioCache.requestPreload(m_font);
 
   services.bus.registerEffect(std::make_unique<Effects::PreloadWaitEffect>(
-      *this, services.audio, services.audioCache, services.status, m_font));
+      m_power, services.audio, services.audioCache, services.status, m_font));
 
   auto swingFx = std::make_unique<Effects::InertialSwingEffect>(services.audio, m_def, m_font,
                                                                 services.audioCache);
@@ -65,22 +65,21 @@ void ConfigurableProfile::load(const SaberServices &services, ProfileManager &pr
   services.bus.registerEffect(std::move(lightFx));
 
   auto powerFx = std::make_unique<Effects::PowerToggleEffect>(
-      *this, *m_swingEffect, *m_lightEffect, services.audio, services.blade, m_def, m_font,
+      m_power, *m_swingEffect, *m_lightEffect, services.audio, services.blade, m_def, m_font,
       Core::kMainButtonInputId);
-  auto &powerRef = *powerFx;
   services.bus.registerEffect(std::move(powerFx));
 
   services.bus.registerEffect(std::make_unique<Effects::BlasterEffect>(
-      powerRef, services.audio, services.blade, m_def, m_font, Core::kMainButtonInputId));
+      m_power, services.audio, services.blade, m_def, m_font, Core::kMainButtonInputId));
 
   services.bus.registerEffect(std::make_unique<Effects::KineticImpactEffect>(
-      powerRef, services.audio, services.blade, m_def, m_font));
+      m_power, services.audio, services.blade, m_def, m_font));
 
   services.bus.registerEffect(std::make_unique<Effects::DragEffect>(
-      powerRef, services.audio, services.blade, m_def, m_font, Core::kMainButtonInputId));
+      m_power, services.audio, services.blade, m_def, m_font, Core::kMainButtonInputId));
 
   services.bus.registerEffect(std::make_unique<Effects::ProfileCycleEffect>(
-      *this, profileManager, Core::kMainButtonInputId));
+      m_power, profileManager, Core::kMainButtonInputId));
 }
 
 void ConfigurableProfile::unload(const SaberServices &services) {

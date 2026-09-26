@@ -1,5 +1,5 @@
 #include "ProfileCycleEffect.hpp"
-#include "profiles/ConfigurableProfile.hpp"
+#include "profiles/PowerStateMachine.hpp"
 #include "profiles/ProfileManager.hpp"
 #include "core/SaberDataPacket.hpp"
 #include "esp_log.h"
@@ -8,18 +8,17 @@ namespace InertialSaber::Effects {
 
 static constexpr const char* TAG = "ProfileCycle";
 
-ProfileCycleEffect::ProfileCycleEffect(Profiles::ConfigurableProfile& profile,
+ProfileCycleEffect::ProfileCycleEffect(const Profiles::PowerStateMachine& power,
                                        Profiles::ProfileManager& profileManager,
                                        uint8_t buttonId)
     : InertialEffect(1)
-    , m_profile(profile)
+    , m_power(power)
     , m_profileManager(profileManager)
     , m_buttonId(buttonId)
 {}
 
 bool ProfileCycleEffect::test(const Core::SaberDataPacket& packet) {
-    using PowerState = Profiles::ConfigurableProfile::PowerState;
-    if (m_profile.getPowerState() != PowerState::RETRACTED) return false;
+    if (!m_power.isRetracted()) return false;
     if (m_buttonId >= Core::kMaxInputs) return false;
 
     const auto& input = packet.inputs[m_buttonId];

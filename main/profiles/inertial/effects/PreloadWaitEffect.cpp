@@ -1,5 +1,5 @@
 #include "PreloadWaitEffect.hpp"
-#include "profiles/ConfigurableProfile.hpp"
+#include "profiles/PowerStateMachine.hpp"
 #include "profiles/SoundFont.hpp"
 #include "AudioLevels.hpp"
 #include "system/PsramAudioCache.hpp"
@@ -15,13 +15,13 @@ static constexpr const char* TAG = "PreloadWait";
 
 using System::Status::SystemStatus;
 
-PreloadWaitEffect::PreloadWaitEffect(Profiles::ConfigurableProfile& profile,
+PreloadWaitEffect::PreloadWaitEffect(Profiles::PowerStateMachine& power,
                                      Espressif::Wrappers::Audio::AudioEngine& audio,
                                      const System::PsramAudioCache& audioCache,
                                      System::Status::StatusIndicator& status,
                                      const Profiles::SoundFont& font)
     : InertialEffect(0)
-    , m_profile(profile)
+    , m_power(power)
     , m_audio(audio)
     , m_audioCache(audioCache)
     , m_status(status)
@@ -29,7 +29,7 @@ PreloadWaitEffect::PreloadWaitEffect(Profiles::ConfigurableProfile& profile,
 {}
 
 bool PreloadWaitEffect::test(const Core::SaberDataPacket&) {
-    return m_profile.getPowerState() == Profiles::ConfigurableProfile::PowerState::PRELOADING;
+    return m_power.state() == Profiles::PowerStateMachine::State::Locked;
 }
 
 void PreloadWaitEffect::run() {
@@ -38,7 +38,7 @@ void PreloadWaitEffect::run() {
         return;
     }
 
-    m_profile.setPowerState(Profiles::ConfigurableProfile::PowerState::RETRACTED);
+    m_power.handle(Profiles::PowerStateMachine::Event::PreloadDone);
 
     m_status.show(SystemStatus::Ready);
 

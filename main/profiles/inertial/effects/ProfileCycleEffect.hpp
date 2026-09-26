@@ -7,21 +7,21 @@ namespace InertialSaber::Core {
 struct SaberDataPacket;
 }
 namespace InertialSaber::Profiles {
-class ConfigurableProfile;
+class PowerStateMachine;
 class ProfileManager;
 }
 
 namespace InertialSaber::Effects {
 
 /**
- * @brief Cycles to the next profile on a Click with pressCount=3 while the saber is RETRACTED.
+ * @brief Cycles to the next profile on a Click with pressCount=3 while the saber is retracted.
  */
 class ProfileCycleEffect final : public Core::InertialEffect {
 public:
     /**
      * @brief Construct a new ProfileCycleEffect.
      */
-    ProfileCycleEffect(Profiles::ConfigurableProfile& profile,
+    ProfileCycleEffect(const Profiles::PowerStateMachine& power,
                        Profiles::ProfileManager& profileManager,
                        uint8_t buttonId);
 
@@ -36,7 +36,7 @@ public:
     void run() override;
 
 private:
-    Profiles::ConfigurableProfile& m_profile;
+    const Profiles::PowerStateMachine& m_power;
     Profiles::ProfileManager&      m_profileManager;
     uint8_t                        m_buttonId;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "profiles/inertial/InertialDefinition.hpp"
+#include "profiles/PowerStateMachine.hpp"
 #include "profiles/SaberServices.hpp"
 #include "profiles/SoundFont.hpp"
 #include <cstdint>
@@ -20,18 +21,10 @@ class ProfileManager;
  * @brief A generic profile driven by an InertialDefinition structure.
  *
  * Instantiates and registers the core effects suite on the SaberActionBus.
- * Owns the PowerState lifecycle and non-owning pointers to the engine effects.
+ * Owns the power state machine and non-owning pointers to the engine effects.
  */
 class ConfigurableProfile final {
 public:
-  enum class PowerState : uint8_t {
-      RETRACTED,
-      IGNITING,
-      IGNITED,
-      RETRACTING,
-      PRELOADING
-  };
-
   /**
    * @brief Parses a profile.json document once and builds the profile from it.
    * @return The profile, or nullptr if the JSON cannot be parsed.
@@ -48,8 +41,8 @@ public:
   [[nodiscard]] const Inertial::InertialDefinition &definition() const;
   [[nodiscard]] const SoundFont &soundFont() const;
 
-  [[nodiscard]] PowerState getPowerState() const;
-  void setPowerState(PowerState state);
+  [[nodiscard]] PowerStateMachine &power();
+  [[nodiscard]] const PowerStateMachine &power() const;
 
   /**
    * @brief Instantiate and register this profile's effects on the bus.
@@ -66,7 +59,7 @@ private:
   Effects::InertialLightEffect *m_lightEffect = nullptr;
   Inertial::InertialDefinition m_def;
   SoundFont m_font;
-  PowerState m_powerState = PowerState::RETRACTED;
+  PowerStateMachine m_power;
 };
 
 } // namespace InertialSaber::Profiles

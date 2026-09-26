@@ -6,6 +6,7 @@
 #include <cstdint>
 
 namespace InertialSaber::Profiles {
+class PowerStateMachine;
 class SoundFont;
 }
 namespace InertialSaber::Core {
@@ -13,7 +14,6 @@ namespace InertialSaber::Core {
 struct SaberDataPacket;
 }
 namespace InertialSaber::Effects {
-class PowerToggleEffect;
 class BladeDragEffect;
 }
 namespace Espressif::Wrappers::Audio {
@@ -32,7 +32,7 @@ class DragEffect final : public Core::InertialEffect {
 public:
     /**
      * @brief Construct a new Drag Effect.
-     * @param power Power toggle effect reference.
+     * @param power Power state machine of the active profile.
      * @param audio Audio engine reference.
      * @param ledEngine SmartLed engine reference.
      * @param definition Active inertial definition.
@@ -40,7 +40,7 @@ public:
      * @param buttonId Trigger button identifier.
      */
     DragEffect(
-        PowerToggleEffect& power,
+        const Profiles::PowerStateMachine& power,
         Espressif::Wrappers::Audio::AudioEngine& audio,
         Espressif::Wrappers::SmartLed::Engine& ledEngine,
         const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
@@ -51,7 +51,7 @@ public:
     void run() override;
 
 private:
-    PowerToggleEffect& m_power;
+    const Profiles::PowerStateMachine& m_power;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;

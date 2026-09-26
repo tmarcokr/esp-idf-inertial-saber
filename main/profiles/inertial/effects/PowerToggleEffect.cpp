@@ -1,5 +1,5 @@
 #include "PowerToggleEffect.hpp"
-#include "profiles/ConfigurableProfile.hpp"
+#include "profiles/PowerStateMachine.hpp"
 #include "AudioEngine.hpp"
 #include "AudioLevels.hpp"
 #include "overlays/BladeIgniteSweep.hpp"
@@ -28,13 +28,13 @@ static uint32_t nowMs() {
 }
 
 PowerToggleEffect::PowerToggleEffect(
-    Profiles::ConfigurableProfile &profile,
+    Profiles::PowerStateMachine &power,
     InertialSwingEffect &swing, InertialLightEffect &light,
     Espressif::Wrappers::Audio::AudioEngine &audio,
     Espressif::Wrappers::SmartLed::Engine &ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition &definition,
     const Profiles::SoundFont &font, uint8_t buttonId)
-    : InertialEffect(1), m_profile(profile), m_swing(swing), m_light(light), m_audio(audio), m_ledEngine(ledEngine),
+    : InertialEffect(1), m_power(power), m_swing(swing), m_light(light), m_audio(audio), m_ledEngine(ledEngine),
       m_def(definition), m_font(font), m_buttonId(buttonId) {}
 
 bool PowerToggleEffect::test(const Core::SaberDataPacket& packet) {
@@ -42,23 +42,23 @@ bool PowerToggleEffect::test(const Core::SaberDataPacket& packet) {
         return false;
     }
 
-    using ProfileState = Profiles::ConfigurableProfile::PowerState;
+    using State        = Profiles::PowerStateMachine::State;
     using Gesture      = Core::InputDescriptor::Gesture;
 
-    const auto state  = m_profile.getPowerState();
+    const auto state  = m_power.state();
     const auto& input = packet.inputs[m_buttonId];
 
-    if (state == ProfileState::IGNITING || state == ProfileState::RETRACTING) {
+    if (state == State::Igniting || state == State::Retracting) {
         return true;
     }
 
-    if (state == ProfileState::RETRACTED &&
+    if (state == State::Retracted &&
         input.gesture == Gesture::Click && input.pressCount == 1) {
         m_pendingTransition = true;
         return true;
     }
 
-    if (state == ProfileState::IGNITED &&
+    if (state == State::Ignited &&
         input.gesture == Gesture::Click && input.pressCount == 2) {
         m_pendingTransition = true;
         return true;
@@ -68,31 +68,31 @@ bool PowerToggleEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void PowerToggleEffect::run() {
-  using ProfileState = Profiles::ConfigurableProfile::PowerState;
-  switch (m_profile.getPowerState()) {
-  case ProfileState::RETRACTED:
+  using State = Profiles::PowerStateMachine::State;
+  switch (m_power.state()) {
+  case State::Retracted:
     if (m_pendingTransition) {
       m_pendingTransition = false;
       beginIgnition();
     }
     break;
 
-  case ProfileState::IGNITING:
+  case State::Igniting:
     tickIgnition();
     break;
 
-  case ProfileState::IGNITED:
+  case State::Ignited:
     if (m_pendingTransition) {
       m_pendingTransition = false;
       beginRetraction();
     }
     break;
 
-  case ProfileState::RETRACTING:
+  case State::Retracting:
     tickRetraction();
     break;
 
-  case ProfileState::PRELOADING:
+  case State::Locked:
     break;
   }
 }
@@ -106,7 +106,7 @@ void PowerToggleEffect::beginIgnition() {
 
   m_sequenceStartMs = nowMs();
   m_enginesStarted = false;
-  m_profile.setPowerState(Profiles::ConfigurableProfile::PowerState::IGNITING);
+  m_power.handle(Profiles::PowerStateMachine::Event::IgniteRequested);
 
   ESP_LOGI(TAG, "Ignition started — %s (%" PRIu32 " ms)", path.c_str(), m_def.ignitionDurationMs);
 }
@@ -123,7 +123,7 @@ void PowerToggleEffect::tickIgnition() {
   }
 
   if (elapsed >= m_def.ignitionDurationMs) {
-    m_profile.setPowerState(Profiles::ConfigurableProfile::PowerState::IGNITED);
+    m_power.handle(Profiles::PowerStateMachine::Event::IgnitionElapsed);
     ESP_LOGI(TAG, "Saber ON");
   }
 }
@@ -139,24 +139,16 @@ void PowerToggleEffect::beginRetraction() {
       m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.retractionDurationMs));
 
   m_sequenceStartMs = nowMs();
-  m_profile.setPowerState(Profiles::ConfigurableProfile::PowerState::RETRACTING);
+  m_power.handle(Profiles::PowerStateMachine::Event::RetractRequested);
 
   ESP_LOGI(TAG, "Retraction started — %s (%" PRIu32 " ms)", path.c_str(), m_def.retractionDurationMs);
 }
 
 void PowerToggleEffect::tickRetraction() {
   if ((nowMs() - m_sequenceStartMs) >= m_def.retractionDurationMs) {
-    m_profile.setPowerState(Profiles::ConfigurableProfile::PowerState::RETRACTED);
+    m_power.handle(Profiles::PowerStateMachine::Event::RetractionElapsed);
     ESP_LOGI(TAG, "Saber OFF");
   }
-}
-
-bool PowerToggleEffect::isIgnited() const {
-  return m_profile.getPowerState() == Profiles::ConfigurableProfile::PowerState::IGNITED;
-}
-
-bool PowerToggleEffect::isRetracted() const {
-  return m_profile.getPowerState() == Profiles::ConfigurableProfile::PowerState::RETRACTED;
 }
 
 } // namespace InertialSaber::Effects

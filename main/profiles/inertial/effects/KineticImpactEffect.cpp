@@ -3,8 +3,8 @@
 #include "AudioLevels.hpp"
 #include "overlays/BladeClashFlash.hpp"
 #include "Engine.hpp"
-#include "PowerToggleEffect.hpp"
 #include "profiles/inertial/InertialDefinition.hpp"
+#include "profiles/PowerStateMachine.hpp"
 #include "profiles/SoundFont.hpp"
 #include "core/SaberDataPacket.hpp"
 
@@ -17,7 +17,7 @@ namespace InertialSaber::Effects {
 static constexpr const char *TAG = "KineticImpact";
 
 KineticImpactEffect::KineticImpactEffect(
-    PowerToggleEffect &power,
+    const Profiles::PowerStateMachine &power,
     Espressif::Wrappers::Audio::AudioEngine &audio,
     Espressif::Wrappers::SmartLed::Engine &ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition &definition,

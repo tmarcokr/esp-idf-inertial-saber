@@ -7,7 +7,7 @@ struct SaberDataPacket;
 }
 
 namespace InertialSaber::Profiles {
-class ConfigurableProfile;
+class PowerStateMachine;
 class SoundFont;
 }
 
@@ -30,7 +30,7 @@ namespace InertialSaber::Effects {
  */
 class PreloadWaitEffect final : public Core::InertialEffect {
 public:
-    PreloadWaitEffect(Profiles::ConfigurableProfile& profile,
+    PreloadWaitEffect(Profiles::PowerStateMachine& power,
                       Espressif::Wrappers::Audio::AudioEngine& audio,
                       const System::PsramAudioCache& audioCache,
                       System::Status::StatusIndicator& status,
@@ -40,7 +40,7 @@ public:
     void run() override;
 
 private:
-    Profiles::ConfigurableProfile&           m_profile;
+    Profiles::PowerStateMachine&             m_power;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     const System::PsramAudioCache&           m_audioCache;
     System::Status::StatusIndicator&         m_status;

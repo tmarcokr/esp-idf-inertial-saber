@@ -9,7 +9,7 @@ namespace InertialSaber::Core {
 struct SaberDataPacket;
 }
 namespace InertialSaber::Profiles {
-class ConfigurableProfile;
+class PowerStateMachine;
 class SoundFont;
 }
 namespace InertialSaber::Effects {
@@ -31,7 +31,7 @@ namespace InertialSaber::Effects {
 class PowerToggleEffect final : public Core::InertialEffect {
 public:
     PowerToggleEffect(
-        Profiles::ConfigurableProfile&           profile,
+        Profiles::PowerStateMachine&             power,
         InertialSwingEffect&                     swing,
         InertialLightEffect&                     light,
         Espressif::Wrappers::Audio::AudioEngine& audio,
@@ -42,8 +42,6 @@ public:
 
     bool test(const Core::SaberDataPacket& packet) override;
     void run() override;
-    [[nodiscard]] bool isIgnited() const;
-    [[nodiscard]] bool isRetracted() const;
 
 private:
     void beginIgnition();
@@ -51,7 +49,7 @@ private:
     void beginRetraction();
     void tickRetraction();
 
-    Profiles::ConfigurableProfile&           m_profile;
+    Profiles::PowerStateMachine&             m_power;
     InertialSwingEffect&                     m_swing;
     InertialLightEffect&                     m_light;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;

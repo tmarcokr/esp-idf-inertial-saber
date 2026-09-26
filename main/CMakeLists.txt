@@ -12,6 +12,7 @@ idf_component_register(
          "profiles/ConfigurableProfile.cpp"
          "profiles/ProfileParser.cpp"
          "profiles/SoundFont.cpp"
+         "profiles/PowerStateMachine.cpp"
          "profiles/ProfileLoader.cpp"
          "profiles/ProfileManager.cpp"
          "profiles/inertial/effects/overlays/BladeIgniteSweep.cpp"

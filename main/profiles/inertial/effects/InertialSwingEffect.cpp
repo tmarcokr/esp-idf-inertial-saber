@@ -1,4 +1,5 @@
 #include "InertialSwingEffect.hpp"
+#include "AudioLevels.hpp"
 
 #include "esp_log.h"
 #include "esp_random.h"
@@ -109,8 +110,8 @@ float InertialSwingEffect::computeFinalMix() const {
 }
 
 void InertialSwingEffect::applySwingVolumes(float masterVolume, float finalMix) {
-    auto volL = static_cast<uint16_t>(masterVolume * (1.0f - finalMix) * kMaxVolume14bit);
-    auto volH = static_cast<uint16_t>(masterVolume * finalMix * kMaxVolume14bit);
+    auto volL = static_cast<uint16_t>(masterVolume * (1.0f - finalMix) * kFullVolume);
+    auto volH = static_cast<uint16_t>(masterVolume * finalMix * kFullVolume);
 
     m_engine.setChannelVolume(m_chSwingL, volL);
     m_engine.setChannelVolume(m_chSwingH, volH);
@@ -135,7 +136,7 @@ void InertialSwingEffect::applyHumDucking(float masterVolume) {
 void InertialSwingEffect::handleInertialBurst() {
     if (!m_inertialBurst || m_font.count(Profiles::FontCategory::Burst) == 0) return;
 
-    m_engine.play(m_font.randomPath(Profiles::FontCategory::Burst), false, kMaxVolume14bit);
+    m_engine.play(m_font.randomPath(Profiles::FontCategory::Burst), false, kFullVolume);
 
     ESP_LOGI(TAG, "Inertial Burst triggered");
 }

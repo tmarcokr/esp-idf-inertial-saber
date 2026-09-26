@@ -6,14 +6,12 @@
 #include <cstdint>
 
 namespace InertialSaber::Profiles {
+class PowerStateMachine;
 class SoundFont;
 }
 namespace InertialSaber::Core {
 
 struct SaberDataPacket;
-}
-namespace InertialSaber::Effects {
-class PowerToggleEffect;
 }
 namespace Espressif::Wrappers::Audio {
 class AudioEngine;
@@ -30,7 +28,7 @@ namespace InertialSaber::Effects {
 class KineticImpactEffect final : public Core::InertialEffect {
 public:
     KineticImpactEffect(
-        PowerToggleEffect&                      power,
+        const Profiles::PowerStateMachine&      power,
         Espressif::Wrappers::Audio::AudioEngine& audio,
         Espressif::Wrappers::SmartLed::Engine&  ledEngine,
         const InertialSaber::Profiles::Inertial::InertialDefinition&         definition,
@@ -43,7 +41,7 @@ private:
     void clearKineticEnergyWindow();
     bool detectClash(const Core::SaberDataPacket& packet);
 
-    PowerToggleEffect&                       m_power;
+    const Profiles::PowerStateMachine&       m_power;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
     Espressif::Wrappers::SmartLed::Engine&   m_ledEngine;
     const InertialSaber::Profiles::Inertial::InertialDefinition&          m_def;
