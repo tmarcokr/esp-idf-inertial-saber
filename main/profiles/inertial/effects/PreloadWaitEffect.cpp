@@ -33,9 +33,19 @@ bool PreloadWaitEffect::test(const Core::SaberDataPacket&) {
 }
 
 void PreloadWaitEffect::run() {
-    if (!m_audioCache.isPreloadComplete()) {
+    using PreloadStatus = System::PsramAudioCache::PreloadStatus;
+    switch (m_audioCache.preloadStatus()) {
+    case PreloadStatus::Pending:
         m_status.show(SystemStatus::Preloading);
         return;
+    case PreloadStatus::Failed:
+        m_power.handle(Profiles::PowerStateMachine::Event::PreloadFailed);
+        m_status.show(SystemStatus::Error);
+        ESP_LOGE(TAG, "Preload failed for '%s'. Ignition disabled; triple-click to cycle profile.",
+                 m_font.root().c_str());
+        return;
+    case PreloadStatus::Ready:
+        break;
     }
 
     m_power.handle(Profiles::PowerStateMachine::Event::PreloadDone);

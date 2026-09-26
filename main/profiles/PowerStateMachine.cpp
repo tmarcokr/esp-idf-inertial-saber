@@ -16,10 +16,13 @@ using Event = PowerStateMachine::Event;
 constexpr std::optional<State> nextState(State from, Event event) {
     switch (event) {
     case Event::Lock:
-        if (from == State::Locked || from == State::Retracted) return State::Locked;
+        if (from == State::Locked || from == State::Retracted || from == State::Faulted) return State::Locked;
         break;
     case Event::PreloadDone:
         if (from == State::Locked) return State::Retracted;
+        break;
+    case Event::PreloadFailed:
+        if (from == State::Locked) return State::Faulted;
         break;
     case Event::IgniteRequested:
         if (from == State::Retracted) return State::Igniting;

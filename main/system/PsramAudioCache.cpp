@@ -83,9 +83,12 @@ void PsramAudioCache::requestPreload(const Profiles::SoundFont& font) {
     }
 }
 
-bool PsramAudioCache::isPreloadComplete() const {
-    return m_completedGeneration.load(std::memory_order_acquire) ==
-           m_requestedGeneration.load(std::memory_order_acquire);
+PsramAudioCache::PreloadStatus PsramAudioCache::preloadStatus() const {
+    const uint32_t requested = m_requestedGeneration.load(std::memory_order_acquire);
+    const uint32_t completed = m_completedGeneration.load(std::memory_order_acquire);
+    if (requested == kNoGeneration || completed != requested) return PreloadStatus::Pending;
+    return m_failedGeneration.load(std::memory_order_acquire) == completed ? PreloadStatus::Failed
+                                                                           : PreloadStatus::Ready;
 }
 
 uint8_t PsramAudioCache::loadedSwingPairCount() const {
@@ -161,7 +164,9 @@ void PsramAudioCache::runPreload(const PreloadJob& job) {
     }
 
     if (loadFile(job.font.humPath(), std::string(kHumName)) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to load hum.wav to PSRAM. Aborting preload.");
+        ESP_LOGE(TAG, "Preload gen %lu failed: hum.wav could not be loaded to PSRAM", generation);
+        // Warning: must be published before m_completedGeneration; preloadStatus() relies on this order.
+        m_failedGeneration.store(job.generation, std::memory_order_release);
         m_completedGeneration.store(job.generation, std::memory_order_release);
         return;
     }

@@ -27,6 +27,8 @@ namespace InertialSaber::Effects {
 
 /**
  * @brief Effect that blocks input and waits for the PSRAM preload to complete before unlocking the saber and playing the selection sound.
+ *
+ * If the preload fails, faults the power state machine (ignition refused) and shows the error status.
  */
 class PreloadWaitEffect final : public Core::InertialEffect {
 public:
