@@ -39,9 +39,14 @@ esp_err_t ProfileLoader::loadFromSd(std::vector<std::unique_ptr<ConfigurableProf
       continue;
     }
 
-    fseek(file.get(), 0, SEEK_END);
-    long size = ftell(file.get());
-    fseek(file.get(), 0, SEEK_SET);
+    long size = -1;
+    if (fseek(file.get(), 0, SEEK_END) == 0) {
+      size = ftell(file.get());
+    }
+    if (size < 0 || fseek(file.get(), 0, SEEK_SET) != 0) {
+      ESP_LOGW(TAG, "  cannot determine size of: %s", configPath.c_str());
+      continue;
+    }
 
     ESP_LOGI(TAG, "  file size: %ld bytes", size);
 

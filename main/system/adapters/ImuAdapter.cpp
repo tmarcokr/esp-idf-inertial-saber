@@ -37,7 +37,6 @@ esp_err_t ImuAdapter::start() {
         return ESP_FAIL;
     }
 
-    // ── IMU Interrupt Configuration ──
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << m_interruptPin),
         .mode = GPIO_MODE_INPUT,
@@ -45,7 +44,10 @@ esp_err_t ImuAdapter::start() {
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_POSEDGE,
     };
-    gpio_config(&io_conf);
+    const esp_err_t config_err = gpio_config(&io_conf);
+    if (config_err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to configure IMU interrupt pin: %s", esp_err_to_name(config_err));
+    }
 
     esp_err_t isr_err = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
     if (isr_err != ESP_OK && isr_err != ESP_ERR_INVALID_STATE) {
@@ -56,6 +58,9 @@ esp_err_t ImuAdapter::start() {
         m_isrHandlerAdded = true;
     } else {
         ESP_LOGE(TAG, "Failed to add IMU ISR handler: %s", esp_err_to_name(add_err));
+    }
+    if (config_err != ESP_OK || !m_isrHandlerAdded) {
+        ESP_LOGW(TAG, "IMU interrupt unavailable, polling every %lu ms", static_cast<unsigned long>(kPollTimeoutMs));
     }
 
     ESP_LOGI(TAG, "IMU Adapter started successfully");

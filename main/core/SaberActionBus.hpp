@@ -92,7 +92,8 @@ public:
      * @brief Push a button state change into the bus input queue.
      *
      * Called by InputAdapters when a state transition is detected.
-     * Automatically wakes the bus task via notification.
+     * Automatically wakes the bus task via notification. Never blocks: when the
+     * queue is full the event is dropped and the bus task logs the drop count.
      *
      * @param inputId Button index (0...kMaxInputs-1).
      * @param descriptor Full state snapshot at the moment of transition.
@@ -108,6 +109,7 @@ private:
     std::atomic<TaskHandle_t> m_taskHandle{nullptr};
     std::atomic<QueueHandle_t> m_inputQueue{nullptr};
     std::atomic<bool> m_running{false};
+    std::atomic<uint32_t> m_droppedInputEvents{0};
 
     std::vector<std::unique_ptr<InertialEffect>> m_effects;
     std::vector<std::unique_ptr<InertialEffect>> m_effectsPendingDestruction;

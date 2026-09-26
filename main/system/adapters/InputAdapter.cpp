@@ -14,12 +14,12 @@ InputAdapter::InputAdapter(Core::SaberActionBus& bus,
 
 InputAdapter::~InputAdapter() {
     if (m_clickTimer) {
-        esp_timer_stop(m_clickTimer);
-        esp_timer_delete(m_clickTimer);
+        (void)esp_timer_stop(m_clickTimer);
+        (void)esp_timer_delete(m_clickTimer);
     }
     if (m_holdTimer) {
-        esp_timer_stop(m_holdTimer);
-        esp_timer_delete(m_holdTimer);
+        (void)esp_timer_stop(m_holdTimer);
+        (void)esp_timer_delete(m_holdTimer);
     }
 }
 
@@ -66,28 +66,35 @@ esp_err_t InputAdapter::start() {
 
 void InputAdapter::onPressDown() {
     const uint32_t now = esp_timer_get_time() / 1000;
-    std::lock_guard lock(m_stateMutex);
+    esp_err_t timerErr = ESP_OK;
+    {
+        std::lock_guard lock(m_stateMutex);
 
-    m_btnState.previous         = m_btnState.current;
-    m_btnState.current          = Core::InputDescriptor::State::Pressed;
-    m_btnState.lastTransitionMs = now;
+        m_btnState.previous         = m_btnState.current;
+        m_btnState.current          = Core::InputDescriptor::State::Pressed;
+        m_btnState.lastTransitionMs = now;
 
-    ++m_pendingClicks;
+        ++m_pendingClicks;
 
-    esp_timer_stop(m_clickTimer);
-    esp_timer_start_once(m_clickTimer,
-                         static_cast<uint64_t>(Hardware::HardwareConfig::kClickWindowMs) * 1000ULL);
+        (void)esp_timer_stop(m_clickTimer);
+        timerErr = esp_timer_start_once(
+            m_clickTimer, static_cast<uint64_t>(Hardware::HardwareConfig::kClickWindowMs) * 1000ULL);
 
-    m_btnState.gesture = Core::InputDescriptor::Gesture::None;
-    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
-    m_btnState.gesture = Core::InputDescriptor::Gesture::None;
+        m_btnState.gesture = Core::InputDescriptor::Gesture::None;
+        m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
+        m_btnState.gesture = Core::InputDescriptor::Gesture::None;
+    }
+
+    if (timerErr != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start click window timer: %s", esp_err_to_name(timerErr));
+    }
 }
 
 void InputAdapter::onPressUp() {
     const uint32_t now = esp_timer_get_time() / 1000;
     std::lock_guard lock(m_stateMutex);
 
-    esp_timer_stop(m_holdTimer);
+    (void)esp_timer_stop(m_holdTimer);
     m_holdLevel = 0;
 
     m_btnState.previous         = m_btnState.current;
@@ -103,15 +110,20 @@ void InputAdapter::onPressUp() {
 
 void InputAdapter::onFirstHoldTick() {
     uint8_t level = 0;
+    esp_err_t timerErr = ESP_OK;
     {
         std::lock_guard lock(m_stateMutex);
 
-        esp_timer_stop(m_clickTimer);
+        (void)esp_timer_stop(m_clickTimer);
         m_pendingClicks = 0;
 
         level = emitHoldTickLocked();
-        esp_timer_start_periodic(m_holdTimer,
-                                 static_cast<uint64_t>(Hardware::HardwareConfig::kHoldTickMs) * 1000ULL);
+        timerErr = esp_timer_start_periodic(
+            m_holdTimer, static_cast<uint64_t>(Hardware::HardwareConfig::kHoldTickMs) * 1000ULL);
+    }
+
+    if (timerErr != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start hold tick timer: %s", esp_err_to_name(timerErr));
     }
 
     ESP_LOGD(TAG, "Gesture resolved: HoldTick level=%u (%u ms)",

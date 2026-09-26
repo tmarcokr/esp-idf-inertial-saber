@@ -62,7 +62,10 @@ struct MemoryVfs::VfsHooks {
 
 MemoryVfs::~MemoryVfs() {
     if (m_initialized) {
-        esp_vfs_unregister_fs(m_mountPoint.c_str());
+        const esp_err_t err = esp_vfs_unregister_fs(m_mountPoint.c_str());
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to unregister MemoryVfs (err=%s)", esp_err_to_name(err));
+        }
     }
 }
 

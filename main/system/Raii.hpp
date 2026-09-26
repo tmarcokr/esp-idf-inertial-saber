@@ -26,6 +26,11 @@ using UniqueDir = std::unique_ptr<DIR, DirCloser>;
     return UniqueFile(std::fopen(path, mode));
 }
 
+/** @brief Closes @p file now and reports the result, which the destructor would discard (e.g. write-back errors). */
+[[nodiscard]] inline bool closeFile(UniqueFile file) {
+    return file && std::fclose(file.release()) == 0;
+}
+
 /** @brief opendir() wrapper; returns null on failure with errno set. */
 [[nodiscard]] inline UniqueDir openDir(const char* path) {
     return UniqueDir(opendir(path));

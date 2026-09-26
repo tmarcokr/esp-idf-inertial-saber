@@ -11,8 +11,10 @@ using Status::SystemStatus;
 esp_err_t SaberSystem::start() {
   ESP_LOGD(TAG, "sizeof(SaberSystem) = %u", static_cast<unsigned>(sizeof(SaberSystem)));
 
-  if (m_status.init() == ESP_OK) {
+  if (const esp_err_t statusErr = m_status.init(); statusErr == ESP_OK) {
     m_status.show(SystemStatus::Booting);
+  } else {
+    ESP_LOGW(TAG, "Status indicator init failed: %s", esp_err_to_name(statusErr));
   }
 
   const esp_err_t err = internalStart();

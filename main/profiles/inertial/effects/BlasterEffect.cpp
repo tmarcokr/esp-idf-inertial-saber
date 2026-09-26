@@ -49,8 +49,10 @@ void BlasterEffect::run() {
   const std::string path = m_font.randomPath(Profiles::FontCategory::Blaster);
 
   m_audio.play(path, false, kFullVolume);
-  m_ledEngine.pushOverlay(std::make_unique<BladeBlasterBlock>(
-      m_ledEngine.numLeds(), m_def.blasterLedCount, m_def.blasterDurationMs));
+  if (!m_ledEngine.pushOverlay(std::make_unique<BladeBlasterBlock>(
+          m_ledEngine.numLeds(), m_def.blasterLedCount, m_def.blasterDurationMs))) {
+    ESP_LOGW(TAG, "Blaster overlay dropped: no free overlay slot");
+  }
 
   ESP_LOGI(TAG, "Blaster block triggered: %s", path.c_str());
 }

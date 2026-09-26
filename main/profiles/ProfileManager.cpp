@@ -3,6 +3,7 @@
 #include "system/Raii.hpp"
 #include "esp_log.h"
 #include <cstdio>
+#include <utility>
 
 namespace InertialSaber::Profiles {
 
@@ -65,13 +66,18 @@ void ProfileManager::next() {
 }
 
 void ProfileManager::saveActiveIndex() {
-  if (System::UniqueFile file = System::openFile(kActiveProfilePath, "w")) {
-    fprintf(file.get(), "%u\n", (unsigned int)m_activeIndex);
-    file.reset();
-    ESP_LOGI(TAG, "Saved active profile index: %u", (unsigned)m_activeIndex);
-  } else {
+  System::UniqueFile file = System::openFile(kActiveProfilePath, "w");
+  if (!file) {
     ESP_LOGE(TAG, "Failed to open active_profile.txt for writing");
+    return;
   }
+  const bool written = fprintf(file.get(), "%u\n", static_cast<unsigned>(m_activeIndex)) > 0;
+  const bool closed = System::closeFile(std::move(file));
+  if (!written || !closed) {
+    ESP_LOGE(TAG, "Failed to write active_profile.txt");
+    return;
+  }
+  ESP_LOGI(TAG, "Saved active profile index: %u", static_cast<unsigned>(m_activeIndex));
 }
 
 } // namespace InertialSaber::Profiles

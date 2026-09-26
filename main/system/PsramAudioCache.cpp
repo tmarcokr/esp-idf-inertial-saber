@@ -255,14 +255,21 @@ void PsramAudioCache::unloadFile(const std::string& vfsName) {
     configASSERT(xTaskGetCurrentTaskHandle() == m_loaderTask);
     auto it = std::find(m_registeredNames.begin(), m_registeredNames.end(), vfsName);
     if (it == m_registeredNames.end()) return;
-    m_vfs.unregisterFile(vfsName);
+    releaseFile(vfsName);
     m_registeredNames.erase(it);
+}
+
+void PsramAudioCache::releaseFile(const std::string& vfsName) {
+    const esp_err_t err = m_vfs.unregisterFile(vfsName);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to unregister '%s' (err=%s)", vfsName.c_str(), esp_err_to_name(err));
+    }
 }
 
 void PsramAudioCache::unloadAll() {
     configASSERT(xTaskGetCurrentTaskHandle() == m_loaderTask);
     for (const auto& name : m_registeredNames) {
-        m_vfs.unregisterFile(name);
+        releaseFile(name);
     }
     m_registeredNames.clear();
 }

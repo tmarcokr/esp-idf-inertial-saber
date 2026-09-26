@@ -3,6 +3,7 @@
 #include "SmartLedTypes.hpp"
 #include "effects/Flash.hpp"
 
+#include "esp_log.h"
 #include "esp_random.h"
 
 #include <algorithm>
@@ -15,6 +16,7 @@ using namespace Espressif::Wrappers::SmartLed;
 
 namespace {
 
+constexpr const char* TAG = "InertialLight";
 constexpr float kHalfPi = std::numbers::pi_v<float> / 2.0f;
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 constexpr float kExcitationThresholdG = 0.5f;
@@ -133,7 +135,9 @@ float InertialLightEffect::calculatePlasmaFlicker() const {
 void InertialLightEffect::triggerPlasmaRuptureOverlay() {
   uint16_t burstHue = (m_baseHue + 180) % 360;
   Color burstColor = hsvToRgb(burstHue, 255, 255);
-  m_ledEngine.pushOverlay(std::make_unique<Flash>(burstColor, m_def.lightBurstDurationMs, 0, 1));
+  if (!m_ledEngine.pushOverlay(std::make_unique<Flash>(burstColor, m_def.lightBurstDurationMs, 0, 1))) {
+    ESP_LOGW(TAG, "Plasma Rupture overlay dropped: no free overlay slot");
+  }
 }
 
 } // namespace InertialSaber::Effects

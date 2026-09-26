@@ -72,6 +72,7 @@ private:
 
     [[nodiscard]] esp_err_t loadFile(const std::string& sdPath, const std::string& vfsName);
     void unloadFile(const std::string& vfsName);
+    void releaseFile(const std::string& vfsName);
     void unloadAll();
 
     Espressif::Wrappers::MemoryVfs m_vfs;

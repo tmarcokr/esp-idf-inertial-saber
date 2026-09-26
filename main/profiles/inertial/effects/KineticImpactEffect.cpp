@@ -67,8 +67,10 @@ void KineticImpactEffect::run() {
     const std::string path = m_font.randomPath(Profiles::FontCategory::Clash);
 
     m_audio.play(path, false, kFullVolume);
-    m_ledEngine.pushOverlay(std::make_unique<BladeClashFlash>(
-        m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.clashDurationMs));
+    if (!m_ledEngine.pushOverlay(std::make_unique<BladeClashFlash>(
+            m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.clashDurationMs))) {
+        ESP_LOGW(TAG, "Clash overlay dropped: no free overlay slot");
+    }
 
     ESP_LOGI(TAG, "Clash triggered: %s (G drop threshold: %.2f)", path.c_str(), m_def.clashThresholdG);
 }

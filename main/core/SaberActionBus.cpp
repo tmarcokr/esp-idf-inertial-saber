@@ -123,7 +123,9 @@ void SaberActionBus::pushInputEvent(uint8_t inputId, const InputDescriptor& desc
     }
 
     InputEvent event{inputId, descriptor};
-    xQueueSend(queue, &event, 0);
+    if (xQueueSend(queue, &event, 0) != pdTRUE) {
+        m_droppedInputEvents.fetch_add(1, std::memory_order_relaxed);
+    }
 
     if (TaskHandle_t handle = m_taskHandle; handle != nullptr) {
         xTaskNotifyGive(handle);
@@ -180,6 +182,10 @@ void SaberActionBus::drainInputQueue() {
         if (event.inputId < kMaxInputs) {
             m_packet.inputs[event.inputId] = event.descriptor;
         }
+    }
+
+    if (const uint32_t dropped = m_droppedInputEvents.exchange(0, std::memory_order_relaxed); dropped > 0) {
+        ESP_LOGW(TAG, "Input queue full: dropped %lu event(s)", static_cast<unsigned long>(dropped));
     }
 }
 

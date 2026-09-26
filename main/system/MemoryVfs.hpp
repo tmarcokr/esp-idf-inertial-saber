@@ -49,7 +49,7 @@ public:
     [[nodiscard]] esp_err_t registerFile(std::string_view name, MemoryFileHandle file);
 
     /** @brief Removes @p name from the file table; open descriptors keep the buffer alive. */
-    esp_err_t unregisterFile(std::string_view name);
+    [[nodiscard]] esp_err_t unregisterFile(std::string_view name);
 
     [[nodiscard]] uint8_t openDescriptorCount() const;
 

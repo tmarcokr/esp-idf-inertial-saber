@@ -102,8 +102,10 @@ void PowerToggleEffect::beginIgnition() {
   const std::string path = m_font.randomPath(Profiles::FontCategory::Ignition);
 
   m_audio.play(path, false, kFullVolume);
-  m_ledEngine.pushOverlay(std::make_unique<BladeIgniteSweep>(
-      m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.ignitionDurationMs));
+  if (!m_ledEngine.pushOverlay(std::make_unique<BladeIgniteSweep>(
+          m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.ignitionDurationMs))) {
+    ESP_LOGW(TAG, "Ignition overlay dropped: no free overlay slot");
+  }
 
   m_sequenceStartMs = nowMs();
   m_enginesStarted = false;
@@ -136,8 +138,10 @@ void PowerToggleEffect::beginRetraction() {
   const std::string path = m_font.randomPath(Profiles::FontCategory::Retraction);
 
   m_audio.play(path, false, kRetractionVolume);
-  m_ledEngine.pushOverlay(std::make_unique<BladeRetractSweep>(
-      m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.retractionDurationMs));
+  if (!m_ledEngine.pushOverlay(std::make_unique<BladeRetractSweep>(
+          m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.retractionDurationMs))) {
+    ESP_LOGW(TAG, "Retraction overlay dropped: no free overlay slot");
+  }
 
   m_sequenceStartMs = nowMs();
   m_power.handle(Profiles::PowerStateMachine::Event::RetractRequested);
