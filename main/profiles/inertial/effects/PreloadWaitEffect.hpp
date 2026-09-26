@@ -37,8 +37,8 @@ public:
 
     );
 
-    bool Test(const Core::SaberDataPacket& packet) override;
-    void Run() override;
+    bool test(const Core::SaberDataPacket& packet) override;
+    void run() override;
 
 private:
     Profiles::ConfigurableProfile&           m_profile;

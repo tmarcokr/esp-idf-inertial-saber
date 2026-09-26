@@ -93,11 +93,6 @@ public:
      */
     void pushInputEvent(uint8_t inputId, const InputDescriptor& descriptor);
 
-    /**
-     * @brief Get the bus task handle for external notification sources.
-     */
-    TaskHandle_t getTaskHandle() const;
-
 private:
     static constexpr uint32_t kBusTimeoutMs    = 10;
     static constexpr uint8_t  kInputQueueDepth = 8;

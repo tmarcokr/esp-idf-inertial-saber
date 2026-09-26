@@ -10,8 +10,8 @@ BladeClashFlash::BladeClashFlash(uint16_t numLeds, uint16_t baseHue, uint32_t du
     , m_clashHue((baseHue + 180) % 360)
     , m_durationMs(durationMs > 0 ? durationMs : 1) {}
 
-void BladeClashFlash::update(uint32_t delta_ms) {
-    m_elapsed = std::min(m_elapsed + delta_ms, m_durationMs);
+void BladeClashFlash::update(uint32_t deltaMs) {
+    m_elapsed = std::min(m_elapsed + deltaMs, m_durationMs);
 }
 
 void BladeClashFlash::render(Canvas& canvas) {

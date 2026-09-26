@@ -22,15 +22,14 @@ DragEffect::DragEffect(
     Espressif::Wrappers::SmartLed::Engine& ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
     uint8_t buttonId)
-    : m_power(power)
+    : InertialEffect(1)
+    , m_power(power)
     , m_audio(audio)
     , m_ledEngine(ledEngine)
     , m_def(definition)
-    , m_buttonId(buttonId) {
-    Priority = 1;
-}
+    , m_buttonId(buttonId) {}
 
-bool DragEffect::Test(const Core::SaberDataPacket& packet) {
+bool DragEffect::test(const Core::SaberDataPacket& packet) {
     if (!m_power.isIgnited()) {
         m_triggerMet = false;
         return m_active;
@@ -41,9 +40,9 @@ bool DragEffect::Test(const Core::SaberDataPacket& packet) {
         using Gesture    = Core::InputDescriptor::Gesture;
         using InputState = Core::InputDescriptor::State;
 
-        if (input.gesture == Gesture::HOLD_TICK && input.holdLevel == 1) {
+        if (input.gesture == Gesture::HoldTick && input.holdLevel == 1) {
             m_triggerMet = true;
-        } else if (input.current == InputState::RELEASED && m_active) {
+        } else if (input.current == InputState::Released && m_active) {
             m_triggerMet = false;
         }
     }
@@ -51,7 +50,7 @@ bool DragEffect::Test(const Core::SaberDataPacket& packet) {
     return m_triggerMet || m_active;
 }
 
-void DragEffect::Run() {
+void DragEffect::run() {
     if (m_triggerMet && !m_active) {
         m_active = true;
 

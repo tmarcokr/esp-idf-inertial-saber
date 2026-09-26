@@ -15,7 +15,7 @@ class BladeClashFlash final : public Espressif::Wrappers::SmartLed::IEffect {
 public:
     BladeClashFlash(uint16_t numLeds, uint16_t baseHue, uint32_t durationMs);
 
-    void update(uint32_t delta_ms) override;
+    void update(uint32_t deltaMs) override;
     void render(Espressif::Wrappers::SmartLed::Canvas& canvas) override;
     [[nodiscard]] bool isFinished() const override;
 

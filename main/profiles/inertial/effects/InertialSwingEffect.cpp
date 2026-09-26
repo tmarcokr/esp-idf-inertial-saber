@@ -19,13 +19,13 @@ InertialSwingEffect::InertialSwingEffect(
     , InertialSaber::System::PsramAudioCache* psramCache
 
     )
-    : m_engine(engine)
+    : InertialEffect(0)
+    , m_engine(engine)
     , m_def(definition)
     , m_psramCache(psramCache)
 
     , m_humPath(std::string("/sdcard/") + definition.profileRoot + "/hum.wav")
     {
-    Priority = 0;
 }
 
 void InertialSwingEffect::activate() {
@@ -72,17 +72,17 @@ bool InertialSwingEffect::isActive() const {
     return m_active.load();
 }
 
-bool InertialSwingEffect::Test(const Core::SaberDataPacket& packet) {
-    m_kineticEnergy = packet.KineticEnergy;
-    m_orientationVector = packet.OrientationVector;
-    m_inertialOverload = packet.InertialOverload;
-    m_inertialBurst = packet.InertialBurst;
-    m_timestampMs = packet.timestamp_ms;
+bool InertialSwingEffect::test(const Core::SaberDataPacket& packet) {
+    m_kineticEnergy = packet.kineticEnergy;
+    m_orientation = packet.orientation;
+    m_inertialOverload = packet.inertialOverload;
+    m_inertialBurst = packet.inertialBurst;
+    m_timestampMs = packet.timestampMs;
 
     return m_active.load();
 }
 
-void InertialSwingEffect::Run() {
+void InertialSwingEffect::run() {
     if (m_chHum == INVALID_CHANNEL || m_chSwingL == INVALID_CHANNEL || m_chSwingH == INVALID_CHANNEL) return;
 
 
@@ -110,7 +110,7 @@ float InertialSwingEffect::computeFinalMix() const {
     float baseMix = (m_kineticEnergy - m_def.swingCrossfadeLowG) / crossfadeRange;
     baseMix = std::clamp(baseMix, 0.0f, 1.0f);
 
-    float gravityMod = m_orientationVector * m_def.gravityInfluence;
+    float gravityMod = m_orientation * m_def.gravityInfluence;
     return std::clamp(baseMix + gravityMod, 0.0f, 1.0f);
 }
 
@@ -147,7 +147,7 @@ void InertialSwingEffect::handleInertialBurst() {
 }
 
 InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
-    uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->getLoadedSwingPairCount() : 0;
+    uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->loadedSwingPairCount() : 0;
     if (availablePairs > 1) {
         uint8_t newPair;
         do {
@@ -194,7 +194,7 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
 }
 
 void InertialSwingEffect::executeSwap() {
-    uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->getLoadedSwingPairCount() : 0;
+    uint8_t availablePairs = (m_psramCache != nullptr) ? m_psramCache->loadedSwingPairCount() : 0;
     if (availablePairs <= 1) return;
 
     if (m_chSwingL != INVALID_CHANNEL) m_engine.stop(m_chSwingL);

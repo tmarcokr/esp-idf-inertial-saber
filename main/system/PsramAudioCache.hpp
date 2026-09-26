@@ -36,7 +36,7 @@ public:
 
     void requestProfilePreload(const std::string& profileRoot, uint8_t totalSwingPairs);
     [[nodiscard]] bool isPreloadComplete() const;
-    [[nodiscard]] uint8_t getLoadedSwingPairCount() const;
+    [[nodiscard]] uint8_t loadedSwingPairCount() const;
 
 private:
     struct CacheEntry {

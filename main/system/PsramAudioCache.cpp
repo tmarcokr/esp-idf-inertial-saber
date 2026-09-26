@@ -175,7 +175,7 @@ bool PsramAudioCache::isPreloadComplete() const {
     return m_preloadComplete.load();
 }
 
-uint8_t PsramAudioCache::getLoadedSwingPairCount() const {
+uint8_t PsramAudioCache::loadedSwingPairCount() const {
     return m_loadedSwingPairs.load();
 }
 

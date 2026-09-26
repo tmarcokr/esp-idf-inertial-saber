@@ -44,8 +44,8 @@ public:
      */
     [[nodiscard]] bool isActive() const;
 
-    bool Test(const Core::SaberDataPacket& packet) override;
-    void Run() override;
+    bool test(const Core::SaberDataPacket& packet) override;
+    void run() override;
 
 private:
     static constexpr const char* TAG = "InertialSwing";
@@ -64,7 +64,7 @@ private:
     Espressif::Wrappers::Audio::ChannelId m_chSwingH = Espressif::Wrappers::Audio::INVALID_CHANNEL;
 
     float m_kineticEnergy = 0.0f;
-    float m_orientationVector = 0.0f;
+    float m_orientation = 0.0f;
     float m_inertialOverload = 0.0f;
     bool m_inertialBurst = false;
     uint32_t m_timestampMs = 0;

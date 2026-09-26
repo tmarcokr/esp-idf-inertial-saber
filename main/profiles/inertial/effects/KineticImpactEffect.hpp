@@ -33,8 +33,8 @@ public:
         Espressif::Wrappers::SmartLed::Engine&  ledEngine,
         const InertialSaber::Profiles::Inertial::InertialDefinition&         definition);
 
-    bool Test(const Core::SaberDataPacket& packet) override;
-    void Run() override;
+    bool test(const Core::SaberDataPacket& packet) override;
+    void run() override;
 
 private:
     [[nodiscard]] std::string buildPath(const char* subAndPrefix, uint8_t index) const;

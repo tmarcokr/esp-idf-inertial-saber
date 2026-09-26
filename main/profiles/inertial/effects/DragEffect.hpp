@@ -43,8 +43,8 @@ public:
         const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
         uint8_t buttonId);
 
-    bool Test(const Core::SaberDataPacket& packet) override;
-    void Run() override;
+    bool test(const Core::SaberDataPacket& packet) override;
+    void run() override;
 
 private:
     [[nodiscard]] std::string buildPath(const char* subAndPrefix, uint8_t index) const;

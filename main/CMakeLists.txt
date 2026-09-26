@@ -12,7 +12,7 @@ idf_component_register(
          "system/PsramAudioCache.cpp"
          "core/SaberActionBus.cpp"
          "profiles/inertial/effects/InertialSwingEffect.cpp"
-         "profiles/inertial/effects/overlays/InertialLightEffect.cpp"
+         "profiles/inertial/effects/InertialLightEffect.cpp"
          "profiles/ConfigurableProfile.cpp"
          "profiles/ProfileParser.cpp"
          "profiles/ProfileLoader.cpp"

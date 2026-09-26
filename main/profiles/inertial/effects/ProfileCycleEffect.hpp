@@ -21,7 +21,7 @@ class Engine;
 namespace InertialSaber::Effects {
 
 /**
- * @brief Cycles to the next profile on CLICK pressCount=3 while the saber is RETRACTED.
+ * @brief Cycles to the next profile on a Click with pressCount=3 while the saber is RETRACTED.
  */
 class ProfileCycleEffect final : public Core::InertialEffect {
 public:
@@ -39,12 +39,12 @@ public:
     /**
      * @brief Test if the profile cycle gesture is triggered.
      */
-    bool Test(const Core::SaberDataPacket& packet) override;
+    bool test(const Core::SaberDataPacket& packet) override;
 
     /**
      * @brief Execute the profile cycle.
      */
-    void Run() override;
+    void run() override;
 
 private:
     Profiles::ConfigurableProfile&           m_profile;

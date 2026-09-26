@@ -19,20 +19,20 @@ PreloadWaitEffect::PreloadWaitEffect(
     , System::PsramAudioCache*               psramCache
 
 )
-    : m_profile(profile)
+    : InertialEffect(0)
+    , m_profile(profile)
     , m_audio(audio)
     , m_statusLed(statusLed)
     , m_psramCache(psramCache)
 
 {
-    Priority = 0;
 }
 
-bool PreloadWaitEffect::Test(const Core::SaberDataPacket&) {
+bool PreloadWaitEffect::test(const Core::SaberDataPacket&) {
     return m_profile.getPowerState() == Profiles::ConfigurableProfile::PowerState::PRELOADING;
 }
 
-void PreloadWaitEffect::Run() {
+void PreloadWaitEffect::run() {
     if (m_psramCache && !m_psramCache->isPreloadComplete()) {
         if (m_statusLed) {
             bool blinkOn = ((esp_timer_get_time() / 1000LL) / 250) % 2 == 0;
@@ -52,7 +52,7 @@ void PreloadWaitEffect::Run() {
         (void)m_statusLed->setColor({0, 32, 0});
     }
 
-    const auto& def = m_profile.getDefinition();
+    const auto& def = m_profile.definition();
     std::string fontPath = std::string("/sdcard/") + def.profileRoot + "font.wav";
     ESP_LOGI(TAG, "Preload complete. Playing selection sound: %s", fontPath.c_str());
     m_audio.play(fontPath, false, 16384);

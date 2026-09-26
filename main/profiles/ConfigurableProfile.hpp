@@ -47,7 +47,7 @@ public:
    */
   explicit ConfigurableProfile(const std::string &jsonStr);
 
-  [[nodiscard]] const InertialSaber::Profiles::Inertial::InertialDefinition &getDefinition() const;
+  [[nodiscard]] const InertialSaber::Profiles::Inertial::InertialDefinition &definition() const;
 
   [[nodiscard]] PowerState getPowerState() const;
   void setPowerState(PowerState state);

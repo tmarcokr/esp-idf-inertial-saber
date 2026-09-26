@@ -13,8 +13,8 @@ BladeBlasterBlock::BladeBlasterBlock(uint16_t numLeds, uint16_t ledCount, uint32
     m_startLed = (max_start > 0) ? static_cast<uint16_t>(esp_random() % (max_start + 1)) : 0;
 }
 
-void BladeBlasterBlock::update(uint32_t delta_ms) {
-    m_elapsed = std::min(m_elapsed + delta_ms, m_durationMs);
+void BladeBlasterBlock::update(uint32_t deltaMs) {
+    m_elapsed = std::min(m_elapsed + deltaMs, m_durationMs);
 }
 
 void BladeBlasterBlock::render(Espressif::Wrappers::SmartLed::Canvas& canvas) {

@@ -22,16 +22,15 @@ BlasterEffect::BlasterEffect(
     Espressif::Wrappers::SmartLed::Engine &ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition &definition,
     uint8_t buttonId)
-    : m_power(power)
+    : InertialEffect(2)
+    , m_power(power)
     , m_audio(audio)
     , m_ledEngine(ledEngine)
     , m_def(definition)
     , m_buttonId(buttonId)
-{
-    Priority = 2;
-}
+{}
 
-bool BlasterEffect::Test(const Core::SaberDataPacket& packet) {
+bool BlasterEffect::test(const Core::SaberDataPacket& packet) {
     if (!m_power.isIgnited()) {
         return false;
     }
@@ -41,10 +40,10 @@ bool BlasterEffect::Test(const Core::SaberDataPacket& packet) {
 
     const auto& input = packet.inputs[m_buttonId];
     using Gesture = Core::InputDescriptor::Gesture;
-    return input.gesture == Gesture::CLICK && input.pressCount == 1;
+    return input.gesture == Gesture::Click && input.pressCount == 1;
 }
 
-void BlasterEffect::Run() {
+void BlasterEffect::run() {
   const uint8_t index = static_cast<uint8_t>(
       esp_random() % std::max<uint8_t>(m_def.fontBlasterCount, 1));
   const std::string path = buildPath("blst/blst", index);

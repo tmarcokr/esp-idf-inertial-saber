@@ -31,7 +31,7 @@ ConfigurableProfile::ConfigurableProfile(const std::string &jsonStr)
   m_allocatedDef.profileRoot = m_profileRootStorage.c_str();
 }
 
-const InertialSaber::Profiles::Inertial::InertialDefinition &ConfigurableProfile::getDefinition() const {
+const InertialSaber::Profiles::Inertial::InertialDefinition &ConfigurableProfile::definition() const {
   return m_def;
 }
 

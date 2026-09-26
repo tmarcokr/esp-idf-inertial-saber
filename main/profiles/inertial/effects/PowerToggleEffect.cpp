@@ -5,7 +5,7 @@
 #include "overlays/BladeIgniteSweep.hpp"
 #include "overlays/BladeRetractSweep.hpp"
 #include "Engine.hpp"
-#include "overlays/InertialLightEffect.hpp"
+#include "InertialLightEffect.hpp"
 #include "InertialSwingEffect.hpp"
 #include "profiles/inertial/InertialDefinition.hpp"
 #include "core/SaberDataPacket.hpp"
@@ -33,12 +33,10 @@ PowerToggleEffect::PowerToggleEffect(
     Espressif::Wrappers::Audio::AudioEngine &audio,
     Espressif::Wrappers::SmartLed::Engine &ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition &definition, uint8_t buttonId)
-    : m_profile(profile), m_swing(swing), m_light(light), m_audio(audio), m_ledEngine(ledEngine),
-      m_def(definition), m_buttonId(buttonId) {
-  Priority = 1;
-}
+    : InertialEffect(1), m_profile(profile), m_swing(swing), m_light(light), m_audio(audio), m_ledEngine(ledEngine),
+      m_def(definition), m_buttonId(buttonId) {}
 
-bool PowerToggleEffect::Test(const Core::SaberDataPacket& packet) {
+bool PowerToggleEffect::test(const Core::SaberDataPacket& packet) {
     if (m_buttonId >= System::Hardware::HardwareConfig::kMaxInputs) {
         return false;
     }
@@ -54,13 +52,13 @@ bool PowerToggleEffect::Test(const Core::SaberDataPacket& packet) {
     }
 
     if (state == ProfileState::RETRACTED &&
-        input.gesture == Gesture::CLICK && input.pressCount == 1) {
+        input.gesture == Gesture::Click && input.pressCount == 1) {
         m_pendingTransition = true;
         return true;
     }
 
     if (state == ProfileState::IGNITED &&
-        input.gesture == Gesture::CLICK && input.pressCount == 2) {
+        input.gesture == Gesture::Click && input.pressCount == 2) {
         m_pendingTransition = true;
         return true;
     }
@@ -68,7 +66,7 @@ bool PowerToggleEffect::Test(const Core::SaberDataPacket& packet) {
     return false;
 }
 
-void PowerToggleEffect::Run() {
+void PowerToggleEffect::run() {
   using ProfileState = Profiles::ConfigurableProfile::PowerState;
   switch (m_profile.getPowerState()) {
   case ProfileState::RETRACTED:

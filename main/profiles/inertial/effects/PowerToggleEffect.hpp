@@ -39,8 +39,8 @@ public:
         const InertialSaber::Profiles::Inertial::InertialDefinition&          definition,
         uint8_t                                  buttonId);
 
-    bool Test(const Core::SaberDataPacket& packet) override;
-    void Run() override;
+    bool test(const Core::SaberDataPacket& packet) override;
+    void run() override;
     [[nodiscard]] bool isIgnited() const;
     [[nodiscard]] bool isRetracted() const;
 
