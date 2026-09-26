@@ -66,12 +66,13 @@ esp_err_t InputAdapter::start() {
 
 void InputAdapter::onPressDown() {
     const uint32_t now = esp_timer_get_time() / 1000;
+    std::lock_guard lock(m_stateMutex);
 
     m_btnState.previous         = m_btnState.current;
     m_btnState.current          = Core::InputDescriptor::State::Pressed;
     m_btnState.lastTransitionMs = now;
 
-    m_pendingClicks.fetch_add(1, std::memory_order_relaxed);
+    ++m_pendingClicks;
 
     esp_timer_stop(m_clickTimer);
     esp_timer_start_once(m_clickTimer,
@@ -84,9 +85,10 @@ void InputAdapter::onPressDown() {
 
 void InputAdapter::onPressUp() {
     const uint32_t now = esp_timer_get_time() / 1000;
+    std::lock_guard lock(m_stateMutex);
 
     esp_timer_stop(m_holdTimer);
-    m_holdLevel.store(0, std::memory_order_relaxed);
+    m_holdLevel = 0;
 
     m_btnState.previous         = m_btnState.current;
     m_btnState.current          = Core::InputDescriptor::State::Released;
@@ -100,31 +102,62 @@ void InputAdapter::onPressUp() {
 }
 
 void InputAdapter::onFirstHoldTick() {
-    esp_timer_stop(m_clickTimer);
-    m_pendingClicks.store(0, std::memory_order_relaxed);
+    uint8_t level = 0;
+    {
+        std::lock_guard lock(m_stateMutex);
 
-    resolveHoldTick();
-    esp_timer_start_periodic(m_holdTimer,
-                             static_cast<uint64_t>(Hardware::HardwareConfig::kHoldTickMs) * 1000ULL);
+        esp_timer_stop(m_clickTimer);
+        m_pendingClicks = 0;
+
+        level = emitHoldTickLocked();
+        esp_timer_start_periodic(m_holdTimer,
+                                 static_cast<uint64_t>(Hardware::HardwareConfig::kHoldTickMs) * 1000ULL);
+    }
+
+    ESP_LOGD(TAG, "Gesture resolved: HoldTick level=%u (%u ms)",
+             static_cast<unsigned>(level),
+             static_cast<unsigned>(level * Hardware::HardwareConfig::kHoldTickMs));
 }
 
 void InputAdapter::resolveClickGesture() {
-    const uint8_t count = m_pendingClicks.exchange(0, std::memory_order_relaxed);
-    if (count == 0) return;
+    uint8_t count = 0;
+    {
+        std::lock_guard lock(m_stateMutex);
 
-    using Gesture = Core::InputDescriptor::Gesture;
-    m_btnState.pressCount = count;
-    m_btnState.gesture    = Gesture::Click;
+        count           = m_pendingClicks;
+        m_pendingClicks = 0;
+        if (count == 0) return;
 
-    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
-    m_btnState.gesture    = Gesture::None;
-    m_btnState.pressCount = 0;
+        using Gesture = Core::InputDescriptor::Gesture;
+        m_btnState.pressCount = count;
+        m_btnState.gesture    = Gesture::Click;
+
+        m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
+        m_btnState.gesture    = Gesture::None;
+        m_btnState.pressCount = 0;
+    }
 
     ESP_LOGD(TAG, "Gesture resolved: Click x%u", static_cast<unsigned>(count));
 }
 
 void InputAdapter::resolveHoldTick() {
-    const uint8_t level = m_holdLevel.fetch_add(1, std::memory_order_relaxed) + 1;
+    uint8_t level = 0;
+    {
+        std::lock_guard lock(m_stateMutex);
+
+        // Warning: a tick dispatched just before onPressUp() stopped the timer belongs to a finished hold.
+        if (m_btnState.current != Core::InputDescriptor::State::Held) return;
+
+        level = emitHoldTickLocked();
+    }
+
+    ESP_LOGD(TAG, "Gesture resolved: HoldTick level=%u (%u ms)",
+             static_cast<unsigned>(level),
+             static_cast<unsigned>(level * Hardware::HardwareConfig::kHoldTickMs));
+}
+
+uint8_t InputAdapter::emitHoldTickLocked() {
+    const uint8_t level = ++m_holdLevel;
 
     m_btnState.current        = Core::InputDescriptor::State::Held;
     m_btnState.holdDurationMs = level * Hardware::HardwareConfig::kHoldTickMs;
@@ -134,9 +167,7 @@ void InputAdapter::resolveHoldTick() {
     m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
     m_btnState.gesture = Core::InputDescriptor::Gesture::None;
 
-    ESP_LOGD(TAG, "Gesture resolved: HoldTick level=%u (%u ms)",
-             static_cast<unsigned>(level),
-             static_cast<unsigned>(level * Hardware::HardwareConfig::kHoldTickMs));
+    return level;
 }
 
 /*static*/ void InputAdapter::clickTimerCallback(void* arg) {
