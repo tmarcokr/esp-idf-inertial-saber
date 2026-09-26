@@ -63,8 +63,11 @@ esp_err_t SaberSystem::internalStart() {
   ESP_LOGI(TAG, "Button ready (GPIO %d)", static_cast<int>(Board::kPins.mainButton));
 
   ESP_LOGI(TAG, "Loading Profiles...");
-  m_profiles.init();
-  m_profiles.loadActive();
+  if ((err = m_profiles.init()) != ESP_OK) {
+    ESP_LOGE(TAG, "No usable profile: action bus not started, ignition disabled");
+    return err;
+  }
+  if ((err = m_profiles.loadActive()) != ESP_OK) return err;
 
   ESP_LOGI(TAG, "Starting Action Bus...");
   if ((err = m_bus.start()) != ESP_OK) {

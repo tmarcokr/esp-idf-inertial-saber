@@ -5,8 +5,8 @@
 #include "GpioButton.hpp"
 #include "esp_timer.h"
 
-#include <atomic>
 #include <cstdint>
+#include <mutex>
 
 namespace InertialSaber::System::Adapters {
 
@@ -39,21 +39,20 @@ private:
     void onFirstHoldTick();
     void resolveClickGesture();
     void resolveHoldTick();
+    uint8_t emitHoldTickLocked();
 
     static void clickTimerCallback(void* arg);
     static void holdTimerCallback(void* arg);
 
     Core::SaberActionBus&            m_bus;
     Espressif::Wrappers::GpioButton& m_mainButton;
-    Core::InputDescriptor            m_btnState{};
 
-    // Thread safety:
-    // m_pendingClicks - std::atomic<uint8_t>: written by GpioButton poll task,
-    //                   read/reset by click esp_timer task.
-    // m_holdLevel     - std::atomic<uint8_t>: written by hold esp_timer task,
-    //                   reset by GpioButton poll task (PressUp).
-    std::atomic<uint8_t> m_pendingClicks{0};
-    std::atomic<uint8_t> m_holdLevel{0};
+    // Warning: m_stateMutex serialises the GpioButton poll task and the esp_timer task; hold it
+    // only around state updates and non-blocking calls (esp_timer start/stop, pushInputEvent).
+    std::mutex            m_stateMutex;
+    Core::InputDescriptor m_btnState{};
+    uint8_t               m_pendingClicks = 0;
+    uint8_t               m_holdLevel     = 0;
 
     esp_timer_handle_t m_clickTimer = nullptr;
     esp_timer_handle_t m_holdTimer  = nullptr;

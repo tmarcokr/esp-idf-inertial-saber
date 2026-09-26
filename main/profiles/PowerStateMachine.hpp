@@ -11,15 +11,16 @@ namespace InertialSaber::Profiles {
  */
 class PowerStateMachine final {
 public:
-    enum class State : uint8_t { Locked, Retracted, Igniting, Ignited, Retracting };
-    enum class Event : uint8_t { Lock, PreloadDone, IgniteRequested, IgnitionElapsed, RetractRequested, RetractionElapsed };
+    enum class State : uint8_t { Locked, Retracted, Igniting, Ignited, Retracting, Faulted };
+    enum class Event : uint8_t { Lock, PreloadDone, PreloadFailed, IgniteRequested, IgnitionElapsed, RetractRequested, RetractionElapsed };
 
-    /** @brief Applies @p event; returns false (state unchanged, logged at DEBUG) if it is not allowed from the current state. */
+    /** @brief Applies @p event; returns false (state unchanged, logged as a warning) if it is not allowed from the current state. */
     bool handle(Event event);
 
     [[nodiscard]] State state() const { return m_state; }
     [[nodiscard]] bool isIgnited() const { return m_state == State::Ignited; }
     [[nodiscard]] bool isRetracted() const { return m_state == State::Retracted; }
+    [[nodiscard]] bool isFaulted() const { return m_state == State::Faulted; }
 
 private:
     State m_state = State::Locked;

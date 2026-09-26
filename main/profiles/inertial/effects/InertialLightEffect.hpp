@@ -16,6 +16,9 @@ namespace InertialSaber::Effects {
  */
 class InertialLightEffect final : public Core::InertialEffect {
 public:
+  /** @brief Breathing frequency swing (Hz) applied on top of the base frequency at full blade tilt. */
+  static constexpr float kGravityBreathModulationHz = 0.5f;
+
   explicit InertialLightEffect(
       Espressif::Wrappers::SmartLed::Engine& ledEngine,
       const InertialSaber::Profiles::Inertial::InertialDefinition& definition);

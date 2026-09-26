@@ -60,12 +60,12 @@ void DragEffect::run() {
 
         m_audioChannel = m_audio.play(path, true, kFullVolume);
 
+        m_overlayFadeRequest = std::make_shared<std::atomic<bool>>(false);
         auto overlay = std::make_unique<BladeDragEffect>(
-            m_ledEngine.numLeds(), m_def.dragLedCount);
-        m_ledEffect = overlay.get();
+            m_ledEngine.numLeds(), m_def.dragLedCount, m_overlayFadeRequest);
 
         if (!m_ledEngine.pushOverlay(std::move(overlay))) {
-            m_ledEffect = nullptr;
+            m_overlayFadeRequest.reset();
         }
 
         ESP_LOGI(TAG, "Drag active: %s", path.c_str());
@@ -80,9 +80,9 @@ void DragEffect::run() {
         const std::string endPath = m_font.randomPath(Profiles::FontCategory::DragEnd);
         m_audio.play(endPath, false, kFullVolume);
 
-        if (m_ledEffect != nullptr) {
-            m_ledEffect->terminate();
-            m_ledEffect = nullptr;
+        if (m_overlayFadeRequest) {
+            m_overlayFadeRequest->store(true);
+            m_overlayFadeRequest.reset();
         }
 
         ESP_LOGI(TAG, "Drag inactive, playing end: %s", endPath.c_str());

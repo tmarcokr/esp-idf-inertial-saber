@@ -25,9 +25,7 @@ class StatusIndicator;
 
 namespace InertialSaber::Effects {
 
-/**
- * @brief Effect that blocks input and waits for the PSRAM preload to complete before unlocking the saber and playing the selection sound.
- */
+/** @brief Effect that blocks input, waits for the PSRAM preload, then unlocks the saber and plays the selection sound, or faults it on failure. */
 class PreloadWaitEffect final : public Core::InertialEffect {
 public:
     PreloadWaitEffect(Profiles::PowerStateMachine& power,

@@ -20,7 +20,13 @@ class PsramAudioCache {
 public:
     static constexpr std::string_view kMountPoint = "/mem";
 
-    explicit PsramAudioCache(uint8_t maxFiles = 40, uint8_t maxFds = 8);
+    enum class PreloadStatus : uint8_t { Pending, Ready, Failed };
+
+    static constexpr uint8_t kDefaultMaxFiles = 40;
+    /** @brief Swing pairs that fit in the default /mem file table next to hum.wav. */
+    static constexpr uint8_t kMaxSwingPairs = (kDefaultMaxFiles - 1) / 2;
+
+    explicit PsramAudioCache(uint8_t maxFiles = kDefaultMaxFiles, uint8_t maxFds = 8);
     ~PsramAudioCache();
 
     PsramAudioCache(const PsramAudioCache&) = delete;
@@ -31,8 +37,8 @@ public:
     /** @brief Queues a preload of @p font; callable from any task, supersedes any pending request. */
     void requestPreload(const Profiles::SoundFont& font);
 
-    /** @brief True when the latest requested generation has finished loading. */
-    [[nodiscard]] bool isPreloadComplete() const;
+    /** @brief Outcome of the latest requested generation; Failed means hum.wav could not be loaded. */
+    [[nodiscard]] PreloadStatus preloadStatus() const;
 
     [[nodiscard]] uint8_t loadedSwingPairCount() const;
 
@@ -49,6 +55,7 @@ private:
         Profiles::SoundFont font;
     };
 
+    static constexpr uint32_t kNoGeneration = 0;
     static constexpr uint32_t kCloseWaitMs = 200;
     static constexpr uint32_t kClosePollMs = 10;
     static constexpr size_t kPsramHeadroomBytes = 256 * 1024;
@@ -69,8 +76,9 @@ private:
 
     std::mutex m_jobMutex;
     std::optional<PreloadJob> m_pendingJob;
-    std::atomic<uint32_t> m_requestedGeneration{0};
-    std::atomic<uint32_t> m_completedGeneration{0};
+    std::atomic<uint32_t> m_requestedGeneration{kNoGeneration};
+    std::atomic<uint32_t> m_completedGeneration{kNoGeneration};
+    std::atomic<uint32_t> m_failedGeneration{kNoGeneration};
     std::atomic<uint8_t> m_loadedSwingPairs{0};
     std::vector<std::string> m_registeredNames;
 };

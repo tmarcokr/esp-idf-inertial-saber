@@ -22,32 +22,34 @@ esp_err_t SaberActionBus::start() {
         return ESP_FAIL;
     }
 
-    m_inputQueue = xQueueCreate(kInputQueueDepth, sizeof(InputEvent));
-    if (m_inputQueue == nullptr) {
+    QueueHandle_t queue = xQueueCreate(kInputQueueDepth, sizeof(InputEvent));
+    if (queue == nullptr) {
         ESP_LOGE(TAG, "Failed to create input queue");
         return ESP_FAIL;
     }
+    m_inputQueue = queue;
 
     m_running = true;
     m_lastLoopTimeUs = esp_timer_get_time();
 
+    TaskHandle_t handle = nullptr;
     BaseType_t result = xTaskCreatePinnedToCore(
         busTaskEntry,
         "saber_bus",
         m_config.task.stackSize,
         this,
         m_config.task.priority,
-        &m_taskHandle,
+        &handle,
         m_config.task.core
     );
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "Failed to create bus task");
         m_running = false;
-        vQueueDelete(m_inputQueue);
-        m_inputQueue = nullptr;
+        vQueueDelete(m_inputQueue.exchange(nullptr));
         return ESP_FAIL;
     }
+    m_taskHandle = handle;
 
     ESP_LOGI(TAG, "Bus started on core %d (priority %d)",
              static_cast<int>(m_config.task.core),
@@ -62,16 +64,14 @@ void SaberActionBus::stop() {
 
     m_running = false;
 
-    if (m_taskHandle != nullptr) {
-        xTaskNotifyGive(m_taskHandle);
-        // Without this delay, m_taskHandle could be nullified before the task reads m_running
+    if (TaskHandle_t handle = m_taskHandle.exchange(nullptr); handle != nullptr) {
+        xTaskNotifyGive(handle);
+        // Warning: there is no join; the delay lets the bus task exit before its queue is deleted.
         vTaskDelay(pdMS_TO_TICKS(kBusTimeoutMs * 2));
-        m_taskHandle = nullptr;
     }
 
-    if (m_inputQueue != nullptr) {
-        vQueueDelete(m_inputQueue);
-        m_inputQueue = nullptr;
+    if (QueueHandle_t queue = m_inputQueue.exchange(nullptr); queue != nullptr) {
+        vQueueDelete(queue);
     }
 
     ESP_LOGI(TAG, "Bus stopped");
@@ -107,27 +107,26 @@ void SaberActionBus::clearEffects() {
 }
 
 void SaberActionBus::updateMotion(const MotionSample& sample) {
-    m_stagedEnergy = sample.kineticEnergyG;
-    m_stagedRotation[0] = sample.axisRotationDps[0];
-    m_stagedRotation[1] = sample.axisRotationDps[1];
-    m_stagedRotation[2] = sample.axisRotationDps[2];
-    m_stagedOrientation = sample.orientationDeg;
+    portENTER_CRITICAL(&m_motionLock);
+    m_stagedMotion = sample;
+    portEXIT_CRITICAL(&m_motionLock);
 
-    if (m_taskHandle != nullptr) {
-        xTaskNotifyGive(m_taskHandle);
+    if (TaskHandle_t handle = m_taskHandle; handle != nullptr) {
+        xTaskNotifyGive(handle);
     }
 }
 
 void SaberActionBus::pushInputEvent(uint8_t inputId, const InputDescriptor& descriptor) {
-    if (inputId >= kMaxInputs || m_inputQueue == nullptr) {
+    QueueHandle_t queue = m_inputQueue;
+    if (inputId >= kMaxInputs || queue == nullptr) {
         return;
     }
 
     InputEvent event{inputId, descriptor};
-    xQueueSend(m_inputQueue, &event, 0);
+    xQueueSend(queue, &event, 0);
 
-    if (m_taskHandle != nullptr) {
-        xTaskNotifyGive(m_taskHandle);
+    if (TaskHandle_t handle = m_taskHandle; handle != nullptr) {
+        xTaskNotifyGive(handle);
     }
 }
 
@@ -175,8 +174,9 @@ void SaberActionBus::busLoop() {
 }
 
 void SaberActionBus::drainInputQueue() {
+    QueueHandle_t queue = m_inputQueue;
     InputEvent event{};
-    while (xQueueReceive(m_inputQueue, &event, 0) == pdTRUE) {
+    while (xQueueReceive(queue, &event, 0) == pdTRUE) {
         if (event.inputId < kMaxInputs) {
             m_packet.inputs[event.inputId] = event.descriptor;
         }
@@ -184,11 +184,13 @@ void SaberActionBus::drainInputQueue() {
 }
 
 void SaberActionBus::loadStagedMotionToPacket() {
-    m_packet.kineticEnergy = m_stagedEnergy;
-    m_packet.axisRotation[0] = m_stagedRotation[0];
-    m_packet.axisRotation[1] = m_stagedRotation[1];
-    m_packet.axisRotation[2] = m_stagedRotation[2];
-    m_packet.orientation = m_stagedOrientation;
+    portENTER_CRITICAL(&m_motionLock);
+    const MotionSample sample = m_stagedMotion;
+    portEXIT_CRITICAL(&m_motionLock);
+
+    m_packet.kineticEnergy = sample.kineticEnergyG;
+    m_packet.axisRotation = sample.axisRotationDps;
+    m_packet.orientation = sample.orientationDeg;
 }
 
 void SaberActionBus::filterStagedMotionWarmUp() {

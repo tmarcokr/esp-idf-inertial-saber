@@ -18,7 +18,7 @@ ProfileCycleEffect::ProfileCycleEffect(const Profiles::PowerStateMachine& power,
 {}
 
 bool ProfileCycleEffect::test(const Core::SaberDataPacket& packet) {
-    if (!m_power.isRetracted()) return false;
+    if (!m_power.isRetracted() && !m_power.isFaulted()) return false;
     if (m_buttonId >= Core::kMaxInputs) return false;
 
     const auto& input = packet.inputs[m_buttonId];
