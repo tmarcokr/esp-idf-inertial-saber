@@ -9,9 +9,11 @@ deny:
   - a push combined with any other persisting git verb in the same command (pushes must be standalone,
     so the state check sees exactly what will be published);
   - a push while unpushed commits (any ref: branches, tags, stash, HEAD, explicit sources) touch
-    private paths or `components/`;
+    private paths, or touch `components/` with content that differs from `componentes/main`;
   - a commit while private paths are staged (paths matched by .git/info/exclude with full gitignore syntax);
-  - staging `components/` paths, or any persisting git command while `components/` has uncommitted changes.
+  - staging `components/` paths, or any persisting git command while `components/` has uncommitted changes,
+    unless every modified `components/` file is an exact copy of `componentes/main` (a component sync,
+    /sync-components): those cases ask instead.
 ask:
   - any git command while on main/master, or that switches to main/master;
   - any push (coarse: the word push/send-pack/http-push in a git context), any `gh` command that is not
@@ -41,6 +43,7 @@ import tempfile
 PROJECT_DIR = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
 SNAPSHOT_GLOB = os.path.expanduser("~/.claude/shell-snapshots/*.sh")
 SEVERITY = {"ask": 1, "deny": 2}
+UPSTREAM_REF = "refs/remotes/componentes/main"  # esp-idf-components, remote added by /sync-components
 
 WORD = re.compile(r"[A-Za-z0-9_.:!+-]+")
 ALIAS_LINE = re.compile(r"^alias (?:-- )?([^=\s]+)='(.*)'$")
@@ -126,7 +129,9 @@ def git_output(*args: str) -> list[str]:
 
 def git_paths(*args: str) -> list[str]:
     """Path list from a git command run with -z: NUL-separated, never quoted or escaped."""
-    result = subprocess.run(["git", "-C", PROJECT_DIR, *args, "-z"], capture_output=True, text=True,
+    args = list(args)
+    args.insert(args.index("--") if "--" in args else len(args), "-z")  # after `--` it would be a pathspec
+    result = subprocess.run(["git", "-C", PROJECT_DIR, *args], capture_output=True, text=True,
                             errors="surrogateescape")
     return [path for path in result.stdout.split("\0") if path.strip("\n")] if result.returncode == 0 else []
 
@@ -154,6 +159,50 @@ def private_paths(paths: list[str]) -> list[str]:
 
 def is_components(path: str) -> bool:
     return path == "components" or path.startswith("components/")
+
+
+def blob(spec: str) -> str | None:
+    """Blob id of `<rev>:<path>` or `:<path>` (index, stage 0); None when absent."""
+    return (git_output("rev-parse", "--verify", "--quiet", spec) or [None])[0]
+
+
+def worktree_blob(path: str) -> str | None:
+    """Blob id of the working-tree file; None when it does not exist as a regular file."""
+    if not os.path.isfile(os.path.join(PROJECT_DIR, path)):
+        return None
+    return (git_output("hash-object", "--", path) or [None])[0]
+
+
+def dirty_components_match_upstream(dirty: list[str]) -> bool:
+    """True when every modified components/ path is an exact copy of UPSTREAM_REF (a component sync).
+
+    The working tree must hold the upstream content (or lack the file when upstream lacks it); the
+    index may hold either the upstream content or still the HEAD content (unstaged during the sync).
+    Conflicted paths have no stage-0 entry and therefore never match.
+    """
+    if not dirty or not git_output("rev-parse", "--verify", "--quiet", UPSTREAM_REF):
+        return False
+    for path in dirty:
+        if not is_components(path):
+            return False
+        upstream = blob(f"{UPSTREAM_REF}:{path}")
+        if worktree_blob(path) != upstream or blob(f":{path}") not in {upstream, blob(f"HEAD:{path}")}:
+            return False
+    return True
+
+
+def unpushed_components_match_upstream(calls: list[tuple[str, list[str]]] | None) -> bool:
+    """True when every components/ file touched by an unpushed commit equals UPSTREAM_REF in that commit."""
+    if not git_output("rev-parse", "--verify", "--quiet", UPSTREAM_REF):
+        return False
+    commit = None
+    for line in git_output("log", "--name-only", "--no-renames", "--diff-merges=dense-combined", "--format=@%H",
+                           *push_revisions(calls), "--not", "--remotes"):
+        if line.startswith("@"):
+            commit = line[1:]
+        elif is_components(line) and blob(f"{commit}:{line}") != blob(f"{UPSTREAM_REF}:{line}"):
+            return False
+    return True
 
 
 def load_shell_definitions() -> dict[str, str] | None:
@@ -353,18 +402,30 @@ def analyse(command: str, verdict: Verdict) -> None:
         verdict.add("ask", "This command switches to main/master: every git operation there requires the user's "
                            "confirmation.")
 
+    dirty_components: list[str] = []
+    if STAGE_COMPONENTS.search(code) or PERSISTING_WORDS.search(text):
+        dirty_components = [entry[3:] for entry in git_paths("status", "--porcelain", "--no-renames",
+                                                             "--untracked-files=all", "--", "components")]
+    is_sync = dirty_components_match_upstream(dirty_components)
+
     if STAGE_COMPONENTS.search(code):
-        verdict.add("deny", "Staging components/** is not allowed (CLAUDE.md rule 3). Component syncs are run by "
-                            "the user.")
+        if is_sync:
+            verdict.add("ask", "Component sync: staging components/ whose modified files all match "
+                               "componentes/main. Confirm the sync (/sync-components).")
+        else:
+            verdict.add("deny", "Staging components/** is not allowed (CLAUDE.md rule 3) unless every modified "
+                                "file matches componentes/main (/sync-components, after `git fetch componentes`).")
     elif PERSISTING_STRICT.search(text) and COMPONENTS_MENTION.search(text):
         verdict.add("ask", "Persisting git command in a command that mentions components/: confirm that no "
                            "component file is modified (CLAUDE.md rule 3).")
-    if PERSISTING_WORDS.search(text):
-        dirty_components = [entry[3:] for entry in git_paths("status", "--porcelain", "--", "components")]
-        if dirty_components:
-            verdict.add("deny", "components/ has uncommitted changes (e.g. " + dirty_components[0] + "). "
-                                "components/** is immutable (CLAUDE.md rule 3): revert them with "
-                                "`git restore -- components/` or ask the user. Syncs are run by the user.")
+    if PERSISTING_WORDS.search(text) and dirty_components:
+        if is_sync:
+            verdict.add("ask", "Component sync in progress: every modified components/ file matches "
+                               "componentes/main. Confirm this step of /sync-components.")
+        else:
+            verdict.add("deny", "components/ has uncommitted changes (e.g. " + dirty_components[0] + ") that do not "
+                                "match componentes/main. components/** is immutable (CLAUDE.md rule 3): revert them "
+                                "with `git restore -- components/` or ask the user.")
 
     if COMMIT_WORDS.search(text):
         staged_private = private_paths(git_paths("diff", "--cached", "--name-only"))
@@ -389,9 +450,9 @@ def analyse(command: str, verdict: Verdict) -> None:
         if leaked:
             verdict.add("deny", f"Unpushed commits contain a private path ({leaked[0]}). Rewrite those commits "
                                 "before pushing; private files must never reach GitHub.")
-        elif touched_components:
-            verdict.add("deny", f"Unpushed commits modify components/ ({touched_components[0]}). Only the user "
-                                "pushes component syncs.")
+        elif touched_components and not unpushed_components_match_upstream(calls):
+            verdict.add("deny", f"Unpushed commits modify components/ ({touched_components[0]}) with content that "
+                                "does not match componentes/main. components/** is immutable (CLAUDE.md rule 3).")
         target = " to main/master" if re.search(r"\b(main|master)\b", text) else ""
         verdict.add("ask", f"Outward-facing action: push{target} requires the user's review (CLAUDE.md rule 1).")
 

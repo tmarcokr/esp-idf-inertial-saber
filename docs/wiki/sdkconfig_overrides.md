@@ -43,3 +43,37 @@ This document tracks all non-default `sdkconfig` modifications required by Inert
 > [!NOTE]
 > These overrides are target-specific for ESP32-S3 and must be placed in `sdkconfig.defaults.esp32s3` to avoid target verification errors when building for the ESP32-C6.
 
+
+### 3. ESP-IDF v6.1 Default Changes (No Override Required)
+
+| Key | v5.4.4 Default | v6.1 Default | Action | Since |
+|---|---|---|---|---|
+| `CONFIG_LIBC_PICOLIBC` | _(absent, newlib)_ | `y` | None (default kept) | 2026-09-26 |
+| `CONFIG_LIBC_PICOLIBC_NEWLIB_COMPATIBILITY` | _(absent)_ | `y` | None (default kept) | 2026-09-26 |
+| `CONFIG_FATFS_USE_DYN_BUFFERS` | `not set` | `y` | None (default kept) | 2026-09-26 |
+| `CONFIG_COMPILER_DISABLE_DEFAULT_ERRORS` | `y` | `not set` | None (default kept) | 2026-09-26 |
+
+**Reason**: The migration from ESP-IDF v5.4.4 to v6.1 changed several defaults that affect this project. No `sdkconfig.defaults*` file was modified; the new defaults are accepted as-is:
+1. **C library** — v6.1 builds with picolibc instead of newlib (newlib compatibility layer enabled).
+2. **FATFS dynamic buffers** — FATFS sector buffers are now allocated separately from the filesystem structure.
+3. **Default warnings as errors** — compiler default warnings are now treated as errors. New warnings must be fixed in code rather than silenced through this option.
+
+The existing overrides (§1 FAT LFN, §2 PSRAM) still exist in v6.1 and apply unchanged.
+
+> [!NOTE]
+> Validated on the XIAO ESP32-S3 on 2026-09-26 (boot, SD, PSRAM preload, audio, IMU, LEDs, effects and profile cycle).
+
+---
+
+### 4. Flash Size (ESP32-S3)
+
+| Key | Default | Override | Since |
+|---|---|---|---|
+| `CONFIG_ESPTOOLPY_FLASHSIZE_16MB` | `not set` (2 MB) | `y` | 2026-09-26 |
+
+**Reason**: The XIAO ESP32-S3 carries a 16 MB flash chip. With the 2 MB default, the bootloader reports `Detected size(16384k) larger than the size in the binary image header(2048k)` and limits flash access to 2 MB. The partition table is unchanged (default single 1 MB app partition).
+
+> [!NOTE]
+> Target-specific: placed in `sdkconfig.defaults.esp32s3`.
+
+---

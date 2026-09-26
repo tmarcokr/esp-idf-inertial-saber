@@ -14,9 +14,9 @@ Commit description provided by the user (if any): `$ARGUMENTS`
 
 1. **Pre-Commit Validation**:
    - Before committing, you MUST ensure the code is functional and does not break the project.
-   - Build with the ESP-IDF VS Code extension (**"ESP-IDF: Build your Project"**) or from a shell. ESP-IDF v5.4.4 (the CI version) is installed by the extension under `~/.espressif/`; source its environment only if `idf.py` is not already on PATH (if no ESP-IDF environment is available, state `Build: NOT VERIFIED` in the commit report; CI builds every PR):
+   - Build with the ESP-IDF VS Code extension (**"ESP-IDF: Build your Project"**) or from a shell. ESP-IDF v6.1 (the CI version) is installed by the extension under `~/.espressif/`; source its environment only if `idf.py` is not already on PATH (if no ESP-IDF environment is available, state `Build: NOT VERIFIED` in the commit report; CI builds every PR):
      ```bash
-     command -v idf.py >/dev/null || source ~/.espressif/tools/activate_idf_v5.4.4.sh
+     command -v idf.py >/dev/null || source ~/.espressif/tools/activate_idf_v6.1.sh
      idf.py build
      ```
    - *Note:* If the project includes unit tests, they should also be executed and passed.

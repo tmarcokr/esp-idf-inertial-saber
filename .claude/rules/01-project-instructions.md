@@ -30,7 +30,7 @@ No code may be modified or proposed without the corresponding expertise loaded i
 - The full roster, workflows and stop points are defined in `.claude/rules/02-orchestrator.md`.
 
 ## 3. General Project Context
-- **Target Microcontroller**: ESP32-S3 exclusively (ESP-IDF v5.4.4, see `.github/workflows/build_check.yml`).
+- **Target Microcontroller**: ESP32-S3 exclusively (ESP-IDF v6.1, see `.github/workflows/build_check.yml`).
 - **Documentation**: Datasheets are located in `.claude/docs/`. Always consult them when dealing with hardware.
 
 ## 4. Git Governance & Safety Protocols (Hard Rules)

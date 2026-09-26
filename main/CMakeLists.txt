@@ -29,12 +29,12 @@ idf_component_register(
          "profiles/inertial/effects/ProfileCycleEffect.cpp"
          "profiles/inertial/effects/PreloadWaitEffect.cpp"
     INCLUDE_DIRS "." "core" "profiles/inertial/effects" "profiles/inertial/effects/overlays" "profiles"
-    REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led json rgb_led
+    REQUIRES mpu6050 gpio_button audio_engine audio_channel i2s_transmitter sd_card smart_led espressif__cjson rgb_led vfs esp_driver_gpio esp_timer
 )
 
 # Force C++20 for all source files
 target_compile_features(${COMPONENT_LIB} PRIVATE cxx_std_20)
 
 if(NOT CONFIG_IDF_TARGET_ESP32S3)
-    message(FATAL_ERROR "El proyecto Inertial Saber solo soporta el target esp32s3. Ejecuta: idf.py set-target esp32s3")
+    message(FATAL_ERROR "InertialSaber only supports the esp32s3 target. Run: idf.py set-target esp32s3")
 endif()

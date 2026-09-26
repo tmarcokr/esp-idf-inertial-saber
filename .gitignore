@@ -7,6 +7,8 @@ dependencies.lock
 
 # IDE specific
 # .vscode/
+# Workspace settings are rewritten by the ESP-IDF extension with machine-specific paths
+.vscode/settings.json
 
 # Python specific
 __pycache__/
