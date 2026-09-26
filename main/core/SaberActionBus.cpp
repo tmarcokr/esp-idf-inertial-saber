@@ -4,7 +4,7 @@
 #include "esp_timer.h"
 
 #include <algorithm>
-#include <cstring>
+#include <cmath>
 
 namespace InertialSaber::Core {
 

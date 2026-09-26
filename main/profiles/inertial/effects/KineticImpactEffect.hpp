@@ -1,4 +1,3 @@
-#include "profiles/inertial/InertialDefinition.hpp"
 #pragma once
 
 #include "core/InertialEffect.hpp"
@@ -8,6 +7,9 @@
 namespace InertialSaber::Profiles {
 class PowerStateMachine;
 class SoundFont;
+}
+namespace InertialSaber::Profiles::Inertial {
+struct InertialDefinition;
 }
 namespace InertialSaber::Core {
 struct SaberDataPacket;
@@ -26,12 +28,11 @@ namespace InertialSaber::Effects {
  */
 class KineticImpactEffect final : public Core::InertialEffect {
 public:
-    KineticImpactEffect(
-        const Profiles::PowerStateMachine&      power,
-        Espressif::Wrappers::Audio::AudioEngine& audio,
-        Espressif::Wrappers::SmartLed::Engine&  ledEngine,
-        const InertialSaber::Profiles::Inertial::InertialDefinition&         definition,
-        const Profiles::SoundFont&              font);
+    KineticImpactEffect(const Profiles::PowerStateMachine& power,
+                        Espressif::Wrappers::Audio::AudioEngine& audio,
+                        Espressif::Wrappers::SmartLed::Engine& ledEngine,
+                        const Profiles::Inertial::InertialDefinition& definition,
+                        const Profiles::SoundFont& font);
 
     bool test(const Core::SaberDataPacket& packet) override;
     void run() override;
@@ -40,11 +41,11 @@ private:
     void clearKineticEnergyWindow();
     bool detectClash(const Core::SaberDataPacket& packet);
 
-    const Profiles::PowerStateMachine&       m_power;
+    const Profiles::PowerStateMachine& m_power;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
-    Espressif::Wrappers::SmartLed::Engine&   m_ledEngine;
-    const InertialSaber::Profiles::Inertial::InertialDefinition&          m_def;
-    const Profiles::SoundFont&               m_font;
+    Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
+    const Profiles::Inertial::InertialDefinition& m_def;
+    const Profiles::SoundFont& m_font;
 
     std::array<float, 4> m_kineticEnergyWindow{};
     size_t               m_windowIdx = 0;

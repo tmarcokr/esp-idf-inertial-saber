@@ -45,7 +45,6 @@ private:
   uint32_t m_lastTimestampMs = 0;
   uint32_t m_deltaMs = 0;
 
-  // ── Clean Code Physics Helpers ──
   void updateBreathPhase();
   bool isExcited() const;
   float calculateIdlePulse() const;

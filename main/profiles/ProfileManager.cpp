@@ -14,8 +14,8 @@ esp_err_t ProfileManager::init() {
   const esp_err_t err = ProfileLoader::loadFromSd(m_profiles);
 
   if (m_profiles.empty()) {
-    ESP_LOGE(TAG, "No valid profile on SD (scan: %s). Each profile needs /sdcard/profiles/<name>/profile.json",
-             esp_err_to_name(err));
+    ESP_LOGE(TAG, "No valid profile on SD (scan: %s)", esp_err_to_name(err));
+    ESP_LOGE(TAG, "Each profile needs /sdcard/profiles/<name>/profile.json");
     return err != ESP_OK ? err : ESP_ERR_NOT_FOUND;
   }
 
@@ -27,7 +27,8 @@ esp_err_t ProfileManager::init() {
         m_activeIndex = loadedIndex;
         ESP_LOGI(TAG, "Restored active profile index: %u", loadedIndex);
       } else {
-        ESP_LOGW(TAG, "Loaded active index %u out of bounds (%u profiles). Resetting to 0.", loadedIndex, (unsigned)m_profiles.size());
+        ESP_LOGW(TAG, "Loaded active index %u out of bounds (%u profiles). Resetting to 0.", loadedIndex,
+                 static_cast<unsigned>(m_profiles.size()));
       }
     } else {
       ESP_LOGW(TAG, "Failed to parse active_profile.txt content");
@@ -35,7 +36,8 @@ esp_err_t ProfileManager::init() {
   } else {
     ESP_LOGW(TAG, "active_profile.txt not found, defaulting to index 0");
   }
-  ESP_LOGI(TAG, "Initialized %u profile(s), active index: %u", (unsigned)m_profiles.size(), (unsigned)m_activeIndex);
+  ESP_LOGI(TAG, "Initialized %u profile(s), active index: %u", static_cast<unsigned>(m_profiles.size()),
+           static_cast<unsigned>(m_activeIndex));
   return ESP_OK;
 }
 

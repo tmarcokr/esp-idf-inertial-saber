@@ -7,14 +7,18 @@
 
 #include <algorithm>
 #include <cmath>
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
+#include <numbers>
 
 namespace InertialSaber::Effects {
 
 using namespace Espressif::Wrappers::SmartLed;
+
+namespace {
+
+constexpr float kHalfPi = std::numbers::pi_v<float> / 2.0f;
+constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
+
+} // namespace
 
 InertialLightEffect::InertialLightEffect(
     Engine& ledEngine,
@@ -90,13 +94,13 @@ void InertialLightEffect::run() {
 }
 
 void InertialLightEffect::updateBreathPhase() {
-  float bladeAngleRad = m_orientation * (static_cast<float>(M_PI) / 2.0f);
+  float bladeAngleRad = m_orientation * kHalfPi;
   float freq = m_def.lightIdleBaseFreq + (std::sin(bladeAngleRad) * kGravityBreathModulationHz);
 
-  m_breathPhase += (static_cast<float>(m_deltaMs) / 1000.0f) * freq * 2.0f * static_cast<float>(M_PI);
+  m_breathPhase += (static_cast<float>(m_deltaMs) / 1000.0f) * freq * kTwoPi;
 
-  if (m_breathPhase > 2.0f * static_cast<float>(M_PI)) {
-    m_breathPhase -= 2.0f * static_cast<float>(M_PI);
+  if (m_breathPhase > kTwoPi) {
+    m_breathPhase -= kTwoPi;
   }
 }
 

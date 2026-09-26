@@ -59,7 +59,7 @@ public:
     [[nodiscard]] esp_err_t start();
 
     /**
-     * @brief Signal the bus task to terminate and wait for cleanup.
+     * @brief Signal the bus task to exit, wait a fixed grace period (no join) and delete the input queue.
      */
     void stop();
 

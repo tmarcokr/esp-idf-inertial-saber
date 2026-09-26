@@ -1,11 +1,14 @@
 #include "ImuAdapter.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include <cmath>
+#include <numbers>
 
 namespace InertialSaber::System::Adapters {
 
 static constexpr const char* TAG = "ImuAdapter";
+static constexpr float kRadToDeg = 180.0f / std::numbers::pi_v<float>;
 
 ImuAdapter::ImuAdapter(Core::SaberActionBus& bus, Espressif::Wrappers::Sensors::Mpu6050& imu,
                        gpio_num_t interruptPin)
@@ -87,7 +90,7 @@ void ImuAdapter::imuLoop() {
                                      linAccel.z * linAccel.z);
 
             auto angles = data->getEulerAngles();
-            float orientation = angles.roll * (180.0f / M_PI);
+            float orientation = angles.roll * kRadToDeg;
 
             const Core::MotionSample sample{
                 .kineticEnergyG  = energy,

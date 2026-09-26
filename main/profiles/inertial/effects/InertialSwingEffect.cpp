@@ -7,6 +7,7 @@
 #include "esp_random.h"
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 #include <string>
 
 namespace InertialSaber::Effects {
@@ -100,7 +101,7 @@ float InertialSwingEffect::computeFinalMix() const {
     float baseMix = (m_kineticEnergy - m_def.swingCrossfadeLowG) / crossfadeRange;
     baseMix = std::clamp(baseMix, 0.0f, 1.0f);
 
-    float bladeAngleRad = m_orientation * (static_cast<float>(M_PI) / 2.0f);
+    float bladeAngleRad = m_orientation * (std::numbers::pi_v<float> / 2.0f);
     float gravityMod = std::sin(bladeAngleRad) * m_def.gravityInfluence;
     return std::clamp(baseMix + gravityMod, 0.0f, 1.0f);
 }
