@@ -72,7 +72,7 @@ void KineticImpactEffect::run() {
         ESP_LOGW(TAG, "Clash overlay dropped: no free overlay slot");
     }
 
-    ESP_LOGI(TAG, "Clash triggered: %s (G drop threshold: %.2f)", path.c_str(), m_def.clashThresholdG);
+    ESP_LOGD(TAG, "Clash triggered: %s (G drop threshold: %.2f)", path.c_str(), m_def.clashThresholdG);
 }
 
 } // namespace InertialSaber::Effects

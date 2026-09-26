@@ -28,10 +28,10 @@ esp_err_t ProfileLoader::loadFromSd(std::vector<std::unique_ptr<ConfigurableProf
       continue;
     }
 
-    ESP_LOGI(TAG, "  entry: '%s' (d_type=%d)", entry->d_name, entry->d_type);
+    ESP_LOGD(TAG, "  entry: '%s' (d_type=%d)", entry->d_name, entry->d_type);
 
     std::string configPath = std::string(kProfilesDir) + "/" + entry->d_name + "/profile.json";
-    ESP_LOGI(TAG, "  trying: %s", configPath.c_str());
+    ESP_LOGD(TAG, "  trying: %s", configPath.c_str());
 
     System::UniqueFile file = System::openFile(configPath.c_str(), "r");
     if (!file) {
@@ -48,7 +48,7 @@ esp_err_t ProfileLoader::loadFromSd(std::vector<std::unique_ptr<ConfigurableProf
       continue;
     }
 
-    ESP_LOGI(TAG, "  file size: %ld bytes", size);
+    ESP_LOGD(TAG, "  file size: %ld bytes", size);
 
     std::string jsonStr;
     if (size > 0) {

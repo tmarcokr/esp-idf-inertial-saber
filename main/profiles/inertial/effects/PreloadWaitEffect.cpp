@@ -53,7 +53,7 @@ void PreloadWaitEffect::run() {
     m_status.show(SystemStatus::Ready);
 
     const std::string fontPath = m_font.selectionPath();
-    ESP_LOGI(TAG, "Preload complete. Playing selection sound: %s", fontPath.c_str());
+    ESP_LOGD(TAG, "Preload complete. Playing selection sound: %s", fontPath.c_str());
     m_audio.play(fontPath, false, kFullVolume);
 }
 

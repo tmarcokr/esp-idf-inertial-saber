@@ -27,7 +27,7 @@ bool ProfileCycleEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void ProfileCycleEffect::run() {
-    ESP_LOGI(TAG, "Profile cycle triggered");
+    ESP_LOGD(TAG, "Profile cycle triggered");
     m_profileManager.next();
 }
 

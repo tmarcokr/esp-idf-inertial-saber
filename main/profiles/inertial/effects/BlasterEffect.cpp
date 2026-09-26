@@ -54,7 +54,7 @@ void BlasterEffect::run() {
     ESP_LOGW(TAG, "Blaster overlay dropped: no free overlay slot");
   }
 
-  ESP_LOGI(TAG, "Blaster block triggered: %s", path.c_str());
+  ESP_LOGD(TAG, "Blaster block triggered: %s", path.c_str());
 }
 
 } // namespace InertialSaber::Effects

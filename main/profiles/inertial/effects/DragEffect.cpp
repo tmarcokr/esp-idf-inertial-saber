@@ -68,7 +68,7 @@ void DragEffect::run() {
             m_overlayFadeRequest.reset();
         }
 
-        ESP_LOGI(TAG, "Drag active: %s", path.c_str());
+        ESP_LOGD(TAG, "Drag active: %s", path.c_str());
     } else if (!m_triggerMet && m_active) {
         m_active = false;
 
@@ -85,7 +85,7 @@ void DragEffect::run() {
             m_overlayFadeRequest.reset();
         }
 
-        ESP_LOGI(TAG, "Drag inactive, playing end: %s", endPath.c_str());
+        ESP_LOGD(TAG, "Drag inactive, playing end: %s", endPath.c_str());
     }
 }
 

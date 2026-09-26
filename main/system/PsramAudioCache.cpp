@@ -67,7 +67,7 @@ void PsramAudioCache::requestPreload(const Profiles::SoundFont& font) {
         m_pendingJob = std::move(job);
         m_requestedGeneration.store(generation, std::memory_order_release);
     }
-    ESP_LOGI(TAG, "Preload gen %lu requested for '%s'", static_cast<unsigned long>(generation),
+    ESP_LOGD(TAG, "Preload gen %lu requested for '%s'", static_cast<unsigned long>(generation),
              font.root().c_str());
     if (m_loaderTask) {
         xTaskNotifyGive(m_loaderTask);
@@ -150,7 +150,7 @@ void PsramAudioCache::runPreload(const PreloadJob& job) {
     waitForDescriptorsClosed();
 
     if (isSuperseded(job.generation)) {
-        ESP_LOGI(TAG, "Preload gen %lu superseded before loading", generation);
+        ESP_LOGD(TAG, "Preload gen %lu superseded before loading", generation);
         return;
     }
 
@@ -161,12 +161,12 @@ void PsramAudioCache::runPreload(const PreloadJob& job) {
         m_completedGeneration.store(job.generation, std::memory_order_release);
         return;
     }
-    ESP_LOGI(TAG, "Loaded to PSRAM: hum.wav");
+    ESP_LOGD(TAG, "Loaded to PSRAM: hum.wav");
 
     const uint8_t totalPairs = job.font.swingPairCount();
     for (uint8_t i = 1; i <= totalPairs; ++i) {
         if (isSuperseded(job.generation)) {
-            ESP_LOGI(TAG, "Preload gen %lu superseded at pair %u", generation, i);
+            ESP_LOGD(TAG, "Preload gen %lu superseded at pair %u", generation, i);
             return;
         }
 
@@ -183,11 +183,11 @@ void PsramAudioCache::runPreload(const PreloadJob& job) {
             break;
         }
         m_loadedSwingPairs.store(i, std::memory_order_release);
-        ESP_LOGI(TAG, "Loaded to PSRAM: swing pair %u", i);
+        ESP_LOGD(TAG, "Loaded to PSRAM: swing pair %u", i);
     }
 
     if (isSuperseded(job.generation)) {
-        ESP_LOGI(TAG, "Preload gen %lu superseded after loading", generation);
+        ESP_LOGD(TAG, "Preload gen %lu superseded after loading", generation);
         return;
     }
 
@@ -246,7 +246,7 @@ esp_err_t PsramAudioCache::loadFile(const std::string& sdPath, const std::string
     }
     m_registeredNames.push_back(vfsName);
 
-    ESP_LOGI(TAG, "Preloaded '%s' to PSRAM (%zu bytes). Free PSRAM: %zu bytes", vfsName.c_str(), size,
+    ESP_LOGD(TAG, "Preloaded '%s' to PSRAM (%zu bytes). Free PSRAM: %zu bytes", vfsName.c_str(), size,
              heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
     return ESP_OK;
 }

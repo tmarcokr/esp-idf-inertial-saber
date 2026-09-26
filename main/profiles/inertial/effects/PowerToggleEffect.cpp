@@ -111,7 +111,7 @@ void PowerToggleEffect::beginIgnition() {
   m_enginesStarted = false;
   m_power.handle(Profiles::PowerStateMachine::Event::IgniteRequested);
 
-  ESP_LOGI(TAG, "Ignition started — %s (%" PRIu32 " ms)", path.c_str(), m_def.ignitionDurationMs);
+  ESP_LOGD(TAG, "Ignition started — %s (%" PRIu32 " ms)", path.c_str(), m_def.ignitionDurationMs);
 }
 
 void PowerToggleEffect::tickIgnition() {
@@ -122,7 +122,7 @@ void PowerToggleEffect::tickIgnition() {
     m_swing.activate();
     m_light.activate();
     m_enginesStarted = true;
-    ESP_LOGI(TAG, "Engines activated at +%" PRIu32 " ms", elapsed);
+    ESP_LOGD(TAG, "Engines activated at +%" PRIu32 " ms", elapsed);
   }
 
   if (elapsed >= m_def.ignitionDurationMs) {
@@ -146,7 +146,7 @@ void PowerToggleEffect::beginRetraction() {
   m_sequenceStartMs = nowMs();
   m_power.handle(Profiles::PowerStateMachine::Event::RetractRequested);
 
-  ESP_LOGI(TAG, "Retraction started — %s (%" PRIu32 " ms)", path.c_str(), m_def.retractionDurationMs);
+  ESP_LOGD(TAG, "Retraction started — %s (%" PRIu32 " ms)", path.c_str(), m_def.retractionDurationMs);
 }
 
 void PowerToggleEffect::tickRetraction() {
