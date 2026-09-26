@@ -2,7 +2,6 @@
 
 #include "esp_err.h"
 #include "esp_heap_caps.h"
-#include "esp_vfs.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -10,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <vector>
 
 namespace Espressif::Wrappers {
@@ -54,6 +54,8 @@ public:
     [[nodiscard]] uint8_t openDescriptorCount() const;
 
 private:
+    struct VfsHooks;
+
     struct FileEntry {
         std::string name;
         MemoryFileHandle file;
@@ -81,7 +83,6 @@ private:
     // Warning: leaf lock. The VFS hooks run under newlib's FILE lock, so while holding m_mutex never
     // log, touch stdio, release the last MemoryFileHandle or take any lock other than the heap's.
     mutable std::mutex m_mutex;
-    esp_vfs_t m_vfsImpl{};
 };
 
 } // namespace Espressif::Wrappers

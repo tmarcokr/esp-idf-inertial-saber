@@ -1,5 +1,6 @@
 #include "system/MemoryVfs.hpp"
 #include "esp_log.h"
+#include "esp_vfs.h"
 #include <fcntl.h>
 #include <algorithm>
 #include <cerrno>
@@ -24,9 +25,44 @@ MemoryVfs::MemoryVfs(std::string_view mountPoint, uint8_t maxFiles, uint8_t maxF
     , m_files(maxFiles)
     , m_fds(maxFds) {}
 
+struct MemoryVfs::VfsHooks {
+    static constexpr esp_vfs_fs_ops_t kOps = {
+        .write_p = nullptr,
+        .lseek_p = [](void* ctx, int fd, off_t offset, int mode) -> off_t {
+            return static_cast<MemoryVfs*>(ctx)->vfsLseek(fd, offset, mode);
+        },
+        .read_p = [](void* ctx, int fd, void* dst, size_t size) -> ssize_t {
+            return static_cast<MemoryVfs*>(ctx)->vfsRead(fd, dst, size);
+        },
+        .pread_p = nullptr,
+        .pwrite_p = nullptr,
+        .open_p = [](void* ctx, const char* path, int flags, int mode) -> int {
+            return static_cast<MemoryVfs*>(ctx)->vfsOpen(path, flags, mode);
+        },
+        .close_p = [](void* ctx, int fd) -> int {
+            return static_cast<MemoryVfs*>(ctx)->vfsClose(fd);
+        },
+        .fstat_p = [](void* ctx, int fd, struct stat* st) -> int {
+            return static_cast<MemoryVfs*>(ctx)->vfsFstat(fd, st);
+        },
+        .fcntl_p = nullptr,
+        .ioctl_p = nullptr,
+        .fsync_p = nullptr,
+#ifdef CONFIG_VFS_SUPPORT_DIR
+        .dir = nullptr,
+#endif
+#ifdef CONFIG_VFS_SUPPORT_TERMIOS
+        .termios = nullptr,
+#endif
+#if CONFIG_VFS_SUPPORT_SELECT
+        .select = nullptr,
+#endif
+    };
+};
+
 MemoryVfs::~MemoryVfs() {
     if (m_initialized) {
-        esp_vfs_unregister(m_mountPoint.c_str());
+        esp_vfs_unregister_fs(m_mountPoint.c_str());
     }
 }
 
@@ -35,24 +71,8 @@ esp_err_t MemoryVfs::init() {
         return ESP_ERR_INVALID_STATE;
     }
 
-    m_vfsImpl.flags = ESP_VFS_FLAG_CONTEXT_PTR;
-    m_vfsImpl.open_p = [](void* ctx, const char* path, int flags, int mode) -> int {
-        return static_cast<MemoryVfs*>(ctx)->vfsOpen(path, flags, mode);
-    };
-    m_vfsImpl.read_p = [](void* ctx, int fd, void* dst, size_t size) -> ssize_t {
-        return static_cast<MemoryVfs*>(ctx)->vfsRead(fd, dst, size);
-    };
-    m_vfsImpl.close_p = [](void* ctx, int fd) -> int {
-        return static_cast<MemoryVfs*>(ctx)->vfsClose(fd);
-    };
-    m_vfsImpl.lseek_p = [](void* ctx, int fd, off_t offset, int mode) -> off_t {
-        return static_cast<MemoryVfs*>(ctx)->vfsLseek(fd, offset, mode);
-    };
-    m_vfsImpl.fstat_p = [](void* ctx, int fd, struct stat* st) -> int {
-        return static_cast<MemoryVfs*>(ctx)->vfsFstat(fd, st);
-    };
-
-    esp_err_t err = esp_vfs_register(m_mountPoint.c_str(), &m_vfsImpl, this);
+    esp_err_t err = esp_vfs_register_fs(m_mountPoint.c_str(), &VfsHooks::kOps,
+                                        ESP_VFS_FLAG_CONTEXT_PTR | ESP_VFS_FLAG_STATIC, this);
     if (err == ESP_OK) {
         m_initialized = true;
         ESP_LOGI(TAG, "Mounted MemoryVfs at '%s'", m_mountPoint.c_str());
