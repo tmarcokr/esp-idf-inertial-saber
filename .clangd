@@ -16,6 +16,7 @@ CompileFlags:
     - "-fno-optimize-sibling-calls"
     - "-mlongcalls"
     - "-mlong-calls"
+    - "-mdisable-hardware-atomics"
     
 
 Index:
