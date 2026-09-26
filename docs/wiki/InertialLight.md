@@ -1,7 +1,5 @@
 # InertialLight Engine: Visual Plasma Simulation
 
-[Play with InertialSaber Simulator](https://tmarcokr.github.io/esp-idf-inertial-saber/)
-
 ## 1. System Overview
 The **InertialLight Engine** is the visual counterpart to the *InertialSwing*. Its goal is to translate the kinetic forces and energy accumulation of the saber into organic light responses using the **HSB (Hue, Saturation, Brightness)** color space.
 

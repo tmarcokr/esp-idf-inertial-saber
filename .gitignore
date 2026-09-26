@@ -18,3 +18,5 @@ __pycache__/
 # Claude Code (personal, not shared)
 .claude/settings.local.json
 CLAUDE.local.md
+.claude/docs/plans/*
+!.claude/docs/plans/README.md
