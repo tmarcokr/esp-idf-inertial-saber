@@ -42,7 +42,7 @@ constexpr std::optional<State> nextState(State from, Event event) {
 bool PowerStateMachine::handle(Event event) {
     const std::optional<State> next = nextState(m_state, event);
     if (!next) {
-        ESP_LOGD(TAG, "Rejected event %u in state %u", static_cast<unsigned>(event),
+        ESP_LOGW(TAG, "Rejected event %u in state %u", static_cast<unsigned>(event),
                  static_cast<unsigned>(m_state));
         return false;
     }

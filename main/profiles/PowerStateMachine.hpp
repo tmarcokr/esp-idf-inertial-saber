@@ -9,7 +9,7 @@ namespace InertialSaber::Profiles {
  *
  * Accessed from the bus task only (and from the main task before the bus starts); not thread-safe.
  */
-class PowerStateMachine {
+class PowerStateMachine final {
 public:
     enum class State : uint8_t { Locked, Retracted, Igniting, Ignited, Retracting };
     enum class Event : uint8_t { Lock, PreloadDone, IgniteRequested, IgnitionElapsed, RetractRequested, RetractionElapsed };

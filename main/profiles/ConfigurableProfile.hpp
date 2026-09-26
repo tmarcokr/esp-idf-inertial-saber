@@ -41,9 +41,6 @@ public:
   [[nodiscard]] const Inertial::InertialDefinition &definition() const;
   [[nodiscard]] const SoundFont &soundFont() const;
 
-  [[nodiscard]] PowerStateMachine &power();
-  [[nodiscard]] const PowerStateMachine &power() const;
-
   /**
    * @brief Instantiate and register this profile's effects on the bus.
    */

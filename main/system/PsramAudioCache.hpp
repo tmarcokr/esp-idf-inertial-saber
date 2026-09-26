@@ -36,6 +36,7 @@ public:
 
     [[nodiscard]] uint8_t loadedSwingPairCount() const;
 
+    /** @brief /mem path of the hum file. */
     [[nodiscard]] static std::string humPath();
     /** @brief /mem path of the low swing of the 1-based @p pairIndex. */
     [[nodiscard]] static std::string swingLowPath(uint8_t pairIndex);

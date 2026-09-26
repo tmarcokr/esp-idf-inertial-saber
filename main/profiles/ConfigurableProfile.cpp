@@ -36,14 +36,6 @@ const SoundFont &ConfigurableProfile::soundFont() const {
   return m_font;
 }
 
-PowerStateMachine &ConfigurableProfile::power() {
-  return m_power;
-}
-
-const PowerStateMachine &ConfigurableProfile::power() const {
-  return m_power;
-}
-
 void ConfigurableProfile::load(const SaberServices &services, ProfileManager &profileManager) {
   ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName.c_str());
 

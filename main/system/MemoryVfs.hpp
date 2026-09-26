@@ -48,9 +48,6 @@ public:
     /** @brief Removes @p name from the file table; open descriptors keep the buffer alive. */
     esp_err_t unregisterFile(std::string_view name);
 
-    /** @brief Clears the file table; open descriptors keep their buffers alive. */
-    void unregisterAll();
-
     [[nodiscard]] uint8_t openDescriptorCount() const;
 
 private:

@@ -111,21 +111,6 @@ esp_err_t MemoryVfs::unregisterFile(std::string_view name) {
     return ESP_OK;
 }
 
-void MemoryVfs::unregisterAll() {
-    std::vector<MemoryFileHandle> released;
-    released.reserve(m_files.size());
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        for (auto& entry : m_files) {
-            if (entry.file) {
-                released.push_back(std::move(entry.file));
-                entry.name.clear();
-            }
-        }
-    }
-    ESP_LOGD(TAG, "Unregistered all virtual files");
-}
-
 uint8_t MemoryVfs::openDescriptorCount() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return static_cast<uint8_t>(std::count_if(m_fds.begin(), m_fds.end(),
