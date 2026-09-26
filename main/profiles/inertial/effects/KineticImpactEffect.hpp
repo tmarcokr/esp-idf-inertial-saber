@@ -10,7 +10,6 @@ class PowerStateMachine;
 class SoundFont;
 }
 namespace InertialSaber::Core {
-
 struct SaberDataPacket;
 }
 namespace Espressif::Wrappers::Audio {

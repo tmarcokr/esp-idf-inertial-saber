@@ -1,14 +1,13 @@
 #include "InertialSwingEffect.hpp"
 #include "AudioLevels.hpp"
+#include "profiles/SoundFont.hpp"
+#include "system/PsramAudioCache.hpp"
 
 #include "esp_log.h"
 #include "esp_random.h"
 #include <algorithm>
 #include <cmath>
 #include <string>
-
-#include "profiles/SoundFont.hpp"
-#include "system/PsramAudioCache.hpp"
 
 namespace InertialSaber::Effects {
 
@@ -117,7 +116,7 @@ void InertialSwingEffect::applySwingVolumes(float masterVolume, float finalMix) 
     m_engine.setChannelVolume(m_chSwingL, volL);
     m_engine.setChannelVolume(m_chSwingH, volH);
 
-    if (++m_logCounter >= 400) { 
+    if (++m_logCounter >= 400) {
         m_logCounter = 0;
         auto humVol = static_cast<uint16_t>(m_def.humBaseVolume * std::max(0.0f, 1.0f - masterVolume * m_def.humMaxDucking));
         ESP_LOGI(TAG, "KE:%.2f | MV:%.2f | Mix:%.2f | L:%u H:%u | Hum:%u | OL:%.2f | Pair:%u",
@@ -168,7 +167,7 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
     if (isMoving) {
         m_wasMoving = true;
         m_lastMovementTimeMs = m_timestampMs;
-    } else {    
+    } else {
         if (m_wasMoving) {
             m_wasMoving = false;
         } else if (m_needsSwap) {

@@ -5,7 +5,6 @@
 #include <cstdint>
 
 namespace InertialSaber::Core {
-
 struct SaberDataPacket;
 }
 namespace InertialSaber::Profiles {

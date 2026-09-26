@@ -219,7 +219,7 @@ void SaberActionBus::filterStagedMotionOrientation() {
     float correctedAngle = m_packet.orientation - m_config.motion.orientationOffsetDeg;
     if (correctedAngle > 90.0f) correctedAngle = 90.0f;
     if (correctedAngle < -90.0f) correctedAngle = -90.0f;
-    
+
     m_packet.orientation = correctedAngle / 90.0f;
 }
 
