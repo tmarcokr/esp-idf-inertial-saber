@@ -1,6 +1,7 @@
 #include "SaberSystem.hpp"
 #include "profiles/ProfileParser.hpp"
 #include "esp_log.h"
+#include "sdkconfig.h"
 
 namespace InertialSaber::System {
 
@@ -28,7 +29,7 @@ esp_err_t SaberSystem::start() {
 esp_err_t SaberSystem::internalStart() {
   esp_err_t err;
 
-#ifndef NDEBUG
+#if CONFIG_SABER_PARSER_SELF_TEST
   if ((err = Profiles::ProfileParser::runSelfTest()) != ESP_OK) return err;
 #endif
 

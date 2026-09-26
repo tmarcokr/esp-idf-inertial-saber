@@ -1,0 +1,11 @@
+menu "InertialSaber"
+
+    config SABER_PARSER_SELF_TEST
+        bool "Run the profile parser self-test at boot"
+        default y
+        help
+            Runs ProfileParser::runSelfTest() before the hardware is initialised.
+            A failing self-test aborts the boot with the error status.
+            Disable it in release builds to shorten the boot and save flash.
+
+endmenu

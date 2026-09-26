@@ -2,6 +2,7 @@
 
 #include "profiles/inertial/InertialDefinition.hpp"
 #include "esp_err.h"
+#include "sdkconfig.h"
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
@@ -23,7 +24,7 @@ public:
    */
   static esp_err_t parse(std::string_view json, Inertial::InertialDefinition &outDef);
 
-#ifndef NDEBUG
+#if CONFIG_SABER_PARSER_SELF_TEST
   /**
    * @brief Executes a comprehensive parser self-test checking values and fallbacks.
    * @return ESP_OK on success, or ESP_FAIL if any validation fails.

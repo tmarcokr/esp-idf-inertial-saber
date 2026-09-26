@@ -199,7 +199,7 @@ esp_err_t ProfileParser::parse(std::string_view json, Inertial::InertialDefiniti
   return ESP_OK;
 }
 
-#ifndef NDEBUG
+#if CONFIG_SABER_PARSER_SELF_TEST
 esp_err_t ProfileParser::runSelfTest() {
   static const char *testTag = "ParserTest";
   ESP_LOGI(testTag, "Running parser self-tests...");
