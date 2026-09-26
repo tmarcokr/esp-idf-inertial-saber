@@ -10,13 +10,17 @@ Use this workflow to sync or update shared components from the `esp-idf-componen
 
 ## Important Constraints
 - **Do not use `git checkout`** for bringing files from the components repo (e.g., `git checkout componentes/main -- components/`), as it will forcefully overwrite local changes without warning.
-- **Use `git merge`** to safely bring in changes. This ensures Git uses its merge engine to combine changes and alert about conflicts, preserving project-specific customizations if any.
+- **Use `git merge`** to bring in changes. The histories are unrelated (there is no common ancestor), so every changed component file is an add/add conflict; `-X theirs` resolves them to the upstream version, because `components/` must be an exact copy of `esp-idf-components` (CLAUDE.md rule 3: no local customizations).
 - Focus updates specifically on the `components/` directory.
-- **Guardrail interaction**: `.claude/hooks/guard-bash.py` denies agent git commands that stage, commit or push `components/` changes, and asks before `git clean`/`git restore`. Run this sync on a `feature/` branch; the agent may run the read-only steps (`git remote -v`, `git fetch componentes`, `git status`, `git diff --staged`), but present the merge, staging, cleanup and commit commands to the user, who runs them with the `!` prompt prefix.
+- **Guardrail interaction**: once the user has invoked `/sync-components`, the agent runs every step itself on a `feature/` branch. `.claude/hooks/guard-bash.py` asks the user to confirm each persisting step (reset, staging, restore, clean, commit, push) **only while every modified `components/` file is an exact copy of `componentes/main`**; any other `components/` change (manual edits, unresolved conflicts, missing `git fetch componentes`) is denied. If a step is denied, stop and report it to the user instead of working around it.
 
 ## Process Steps
 
 1. **Information Gathering**:
+   - The working tree must be clean, with no untracked files (step 4 runs `git clean -fd`); otherwise stop and ask the user:
+     ```bash
+     git status --porcelain --untracked-files=all
+     ```
    - Check if the `componentes` remote already exists:
      ```bash
      git remote -v
@@ -33,11 +37,11 @@ Use this workflow to sync or update shared components from the `esp-idf-componen
      ```
 
 3. **Merging Changes (Safe approach)**:
-   - To merge changes safely while only targeting the `components/` folder, execute a merge without committing automatically:
+   - To merge changes safely while only targeting the `components/` folder, execute a merge without committing automatically, resolving conflicts to the upstream version:
      ```bash
-     git merge componentes/main --no-commit --no-ff --allow-unrelated-histories
+     git merge componentes/main --no-commit --no-ff --allow-unrelated-histories -X theirs
      ```
-   - *Note:* If conflicts occur within the `components/` directory, they must be resolved manually.
+   - *Note:* Files deleted upstream are not removed by this merge (there is no common ancestor); remove them explicitly if needed. If conflicts remain within `components/`, stop and ask the user.
 
 4. **Filtering and Atomic Cleanup**:
    - Isolate the desired changes and purge the rest of the template files that might have been brought in:

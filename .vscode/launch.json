@@ -4,7 +4,8 @@
         {
             // Resolved by the ESP-IDF extension: it fills in the ELF, the GDB of the
             // active toolchain and the init commands, and starts OpenOCD with
-            // `idf.openOcdConfigs` (see settings.json) before attaching.
+            // `idf.openOcdConfigs` before attaching (written to the local, untracked
+            // settings.json by "ESP-IDF: Set Espressif Device Target").
             "name": "Debug (ESP32-S3)",
             "type": "gdbtarget",
             "request": "attach"
