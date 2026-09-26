@@ -32,10 +32,6 @@ const Inertial::InertialDefinition &ConfigurableProfile::definition() const {
   return m_def;
 }
 
-const SoundFont &ConfigurableProfile::soundFont() const {
-  return m_font;
-}
-
 void ConfigurableProfile::load(const SaberServices &services, ProfileManager &profileManager) {
   ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName.c_str());
 

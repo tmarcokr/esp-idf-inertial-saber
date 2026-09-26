@@ -39,7 +39,6 @@ public:
   ConfigurableProfile &operator=(ConfigurableProfile &&) = delete;
 
   [[nodiscard]] const Inertial::InertialDefinition &definition() const;
-  [[nodiscard]] const SoundFont &soundFont() const;
 
   /**
    * @brief Instantiate and register this profile's effects on the bus.

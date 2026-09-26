@@ -168,7 +168,6 @@ esp_err_t ProfileParser::parse(std::string_view json, Inertial::InertialDefiniti
   outDef.clashThresholdG = reader.read(swing, "clash_threshold_g", 2.0f, kMinClashThresholdG, kMaxG);
 
   const Section fontCounts = section(root, "font_counts");
-  outDef.fontCounts.hum = reader.read<uint8_t>(fontCounts, "hum", 1, 0, kMaxFontCount);
   outDef.fontCounts.swingPair = reader.read<uint8_t>(fontCounts, "swing_pair", 3, 0, System::PsramAudioCache::kMaxSwingPairs);
   outDef.fontCounts.burst = reader.read<uint8_t>(fontCounts, "burst", 16, 0, kMaxFontCount);
   outDef.fontCounts.in = reader.read<uint8_t>(fontCounts, "in", 2, 0, kMaxFontCount);
@@ -231,7 +230,6 @@ esp_err_t ProfileParser::runSelfTest() {
       "clash_threshold_g": 2.5
     },
     "font_counts": {
-      "hum": 2,
       "swing_pair": 4,
       "burst": 12,
       "in": 3,
@@ -273,7 +271,7 @@ esp_err_t ProfileParser::runSelfTest() {
   if (def.kineticEnergyDeadbandG != 0.35f || def.rotationDeadbandDps != 18.0f) return ESP_FAIL;
   if (def.overloadThresholdG != 1.5f || def.overloadChargeRate != 2.5f) return ESP_FAIL;
   if (def.swingIdleThresholdG != 0.2f || def.humBaseVolume != 9000 || def.clashThresholdG != 2.5f) return ESP_FAIL;
-  if (def.fontCounts.hum != 2 || def.fontCounts.swingPair != 4 || def.fontCounts.dragEnd != 3) return ESP_FAIL;
+  if (def.fontCounts.swingPair != 4 || def.fontCounts.dragEnd != 3) return ESP_FAIL;
   if (def.ignitionDurationMs != 700 || def.retractionDurationMs != 400) return ESP_FAIL;
   if (def.blasterLedCount != 4 || def.dragLedCount != 6) return ESP_FAIL;
   if (def.bladeBaseHue != 120 || def.lightIdleBaseFreq != 1.5f) return ESP_FAIL;
@@ -288,7 +286,7 @@ esp_err_t ProfileParser::runSelfTest() {
   if (fallbackDef.profileName != "unnamed" || fallbackDef.profileRoot != "profiles/unnamed/") return ESP_FAIL;
   if (fallbackDef.overloadThresholdG != 1.0f) return ESP_FAIL;
   if (fallbackDef.kineticEnergyDeadbandG != 0.25f || fallbackDef.rotationDeadbandDps != 15.0f) return ESP_FAIL;
-  if (fallbackDef.fontCounts.hum != 1 || fallbackDef.bladeBaseHue != 240 || fallbackDef.clashThresholdG != 2.0f) return ESP_FAIL;
+  if (fallbackDef.fontCounts.swingPair != 3 || fallbackDef.bladeBaseHue != 240 || fallbackDef.clashThresholdG != 2.0f) return ESP_FAIL;
 
   const char *invalidJson = R"({
     "swing": {

@@ -10,7 +10,6 @@ namespace InertialSaber::Profiles::Inertial {
  * @brief Number of files available per sound category of a font.
  */
 struct FontCounts {
-    uint8_t hum;        ///< Number of hum.wav files in the font directory.
     uint8_t swingPair;  ///< Number of swingL/H pairs.
     uint8_t burst;      ///< Number of burst one-shot files (swng/swng1.wav … swngN.wav).
     uint8_t in;         ///< Number of power-on sound files (in/in1.wav … inN.wav).

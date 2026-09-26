@@ -41,12 +41,6 @@ public:
      */
     void deactivate();
 
-    /**
-     * @brief Checks if the effect is currently active.
-     * @return True if active.
-     */
-    [[nodiscard]] bool isActive() const;
-
     bool test(const Core::SaberDataPacket& packet) override;
     void run() override;
 

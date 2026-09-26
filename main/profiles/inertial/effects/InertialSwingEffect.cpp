@@ -64,10 +64,6 @@ void InertialSwingEffect::deactivate() {
     ESP_LOGI(TAG, "Deactivated — all channels stopped");
 }
 
-bool InertialSwingEffect::isActive() const {
-    return m_active.load();
-}
-
 bool InertialSwingEffect::test(const Core::SaberDataPacket& packet) {
     m_kineticEnergy = packet.kineticEnergy;
     m_orientation = packet.orientation;
