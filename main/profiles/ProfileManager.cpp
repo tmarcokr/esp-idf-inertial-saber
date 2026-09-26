@@ -47,8 +47,9 @@ esp_err_t ProfileManager::loadActive() {
 }
 
 void ProfileManager::next() {
-  if (m_profiles.size() <= 1) return;
+  if (m_profiles.empty()) return;
 
+  const size_t previousIndex = m_activeIndex;
   ESP_LOGI(TAG, "Hot-swapping profile: unloading active index %u", m_activeIndex);
   m_profiles[m_activeIndex]->unload(m_services);
 
@@ -56,7 +57,9 @@ void ProfileManager::next() {
 
   ESP_LOGI(TAG, "Loading next profile at index %u...", m_activeIndex);
   m_profiles[m_activeIndex]->load(m_services, *this);
-  saveActiveIndex();
+  if (m_activeIndex != previousIndex) {
+    saveActiveIndex();
+  }
 }
 
 void ProfileManager::saveActiveIndex() {

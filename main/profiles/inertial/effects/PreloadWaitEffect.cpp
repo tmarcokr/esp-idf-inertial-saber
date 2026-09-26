@@ -41,7 +41,7 @@ void PreloadWaitEffect::run() {
     case PreloadStatus::Failed:
         m_power.handle(Profiles::PowerStateMachine::Event::PreloadFailed);
         m_status.show(SystemStatus::Error);
-        ESP_LOGE(TAG, "Preload failed for '%s'. Ignition disabled; triple-click to cycle profile.",
+        ESP_LOGE(TAG, "Preload failed for '%s'. Ignition disabled; triple-click to reload or cycle profile.",
                  m_font.root().c_str());
         return;
     case PreloadStatus::Ready:

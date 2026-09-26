@@ -32,7 +32,7 @@ public:
   [[nodiscard]] esp_err_t loadActive();
 
   /**
-   * @brief Hot-swaps to the next profile in the list.
+   * @brief Hot-swaps to the next profile in the list; with a single profile, reloads it and re-runs its preload.
    */
   void next();
 
