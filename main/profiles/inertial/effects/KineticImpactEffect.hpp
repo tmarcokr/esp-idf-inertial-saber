@@ -38,10 +38,19 @@ public:
     void run() override;
 
 private:
-    static constexpr size_t kKineticEnergyWindowSize = 4;
+    static constexpr uint32_t kClashWindowMs = 15;
+    static constexpr int64_t kClashWindowUs = static_cast<int64_t>(kClashWindowMs) * 1000;
+    static constexpr size_t kKineticEnergyHistorySize = 16;
     static constexpr uint32_t kClashDebounceMs = 500;
 
-    void clearKineticEnergyWindow();
+    struct KineticEnergySample {
+        int64_t timestampUs;
+        float kineticEnergyG;
+    };
+
+    void clearKineticEnergyHistory();
+    void recordKineticEnergy(int64_t timestampUs, float kineticEnergyG);
+    [[nodiscard]] float peakKineticEnergySince(int64_t oldestTimestampUs) const;
     bool detectClash(const Core::SaberDataPacket& packet);
 
     const Profiles::PowerStateMachine& m_power;
@@ -50,8 +59,10 @@ private:
     const Profiles::Inertial::InertialDefinition& m_def;
     const Profiles::SoundFont& m_font;
 
-    std::array<float, kKineticEnergyWindowSize> m_kineticEnergyWindow{};
-    size_t m_windowIdx = 0;
+    std::array<KineticEnergySample, kKineticEnergyHistorySize> m_kineticEnergyHistory{};
+    size_t m_historyNext = 0;
+    size_t m_historySize = 0;
+    int64_t m_lastSampleTimestampUs = 0;
     uint32_t m_lastClashTimeMs = 0;
 };
 

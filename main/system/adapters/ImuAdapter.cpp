@@ -2,6 +2,7 @@
 #include "diagnostics/Metrics.hpp"
 #include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "driver/gpio.h"
 #include <cmath>
 #include <numbers>
@@ -101,6 +102,7 @@ void ImuAdapter::imuLoop() {
         if (!data) {
             SABER_METRIC_COUNT(Diagnostics::Counter::ImuEmptyReads);
         } else {
+            const int64_t sampleTimeUs = esp_timer_get_time();
             SABER_METRIC_COUNT(Diagnostics::Counter::ImuSamples);
             auto linAccel = data->getLinearAcceleration();
             float energy = std::sqrt(linAccel.x * linAccel.x + linAccel.y * linAccel.y +
@@ -115,6 +117,7 @@ void ImuAdapter::imuLoop() {
                                     static_cast<float>(data->gyro_y),
                                     static_cast<float>(data->gyro_z)},
                 .orientationDeg = orientation,
+                .timestampUs = sampleTimeUs,
             };
 
             m_bus.updateMotion(sample);

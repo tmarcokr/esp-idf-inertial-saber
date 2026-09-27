@@ -31,6 +31,7 @@ enum class Metric : uint8_t {
     ImuRead,
     AudioPlayCall,
     AudioLatency,
+    MotionAge,
     Count
 };
 

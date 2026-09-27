@@ -147,9 +147,14 @@ void SaberActionBus::busLoop() {
         {
             SABER_METRIC_SCOPE(Diagnostics::Metric::BusCycle);
 
-            m_packet.timestampMs = xTaskGetTickCount() * portTICK_PERIOD_MS;
+            m_packet.timestampMs = static_cast<uint32_t>(esp_timer_get_time() / 1000);
 
             applyStagedMotion();
+            if (m_packet.motionTimestampUs != 0) {
+                SABER_METRIC_DURATION(
+                    Diagnostics::Metric::MotionAge,
+                    static_cast<uint32_t>(esp_timer_get_time() - m_packet.motionTimestampUs));
+            }
             computeInertialOverload();
             drainInputQueue();
 
@@ -202,6 +207,7 @@ void SaberActionBus::loadStagedMotionToPacket() {
     m_packet.kineticEnergy = sample.kineticEnergyG;
     m_packet.axisRotation = sample.axisRotationDps;
     m_packet.orientation = sample.orientationDeg;
+    m_packet.motionTimestampUs = sample.timestampUs;
 }
 
 void SaberActionBus::filterStagedMotionWarmUp() {

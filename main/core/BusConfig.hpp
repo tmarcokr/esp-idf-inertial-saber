@@ -39,6 +39,7 @@ struct MotionSample {
     float kineticEnergyG;
     std::array<float, 3> axisRotationDps;
     float orientationDeg;
+    int64_t timestampUs;
 };
 
 } // namespace InertialSaber::Core
