@@ -95,9 +95,10 @@ void SaberActionBus::registerEffect(std::unique_ptr<InertialEffect> effect) {
                  static_cast<unsigned>(kMaxEffects));
         return;
     }
-    m_effects.push_back(std::move(effect));
-    std::sort(m_effects.begin(), m_effects.end(),
-              [](const auto& a, const auto& b) { return a->priority() < b->priority(); });
+    const auto position = std::upper_bound(
+        m_effects.begin(), m_effects.end(), effect->priority(),
+        [](uint8_t priority, const auto& fx) { return priority < fx->priority(); });
+    m_effects.insert(position, std::move(effect));
     m_effectsChanged = true;
 }
 

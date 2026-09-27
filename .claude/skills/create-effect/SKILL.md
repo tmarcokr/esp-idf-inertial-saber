@@ -24,7 +24,7 @@ The plan must cover every touch point of the pattern:
 | 4 | Visual overlay `main/profiles/inertial/effects/overlays/Blade<Name>.{hpp,cpp}` implementing the SmartLed overlay contract, self-removing via `isFinished()` | `BladeBlasterBlock`, `BladeDragEffect` |
 | 5 | Audio: random file from the font sub-directory (`SoundFont::randomPath()`, a heap-free `System::AudioPath`). One-shots via `AudioController::playOneShot()`; loops via an `AudioVoice` acquired in the effect constructor (`play()` / `stop()` / `setVolume()`). Never call `AudioEngine` from an effect: its `play()`/`stop()` block and must stay off the bus task | `BlasterEffect` (one-shot), `DragEffect` (voice loop) |
 | 6 | Profile parameters in `InertialDefinition` (`font<Name>Count`, LED counts, thresholds) + parsing/defaults in `ProfileParser.cpp` + its self-test JSON | `fontDragCount`, `dragLedCount` |
-| 7 | Registration in `ConfigurableProfile.cpp` (`bus.registerEffect(std::make_unique<...>)`); priority is declared by the effect (the bus re-sorts on registration, order among equal priorities is not guaranteed) | existing registrations |
+| 7 | Registration in `ConfigurableProfile.cpp` (`bus.registerEffect(std::make_unique<...>)`); priority is declared by the effect (the bus inserts it in priority order; ties keep registration order) | existing registrations |
 | 8 | Sources added to `main/CMakeLists.txt` `SRCS` | existing entries |
 | 9 | Physics thresholds that are not per-profile go to `main/core/PhysicsConfig.hpp` | — |
 

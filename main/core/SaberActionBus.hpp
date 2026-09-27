@@ -81,7 +81,8 @@ public:
     /**
      * @brief Register an InertialEffect on the bus. Ownership is transferred.
      *
-     * Rejected with an error log once kMaxEffects effects are registered.
+     * The effect is inserted in priority order, after any effect of equal priority. Rejected with
+     * an error log once kMaxEffects effects are registered.
      * @param effect The effect to register. Must not be null.
      */
     void registerEffect(std::unique_ptr<InertialEffect> effect);
