@@ -10,6 +10,10 @@ static constexpr const char* TAG = "SaberSystem";
 
 using Status::SystemStatus;
 
+SaberSystem::~SaberSystem() {
+    m_bus.stop();
+}
+
 esp_err_t SaberSystem::start() {
     ESP_LOGD(TAG, "sizeof(SaberSystem) = %u", static_cast<unsigned>(sizeof(SaberSystem)));
 

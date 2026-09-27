@@ -12,13 +12,16 @@ namespace InertialSaber::Core {
 
 static constexpr const char* TAG = "SaberActionBus";
 
-SaberActionBus::SaberActionBus(const BusConfig& config) : m_config(config) {
+SaberActionBus::SaberActionBus(const BusConfig& config)
+    : m_config(config)
+    , m_exitSemaphore(xSemaphoreCreateBinaryStatic(&m_exitSemaphoreControl)) {
     m_effects.reserve(kMaxEffects);
     m_effectsPendingDestruction.reserve(kMaxEffects);
 }
 
 SaberActionBus::~SaberActionBus() {
     stop();
+    vSemaphoreDelete(m_exitSemaphore);
 }
 
 esp_err_t SaberActionBus::start() {
@@ -57,17 +60,15 @@ esp_err_t SaberActionBus::start() {
 }
 
 void SaberActionBus::stop() {
-    if (!m_running) {
+    const TaskHandle_t handle = m_taskHandle.exchange(nullptr);
+    if (handle == nullptr) {
         return;
     }
+    configASSERT(xTaskGetCurrentTaskHandle() != handle);
 
     m_running = false;
-
-    if (TaskHandle_t handle = m_taskHandle.exchange(nullptr); handle != nullptr) {
-        xTaskNotifyGive(handle);
-        // Warning: there is no join; the delay lets the bus task exit before its queue is deleted.
-        vTaskDelay(pdMS_TO_TICKS(kBusTimeoutMs * 2));
-    }
+    xTaskNotifyGive(handle);
+    xSemaphoreTake(m_exitSemaphore, portMAX_DELAY);
 
     if (QueueHandle_t queue = m_inputQueue.exchange(nullptr); queue != nullptr) {
         vQueueDelete(queue);
@@ -137,6 +138,7 @@ void SaberActionBus::pushInputEvent(uint8_t inputId, const InputDescriptor& desc
 void SaberActionBus::busTaskEntry(void* arg) {
     auto* bus = static_cast<SaberActionBus*>(arg);
     bus->busLoop();
+    xSemaphoreGive(bus->m_exitSemaphore);
     vTaskDelete(nullptr);
 }
 

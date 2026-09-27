@@ -27,7 +27,12 @@ namespace InertialSaber::System {
 class SaberSystem {
 public:
     SaberSystem() = default;
-    ~SaberSystem() = default;
+
+    /**
+     * @brief Joins the bus task before any member is destroyed, so no effect runs on a destroyed
+     * profile.
+     */
+    ~SaberSystem();
 
     SaberSystem(const SaberSystem&) = delete;
     SaberSystem& operator=(const SaberSystem&) = delete;

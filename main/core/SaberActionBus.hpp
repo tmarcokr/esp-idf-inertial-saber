@@ -8,6 +8,7 @@
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 
 #include <atomic>
@@ -48,6 +49,10 @@ public:
      * @param config Task and motion filter parameters, copied and immutable afterwards.
      */
     explicit SaberActionBus(const BusConfig& config);
+
+    /**
+     * @brief Stop the bus (see stop()), then release the exit semaphore.
+     */
     ~SaberActionBus();
 
     SaberActionBus(const SaberActionBus&) = delete;
@@ -60,7 +65,10 @@ public:
     [[nodiscard]] esp_err_t start();
 
     /**
-     * @brief Signal the bus task to exit, wait a fixed grace period (no join) and delete the input queue.
+     * @brief Signal the bus task to exit, join it without a timeout and delete the input queue.
+     *
+     * Idempotent: returns immediately when the bus is not running. Must not be called from the
+     * bus task itself.
      */
     void stop();
 
@@ -109,6 +117,9 @@ private:
     static constexpr uint8_t kInputQueueDepth = 8;
 
     const BusConfig m_config;
+
+    StaticSemaphore_t m_exitSemaphoreControl{};
+    SemaphoreHandle_t m_exitSemaphore = nullptr;
 
     std::atomic<TaskHandle_t> m_taskHandle{nullptr};
     std::atomic<QueueHandle_t> m_inputQueue{nullptr};
