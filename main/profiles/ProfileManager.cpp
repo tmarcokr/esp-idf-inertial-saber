@@ -37,6 +37,7 @@ esp_err_t ProfileManager::init() {
 esp_err_t ProfileManager::loadActive() {
     if (m_profiles.empty()) return ESP_ERR_INVALID_STATE;
     m_profiles[m_activeIndex]->load(m_services, *this);
+    logActiveProfile();
     return ESP_OK;
 }
 
@@ -44,16 +45,24 @@ void ProfileManager::next() {
     if (m_profiles.empty()) return;
 
     const size_t previousIndex = m_activeIndex;
-    ESP_LOGI(TAG, "Hot-swapping profile: unloading active index %u", m_activeIndex);
+    ESP_LOGD(TAG, "Hot-swapping profile: unloading active index %u",
+             static_cast<unsigned>(m_activeIndex));
     m_profiles[m_activeIndex]->unload(m_services);
 
     m_activeIndex = (m_activeIndex + 1) % m_profiles.size();
 
-    ESP_LOGI(TAG, "Loading next profile at index %u...", m_activeIndex);
+    ESP_LOGD(TAG, "Loading next profile at index %u...", static_cast<unsigned>(m_activeIndex));
     m_profiles[m_activeIndex]->load(m_services, *this);
+    logActiveProfile();
     if (m_activeIndex != previousIndex) {
         m_store.saveAsync(m_activeIndex);
     }
+}
+
+void ProfileManager::logActiveProfile() const {
+    ESP_LOGI(TAG, "Active profile %u/%u: %s", static_cast<unsigned>(m_activeIndex + 1),
+             static_cast<unsigned>(m_profiles.size()),
+             m_profiles[m_activeIndex]->definition().profileName.c_str());
 }
 
 } // namespace InertialSaber::Profiles

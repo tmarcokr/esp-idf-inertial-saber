@@ -131,7 +131,7 @@ void PowerToggleEffect::tickIgnition() {
 
     if (elapsed >= m_def.ignitionDurationMs) {
         m_power.handle(Profiles::PowerStateMachine::Event::IgnitionElapsed);
-        ESP_LOGI(TAG, "Saber ON");
+        ESP_LOGD(TAG, "Saber ON");
     }
 }
 
@@ -158,7 +158,7 @@ void PowerToggleEffect::beginRetraction() {
 void PowerToggleEffect::tickRetraction() {
     if ((nowMs() - m_sequenceStartMs) >= m_def.retractionDurationMs) {
         m_power.handle(Profiles::PowerStateMachine::Event::RetractionElapsed);
-        ESP_LOGI(TAG, "Saber OFF");
+        ESP_LOGD(TAG, "Saber OFF");
     }
 }
 

@@ -104,6 +104,8 @@ esp_err_t SaberSystem::bringUpAudio() {
         ESP_LOGE(TAG, "AudioEngine start failed: %s", esp_err_to_name(err));
         return err;
     }
+    esp_log_level_set("AudioEngine", ESP_LOG_WARN);
+    esp_log_level_set("AudioChannel", ESP_LOG_WARN);
 
     m_audio.setGlobalVolume(Hardware::HardwareConfig::kAudioGlobalVolume);
 

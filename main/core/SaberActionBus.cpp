@@ -12,7 +12,10 @@ namespace InertialSaber::Core {
 
 static constexpr const char* TAG = "SaberActionBus";
 
-SaberActionBus::SaberActionBus(const BusConfig& config) : m_config(config) {}
+SaberActionBus::SaberActionBus(const BusConfig& config) : m_config(config) {
+    m_effects.reserve(kMaxEffects);
+    m_effectsPendingDestruction.reserve(kMaxEffects);
+}
 
 SaberActionBus::~SaberActionBus() {
     stop();
@@ -84,6 +87,11 @@ void SaberActionBus::setPhysicsConfig(const Core::PhysicsConfig& def) {
 
 void SaberActionBus::registerEffect(std::unique_ptr<InertialEffect> effect) {
     if (!effect) {
+        return;
+    }
+    if (m_effects.size() >= kMaxEffects) {
+        ESP_LOGE(TAG, "Effect rejected: the bus holds at most %u effects",
+                 static_cast<unsigned>(kMaxEffects));
         return;
     }
     m_effects.push_back(std::move(effect));
@@ -159,16 +167,9 @@ void SaberActionBus::busLoop() {
             drainInputQueue();
 
             m_effectsChanged = false;
-            std::vector<InertialEffect*> activeEffects;
-            activeEffects.reserve(m_effects.size());
-            for (const auto& fx : m_effects) {
-                activeEffects.push_back(fx.get());
-            }
-
-            for (auto* effect : activeEffects) {
-                if (m_effectsChanged) {
-                    break;
-                }
+            // Warning: run() may replace the effects; check m_effectsChanged before indexing again.
+            for (size_t i = 0; i < m_effects.size() && !m_effectsChanged; ++i) {
+                InertialEffect* effect = m_effects[i].get();
                 if (effect->test(m_packet)) {
                     effect->run();
                 }
@@ -297,6 +298,7 @@ void SaberActionBus::evaluateInertialBurst() {
     m_packet.inertialBurst = false;
     if (m_overloadLevel >= 1.0f) {
         m_packet.inertialBurst = true;
+        SABER_METRIC_COUNT(Diagnostics::Counter::InertialBursts);
         m_lastBurstTimeMs = m_packet.timestampMs;
         m_overloadLevel = 0.0f;
     }

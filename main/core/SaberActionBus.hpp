@@ -11,6 +11,7 @@
 #include "freertos/task.h"
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -71,6 +72,8 @@ public:
 
     /**
      * @brief Register an InertialEffect on the bus. Ownership is transferred.
+     *
+     * Rejected with an error log once kMaxEffects effects are registered.
      * @param effect The effect to register. Must not be null.
      */
     void registerEffect(std::unique_ptr<InertialEffect> effect);
@@ -102,6 +105,7 @@ public:
 
 private:
     static constexpr uint32_t kBusTimeoutMs = 10;
+    static constexpr size_t kMaxEffects = 16;
     static constexpr uint8_t kInputQueueDepth = 8;
 
     const BusConfig m_config;

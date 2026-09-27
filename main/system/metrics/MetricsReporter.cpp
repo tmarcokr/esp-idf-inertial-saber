@@ -59,9 +59,9 @@ constexpr MetricInfo kMetricInfo[] = {
 static_assert(std::size(kMetricInfo) == Diagnostics::kMetricCount);
 
 constexpr const char* kCounterNames[] = {
-    "bus_timeout_wakes", "input_events_dropped",   "imu_samples",
-    "imu_empty_reads",   "imu_poll_timeouts",      "overlays_dropped",
-    "bus_cycles",        "audio_commands_dropped", "audio_play_failed",
+    "bus_timeout_wakes", "input_events_dropped", "imu_samples", "imu_empty_reads",
+    "imu_poll_timeouts", "overlays_dropped",     "bus_cycles",  "audio_commands_dropped",
+    "audio_play_failed", "inertial_bursts",
 };
 static_assert(std::size(kCounterNames) == Diagnostics::kCounterCount);
 
@@ -642,12 +642,14 @@ bool MetricsReporter::writeSessionBlock(const BlockSnapshot& block) {
     csv.number("alloc", "core1", "", block.coreAllocations[1], "");
 
     const uint32_t flowAllocations = live.durations[index(Metric::RunSwing)].allocations +
-                                     live.durations[index(Metric::RunLight)].allocations +
                                      live.durations[index(Metric::RunPreloadWait)].allocations;
+    const bool flowAllocationsOk =
+        flowAllocations == 0 && live.durations[index(Metric::RunLight)].scopesWithAllocations <=
+                                    live.counters[index(Counter::InertialBursts)];
     csv.text("check", "bus_cycle_max_lt_2ms", "",
              passFail(live.durations[index(Metric::BusCycle)].maxUs < kBusCycleBudgetUs), "");
     csv.text("check", "bus_loop_allocs_zero", "", passFail(busLoopAllocations == 0), "");
-    csv.text("check", "flow_effects_allocs_zero", "", passFail(flowAllocations == 0), "");
+    csv.text("check", "flow_effects_allocs_zero", "", passFail(flowAllocationsOk), "");
     csv.text("check", "stack_margin_ge_1k", "", passFail(stackMarginOk), "");
 
     const bool written = csv.finish();

@@ -44,6 +44,8 @@ public:
     void next();
 
 private:
+    void logActiveProfile() const;
+
     const SaberServices& m_services;
     System::ActiveProfileStore& m_store;
     std::vector<std::unique_ptr<ConfigurableProfile>> m_profiles;

@@ -39,7 +39,7 @@ const Inertial::InertialDefinition& ConfigurableProfile::definition() const {
 }
 
 void ConfigurableProfile::load(const SaberServices& services, ProfileManager& profileManager) {
-    ESP_LOGI(TAG, "Loading configurable profile '%s'", m_def.profileName.c_str());
+    ESP_LOGD(TAG, "Loading configurable profile '%s'", m_def.profileName.c_str());
 
     m_power.handle(PowerStateMachine::Event::Lock);
     services.bus.setPhysicsConfig(m_def);
@@ -77,7 +77,7 @@ void ConfigurableProfile::load(const SaberServices& services, ProfileManager& pr
 }
 
 void ConfigurableProfile::unload(const SaberServices& services) {
-    ESP_LOGI(TAG, "Unloading configurable profile '%s'", m_def.profileName.c_str());
+    ESP_LOGD(TAG, "Unloading configurable profile '%s'", m_def.profileName.c_str());
 
     if (m_swingEffect) {
         m_swingEffect->deactivate();

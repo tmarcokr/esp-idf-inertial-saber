@@ -46,6 +46,7 @@ enum class Counter : uint8_t {
     BusCycles,
     AudioCommandsDropped,
     AudioPlayFailed,
+    InertialBursts,
     Count
 };
 
