@@ -1,4 +1,5 @@
 #include "ImuAdapter.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
 #include "driver/gpio.h"
@@ -38,6 +39,7 @@ esp_err_t ImuAdapter::start() {
         ESP_LOGE(TAG, "IMU adapter task creation failed");
         return ESP_FAIL;
     }
+    SABER_METRIC_REGISTER_TASK(Diagnostics::TaskId::Imu, m_imuTaskHandle);
 
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << m_interruptPin),
@@ -91,10 +93,15 @@ void ImuAdapter::imuLoop() {
     vTaskDelay(pdMS_TO_TICKS(kStartupDelayMs));
 
     while (true) {
-        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kPollTimeoutMs));
+        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kPollTimeoutMs)) == 0) {
+            SABER_METRIC_COUNT(Diagnostics::Counter::ImuPollTimeouts);
+        }
 
-        auto data = m_imu.readData();
-        if (data) {
+        auto data = readMotion();
+        if (!data) {
+            SABER_METRIC_COUNT(Diagnostics::Counter::ImuEmptyReads);
+        } else {
+            SABER_METRIC_COUNT(Diagnostics::Counter::ImuSamples);
             auto linAccel = data->getLinearAcceleration();
             float energy = std::sqrt(linAccel.x * linAccel.x + linAccel.y * linAccel.y +
                                      linAccel.z * linAccel.z);
@@ -113,6 +120,11 @@ void ImuAdapter::imuLoop() {
             m_bus.updateMotion(sample);
         }
     }
+}
+
+std::optional<Espressif::Wrappers::Sensors::MotionData> ImuAdapter::readMotion() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::ImuRead);
+    return m_imu.readData();
 }
 
 } // namespace InertialSaber::System::Adapters

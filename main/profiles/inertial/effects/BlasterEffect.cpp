@@ -1,4 +1,5 @@
 #include "BlasterEffect.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "AudioEngine.hpp"
 #include "AudioLevels.hpp"
 #include "overlays/BladeBlasterBlock.hpp"
@@ -43,11 +44,13 @@ bool BlasterEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void BlasterEffect::run() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::RunBlaster);
     const std::string path = m_font.randomPath(Profiles::FontCategory::Blaster);
 
     m_audio.play(path, false, kFullVolume);
     if (!m_ledEngine.pushOverlay(std::make_unique<BladeBlasterBlock>(
             m_ledEngine.numLeds(), m_def.blasterLedCount, m_def.blasterDurationMs))) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::OverlaysDropped);
         ESP_LOGW(TAG, "Blaster overlay dropped: no free overlay slot");
     }
 

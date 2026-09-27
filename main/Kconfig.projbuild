@@ -8,4 +8,19 @@ menu "InertialSaber"
             A failing self-test aborts the boot with the error status.
             Disable it in release builds to shorten the boot and save flash.
 
+    config SABER_METRICS
+        bool "Record real-time metrics and write them to /sdcard/metrics"
+        default y
+        select HEAP_USE_HOOKS
+        help
+            Records bus cycle and effect run() timings, loop and IMU rates, event
+            counters, heap allocations per CPU core, free heap and task stack
+            high-water marks in under 0.5 KB of internal RAM, without heap use or
+            locks on the real-time path. A priority-1 task (4 KB stack, about 10 KB of
+            PSRAM buffers) appends one CSV block per ignition session to
+            /sdcard/metrics/session_NNN.csv, only while the saber is retracted
+            and the audio is idle. Enables the heap allocation hooks.
+            When disabled, the instrumentation compiles to nothing.
+            Disable it in release builds.
+
 endmenu

@@ -1,5 +1,6 @@
 #include "SaberSystem.hpp"
 #include "profiles/ProfileParser.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "esp_log.h"
 #include "sdkconfig.h"
 
@@ -77,6 +78,13 @@ esp_err_t SaberSystem::internalStart() {
         ESP_LOGE(TAG, "Bus start failed");
         return err;
     }
+
+    SABER_METRIC_RECORD_BOOT();
+#if CONFIG_SABER_METRICS
+    if (const esp_err_t metricsErr = m_metricsReporter.start(); metricsErr != ESP_OK) {
+        ESP_LOGW(TAG, "Metrics reporter unavailable: %s", esp_err_to_name(metricsErr));
+    }
+#endif
 
     ESP_LOGI(TAG, "InertialSaber OS active — all systems nominal");
     return ESP_OK;

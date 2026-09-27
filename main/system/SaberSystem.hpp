@@ -9,6 +9,7 @@
 #include "system/board/Board.hpp"
 #include "system/hardware/HardwareConfig.hpp"
 #include "system/PsramAudioCache.hpp"
+#include "system/metrics/MetricsReporter.hpp"
 
 #include "AudioEngine.hpp"
 #include "Engine.hpp"
@@ -17,6 +18,7 @@
 #include "sd_card.hpp"
 
 #include "esp_err.h"
+#include "sdkconfig.h"
 
 namespace InertialSaber::System {
 
@@ -50,6 +52,9 @@ private:
     Profiles::ProfileManager m_profiles{m_services};
     Adapters::ImuAdapter m_imuAdapter{m_bus, m_imu, Board::kPins.imuInt};
     Adapters::InputAdapter m_inputAdapter{m_bus, m_button};
+#if CONFIG_SABER_METRICS
+    Monitoring::MetricsReporter m_metricsReporter{m_audio};
+#endif
 };
 
 } // namespace InertialSaber::System

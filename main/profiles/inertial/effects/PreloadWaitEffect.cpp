@@ -1,4 +1,5 @@
 #include "PreloadWaitEffect.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "profiles/PowerStateMachine.hpp"
 #include "profiles/SoundFont.hpp"
 #include "AudioLevels.hpp"
@@ -32,6 +33,7 @@ bool PreloadWaitEffect::test(const Core::SaberDataPacket&) {
 }
 
 void PreloadWaitEffect::run() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::RunPreloadWait);
     using PreloadStatus = System::PsramAudioCache::PreloadStatus;
     switch (m_audioCache.preloadStatus()) {
     case PreloadStatus::Pending:

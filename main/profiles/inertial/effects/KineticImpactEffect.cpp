@@ -1,4 +1,5 @@
 #include "KineticImpactEffect.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "AudioEngine.hpp"
 #include "AudioLevels.hpp"
 #include "overlays/BladeClashFlash.hpp"
@@ -63,11 +64,13 @@ bool KineticImpactEffect::detectClash(const Core::SaberDataPacket& packet) {
 }
 
 void KineticImpactEffect::run() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::RunClash);
     const std::string path = m_font.randomPath(Profiles::FontCategory::Clash);
 
     m_audio.play(path, false, kFullVolume);
     if (!m_ledEngine.pushOverlay(std::make_unique<BladeClashFlash>(
             m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.clashDurationMs))) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::OverlaysDropped);
         ESP_LOGW(TAG, "Clash overlay dropped: no free overlay slot");
     }
 

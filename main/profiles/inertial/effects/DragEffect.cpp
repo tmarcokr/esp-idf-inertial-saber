@@ -1,4 +1,5 @@
 #include "DragEffect.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "AudioEngine.hpp"
 #include "AudioLevels.hpp"
 #include "overlays/BladeDragEffect.hpp"
@@ -51,6 +52,7 @@ bool DragEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void DragEffect::run() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::RunDrag);
     if (m_triggerMet && !m_active) {
         m_active = true;
 
@@ -63,6 +65,7 @@ void DragEffect::run() {
                                                          m_overlayFadeRequest);
 
         if (!m_ledEngine.pushOverlay(std::move(overlay))) {
+            SABER_METRIC_COUNT(Diagnostics::Counter::OverlaysDropped);
             m_overlayFadeRequest.reset();
         }
 

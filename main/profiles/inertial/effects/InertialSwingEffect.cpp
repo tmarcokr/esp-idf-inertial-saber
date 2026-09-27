@@ -1,4 +1,5 @@
 #include "InertialSwingEffect.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "AudioLevels.hpp"
 #include "profiles/SoundFont.hpp"
 #include "system/PsramAudioCache.hpp"
@@ -27,6 +28,7 @@ InertialSwingEffect::InertialSwingEffect(
 
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
+    SABER_METRIC_SCOPE(Diagnostics::Metric::SwingActivate);
 
     m_chHum =
         m_engine.play(InertialSaber::System::PsramAudioCache::humPath(), true, m_def.humBaseVolume);
@@ -76,6 +78,7 @@ bool InertialSwingEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void InertialSwingEffect::run() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::RunSwing);
     if (m_chHum == INVALID_CHANNEL || m_chSwingL == INVALID_CHANNEL ||
         m_chSwingH == INVALID_CHANNEL)
         return;
@@ -185,6 +188,7 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
 void InertialSwingEffect::executeSwap() {
     uint8_t availablePairs = m_audioCache.loadedSwingPairCount();
     if (availablePairs <= 1) return;
+    SABER_METRIC_SCOPE(Diagnostics::Metric::SwingSwap);
 
     if (m_chSwingL != INVALID_CHANNEL) m_engine.stop(m_chSwingL);
     if (m_chSwingH != INVALID_CHANNEL) m_engine.stop(m_chSwingH);

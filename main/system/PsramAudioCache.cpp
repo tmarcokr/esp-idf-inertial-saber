@@ -1,5 +1,6 @@
 #include "system/PsramAudioCache.hpp"
 #include "system/Raii.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include <algorithm>
@@ -53,6 +54,7 @@ esp_err_t PsramAudioCache::init() {
     if (ret != pdPASS) {
         return ESP_ERR_NO_MEM;
     }
+    SABER_METRIC_REGISTER_TASK(Diagnostics::TaskId::PsramLoader, m_loaderTask);
 
     return ESP_OK;
 }

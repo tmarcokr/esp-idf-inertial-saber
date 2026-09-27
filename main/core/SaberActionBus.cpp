@@ -1,5 +1,7 @@
 #include "SaberActionBus.hpp"
 
+#include "diagnostics/Metrics.hpp"
+
 #include "esp_log.h"
 #include "esp_timer.h"
 
@@ -44,6 +46,7 @@ esp_err_t SaberActionBus::start() {
         return ESP_FAIL;
     }
     m_taskHandle = handle;
+    SABER_METRIC_REGISTER_TASK(Diagnostics::TaskId::Bus, handle);
 
     ESP_LOGI(TAG, "Bus started on core %d (priority %d)", static_cast<int>(m_config.task.core),
              static_cast<int>(m_config.task.priority));
@@ -131,36 +134,44 @@ void SaberActionBus::busTaskEntry(void* arg) {
 
 void SaberActionBus::busLoop() {
     while (m_running) {
-        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kBusTimeoutMs));
+        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kBusTimeoutMs)) == 0) {
+            SABER_METRIC_COUNT(Diagnostics::Counter::BusTimeoutWakes);
+        }
 
         if (!m_running) {
             break;
         }
 
-        m_packet.timestampMs = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        SABER_METRIC_INTERVAL(Diagnostics::Metric::BusInterval);
+        SABER_METRIC_COUNT(Diagnostics::Counter::BusCycles);
+        {
+            SABER_METRIC_SCOPE(Diagnostics::Metric::BusCycle);
 
-        applyStagedMotion();
-        computeInertialOverload();
-        drainInputQueue();
+            m_packet.timestampMs = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
-        m_effectsChanged = false;
-        std::vector<InertialEffect*> activeEffects;
-        activeEffects.reserve(m_effects.size());
-        for (const auto& fx : m_effects) {
-            activeEffects.push_back(fx.get());
-        }
+            applyStagedMotion();
+            computeInertialOverload();
+            drainInputQueue();
 
-        for (auto* effect : activeEffects) {
-            if (m_effectsChanged) {
-                break;
+            m_effectsChanged = false;
+            std::vector<InertialEffect*> activeEffects;
+            activeEffects.reserve(m_effects.size());
+            for (const auto& fx : m_effects) {
+                activeEffects.push_back(fx.get());
             }
-            if (effect->test(m_packet)) {
-                effect->run();
-            }
-        }
 
-        m_effectsPendingDestruction.clear();
-        m_packet.inputs = {};
+            for (auto* effect : activeEffects) {
+                if (m_effectsChanged) {
+                    break;
+                }
+                if (effect->test(m_packet)) {
+                    effect->run();
+                }
+            }
+
+            m_effectsPendingDestruction.clear();
+            m_packet.inputs = {};
+        }
     }
 
     ESP_LOGI(TAG, "Bus task exiting");
@@ -177,6 +188,7 @@ void SaberActionBus::drainInputQueue() {
 
     if (const uint32_t dropped = m_droppedInputEvents.exchange(0, std::memory_order_relaxed);
         dropped > 0) {
+        SABER_METRIC_ADD(Diagnostics::Counter::InputEventsDropped, dropped);
         ESP_LOGW(TAG, "Input queue full: dropped %lu event(s)",
                  static_cast<unsigned long>(dropped));
     }

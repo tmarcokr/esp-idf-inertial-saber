@@ -1,4 +1,5 @@
 #include "profiles/PowerStateMachine.hpp"
+#include "diagnostics/Metrics.hpp"
 
 #include "esp_log.h"
 
@@ -51,6 +52,8 @@ bool PowerStateMachine::handle(Event event) {
         return false;
     }
     m_state = *next;
+    if (event == Event::IgniteRequested) SABER_METRIC_SESSION_BEGIN();
+    if (event == Event::RetractionElapsed) SABER_METRIC_SESSION_END();
     return true;
 }
 

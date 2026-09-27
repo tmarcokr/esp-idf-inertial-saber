@@ -1,4 +1,5 @@
 #include "PowerToggleEffect.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "profiles/PowerStateMachine.hpp"
 #include "AudioEngine.hpp"
 #include "AudioLevels.hpp"
@@ -72,6 +73,7 @@ bool PowerToggleEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void PowerToggleEffect::run() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::RunPowerToggle);
     using State = Profiles::PowerStateMachine::State;
     switch (m_power.state()) {
     case State::Retracted:
@@ -108,6 +110,7 @@ void PowerToggleEffect::beginIgnition() {
     m_audio.play(path, false, kFullVolume);
     if (!m_ledEngine.pushOverlay(std::make_unique<BladeIgniteSweep>(
             m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.ignitionDurationMs))) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::OverlaysDropped);
         ESP_LOGW(TAG, "Ignition overlay dropped: no free overlay slot");
     }
 
@@ -143,6 +146,7 @@ void PowerToggleEffect::beginRetraction() {
     m_audio.play(path, false, kRetractionVolume);
     if (!m_ledEngine.pushOverlay(std::make_unique<BladeRetractSweep>(
             m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.retractionDurationMs))) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::OverlaysDropped);
         ESP_LOGW(TAG, "Retraction overlay dropped: no free overlay slot");
     }
 

@@ -1,4 +1,5 @@
 #include "ProfileCycleEffect.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "profiles/PowerStateMachine.hpp"
 #include "profiles/ProfileManager.hpp"
 #include "core/SaberDataPacket.hpp"
@@ -25,6 +26,7 @@ bool ProfileCycleEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void ProfileCycleEffect::run() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::RunProfileCycle);
     ESP_LOGD(TAG, "Profile cycle triggered");
     m_profileManager.next();
 }
