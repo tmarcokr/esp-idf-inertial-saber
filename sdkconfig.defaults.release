@@ -1,0 +1,7 @@
+# InertialSaber OS — release profile (not applied to the default build)
+# Layer it on top of the base defaults, see docs/wiki/sdkconfig_overrides.md.
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_SILENT=y
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+# CONFIG_SABER_PARSER_SELF_TEST is not set

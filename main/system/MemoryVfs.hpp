@@ -2,7 +2,6 @@
 
 #include "esp_err.h"
 #include "esp_heap_caps.h"
-#include "esp_vfs.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -10,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <vector>
 
 namespace Espressif::Wrappers {
@@ -21,6 +21,9 @@ struct MemoryFile {
     };
     std::unique_ptr<uint8_t[], HeapCapsDeleter> bytes;
     size_t size = 0;
+
+    /** @brief Allocates @p size uninitialised bytes with heap_caps_malloc(); bytes is null and size 0 on failure. */
+    [[nodiscard]] static MemoryFile allocate(size_t size, uint32_t caps);
 };
 
 /** @brief Shared, read-only handle to a MemoryFile. */
@@ -29,8 +32,7 @@ using MemoryFileHandle = std::shared_ptr<const MemoryFile>;
 /** @brief Virtual filesystem driver serving in-memory buffers as read-only files. Thread-safe; never call from an ISR. */
 class MemoryVfs {
 public:
-    explicit MemoryVfs(std::string_view mountPoint = "/mem",
-                       uint8_t maxFiles = 16,
+    explicit MemoryVfs(std::string_view mountPoint = "/mem", uint8_t maxFiles = 16,
                        uint8_t maxFds = 8);
     ~MemoryVfs();
 
@@ -46,11 +48,13 @@ public:
     [[nodiscard]] esp_err_t registerFile(std::string_view name, MemoryFileHandle file);
 
     /** @brief Removes @p name from the file table; open descriptors keep the buffer alive. */
-    esp_err_t unregisterFile(std::string_view name);
+    [[nodiscard]] esp_err_t unregisterFile(std::string_view name);
 
     [[nodiscard]] uint8_t openDescriptorCount() const;
 
 private:
+    struct VfsHooks;
+
     struct FileEntry {
         std::string name;
         MemoryFileHandle file;
@@ -78,7 +82,6 @@ private:
     // Warning: leaf lock. The VFS hooks run under newlib's FILE lock, so while holding m_mutex never
     // log, touch stdio, release the last MemoryFileHandle or take any lock other than the heap's.
     mutable std::mutex m_mutex;
-    esp_vfs_t m_vfsImpl{};
 };
 
 } // namespace Espressif::Wrappers

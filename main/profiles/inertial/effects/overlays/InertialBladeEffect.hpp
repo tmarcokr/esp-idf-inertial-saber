@@ -24,7 +24,7 @@ public:
 
     void update(uint32_t /*deltaMs*/) override {}
 
-    void render(Espressif::Wrappers::SmartLed::Canvas &canvas) override {
+    void render(Espressif::Wrappers::SmartLed::Canvas& canvas) override {
         uint32_t packed = m_packedHsb.load(std::memory_order_relaxed);
         uint16_t h = static_cast<uint16_t>((packed >> 16) & 0xFFFF);
         uint8_t s = static_cast<uint8_t>((packed >> 8) & 0xFF);

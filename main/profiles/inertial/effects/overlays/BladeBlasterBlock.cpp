@@ -7,8 +7,7 @@ namespace InertialSaber::Effects {
 BladeBlasterBlock::BladeBlasterBlock(uint16_t numLeds, uint16_t ledCount, uint32_t durationMs)
     : m_numLeds(numLeds)
     , m_ledCount(std::min(ledCount, numLeds))
-    , m_durationMs(durationMs > 0 ? durationMs : 1)
-{
+    , m_durationMs(durationMs > 0 ? durationMs : 1) {
     const uint16_t max_start = static_cast<uint16_t>(m_numLeds - m_ledCount);
     m_startLed = (max_start > 0) ? static_cast<uint16_t>(esp_random() % (max_start + 1)) : 0;
 }

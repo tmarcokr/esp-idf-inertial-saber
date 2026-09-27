@@ -1,14 +1,14 @@
 #include "InertialSwingEffect.hpp"
 #include "AudioLevels.hpp"
+#include "profiles/SoundFont.hpp"
+#include "system/PsramAudioCache.hpp"
 
 #include "esp_log.h"
 #include "esp_random.h"
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 #include <string>
-
-#include "profiles/SoundFont.hpp"
-#include "system/PsramAudioCache.hpp"
 
 namespace InertialSaber::Effects {
 
@@ -23,13 +23,13 @@ InertialSwingEffect::InertialSwingEffect(
     , m_engine(engine)
     , m_def(definition)
     , m_font(font)
-    , m_audioCache(audioCache)
-{}
+    , m_audioCache(audioCache) {}
 
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
 
-    m_chHum = m_engine.play(InertialSaber::System::PsramAudioCache::humPath(), true, m_def.humBaseVolume);
+    m_chHum =
+        m_engine.play(InertialSaber::System::PsramAudioCache::humPath(), true, m_def.humBaseVolume);
 
     auto paths = provideSwingPaths();
     m_chSwingL = m_engine.play(paths.low, true, 0);
@@ -40,8 +40,8 @@ void InertialSwingEffect::activate() {
     m_lastMovementTimeMs = 0;
 
     m_active.store(true);
-    ESP_LOGI(TAG, "Activated — pair %u, hum=%d, swL=%d, swH=%d",
-             m_currentPairIndex, m_chHum, m_chSwingL, m_chSwingH);
+    ESP_LOGD(TAG, "Activated — pair %u, hum=%d, swL=%d, swH=%d", m_currentPairIndex, m_chHum,
+             m_chSwingL, m_chSwingH);
 }
 
 void InertialSwingEffect::deactivate() {
@@ -62,11 +62,7 @@ void InertialSwingEffect::deactivate() {
         m_chSwingH = INVALID_CHANNEL;
     }
 
-    ESP_LOGI(TAG, "Deactivated — all channels stopped");
-}
-
-bool InertialSwingEffect::isActive() const {
-    return m_active.load();
+    ESP_LOGD(TAG, "Deactivated — all channels stopped");
 }
 
 bool InertialSwingEffect::test(const Core::SaberDataPacket& packet) {
@@ -80,7 +76,9 @@ bool InertialSwingEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void InertialSwingEffect::run() {
-    if (m_chHum == INVALID_CHANNEL || m_chSwingL == INVALID_CHANNEL || m_chSwingH == INVALID_CHANNEL) return;
+    if (m_chHum == INVALID_CHANNEL || m_chSwingL == INVALID_CHANNEL ||
+        m_chSwingH == INVALID_CHANNEL)
+        return;
 
     float masterVolume = computeMasterVolume();
     float finalMix = computeFinalMix();
@@ -105,7 +103,7 @@ float InertialSwingEffect::computeFinalMix() const {
     float baseMix = (m_kineticEnergy - m_def.swingCrossfadeLowG) / crossfadeRange;
     baseMix = std::clamp(baseMix, 0.0f, 1.0f);
 
-    float bladeAngleRad = m_orientation * (static_cast<float>(M_PI) / 2.0f);
+    float bladeAngleRad = m_orientation * (std::numbers::pi_v<float> / 2.0f);
     float gravityMod = std::sin(bladeAngleRad) * m_def.gravityInfluence;
     return std::clamp(baseMix + gravityMod, 0.0f, 1.0f);
 }
@@ -117,12 +115,13 @@ void InertialSwingEffect::applySwingVolumes(float masterVolume, float finalMix) 
     m_engine.setChannelVolume(m_chSwingL, volL);
     m_engine.setChannelVolume(m_chSwingH, volH);
 
-    if (++m_logCounter >= 400) { 
+    if (++m_logCounter >= kTelemetryLogIntervalCycles) {
         m_logCounter = 0;
-        auto humVol = static_cast<uint16_t>(m_def.humBaseVolume * std::max(0.0f, 1.0f - masterVolume * m_def.humMaxDucking));
-        ESP_LOGI(TAG, "KE:%.2f | MV:%.2f | Mix:%.2f | L:%u H:%u | Hum:%u | OL:%.2f | Pair:%u",
-                 m_kineticEnergy, masterVolume, finalMix,
-                 volL, volH, humVol, m_inertialOverload, m_currentPairIndex);
+        auto humVol = static_cast<uint16_t>(
+            m_def.humBaseVolume * std::max(0.0f, 1.0f - masterVolume * m_def.humMaxDucking));
+        ESP_LOGD(TAG, "KE:%.2f | MV:%.2f | Mix:%.2f | L:%u H:%u | Hum:%u | OL:%.2f | Pair:%u",
+                 m_kineticEnergy, masterVolume, finalMix, volL, volH, humVol, m_inertialOverload,
+                 m_currentPairIndex);
     }
 }
 
@@ -139,7 +138,7 @@ void InertialSwingEffect::handleInertialBurst() {
 
     m_engine.play(m_font.randomPath(Profiles::FontCategory::Burst), false, kFullVolume);
 
-    ESP_LOGI(TAG, "Inertial Burst triggered");
+    ESP_LOGD(TAG, "Inertial Burst triggered");
 }
 
 InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
@@ -154,8 +153,8 @@ InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
         m_currentPairIndex = 0;
     }
     const auto pairNumber = static_cast<uint8_t>(m_currentPairIndex + 1);
-    return { InertialSaber::System::PsramAudioCache::swingLowPath(pairNumber),
-             InertialSaber::System::PsramAudioCache::swingHighPath(pairNumber) };
+    return {InertialSaber::System::PsramAudioCache::swingLowPath(pairNumber),
+            InertialSaber::System::PsramAudioCache::swingHighPath(pairNumber)};
 }
 
 bool InertialSwingEffect::evaluateSwap(float masterVolume) {
@@ -168,7 +167,7 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
     if (isMoving) {
         m_wasMoving = true;
         m_lastMovementTimeMs = m_timestampMs;
-    } else {    
+    } else {
         if (m_wasMoving) {
             m_wasMoving = false;
         } else if (m_needsSwap) {
@@ -195,8 +194,7 @@ void InertialSwingEffect::executeSwap() {
     m_chSwingL = m_engine.play(paths.low, true, 0);
     m_chSwingH = m_engine.play(paths.high, true, 0);
 
-    ESP_LOGI(TAG, "Pair swapped → %u (swL=%d, swH=%d)",
-             m_currentPairIndex, m_chSwingL, m_chSwingH);
+    ESP_LOGD(TAG, "Pair swapped → %u (swL=%d, swH=%d)", m_currentPairIndex, m_chSwingL, m_chSwingH);
 }
 
 } // namespace InertialSaber::Effects

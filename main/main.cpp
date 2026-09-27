@@ -4,10 +4,16 @@
 #include "freertos/FreeRTOS.h" // IWYU pragma: keep
 #include "freertos/task.h"
 
+namespace {
+
+constexpr uint32_t kStartupDelayMs = 1000;
+
+} // namespace
+
 extern "C" void app_main(void) {
     static const char* TAG = "Main";
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(kStartupDelayMs));
 
     static InertialSaber::System::SaberSystem system;
 

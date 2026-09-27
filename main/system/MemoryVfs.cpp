@@ -1,5 +1,6 @@
 #include "system/MemoryVfs.hpp"
 #include "esp_log.h"
+#include "esp_vfs.h"
 #include <fcntl.h>
 #include <algorithm>
 #include <cerrno>
@@ -10,14 +11,61 @@ static constexpr const char* TAG = "MemoryVfs";
 
 namespace Espressif::Wrappers {
 
+MemoryFile MemoryFile::allocate(size_t size, uint32_t caps) {
+    MemoryFile file;
+    file.bytes.reset(static_cast<uint8_t*>(heap_caps_malloc(size, caps)));
+    if (file.bytes) {
+        file.size = size;
+    }
+    return file;
+}
+
 MemoryVfs::MemoryVfs(std::string_view mountPoint, uint8_t maxFiles, uint8_t maxFds)
     : m_mountPoint(mountPoint)
     , m_files(maxFiles)
     , m_fds(maxFds) {}
 
+struct MemoryVfs::VfsHooks {
+    static constexpr esp_vfs_fs_ops_t kOps = {
+        .write_p = nullptr,
+        .lseek_p = [](void* ctx, int fd, off_t offset, int mode) -> off_t {
+            return static_cast<MemoryVfs*>(ctx)->vfsLseek(fd, offset, mode);
+        },
+        .read_p = [](void* ctx, int fd, void* dst, size_t size) -> ssize_t {
+            return static_cast<MemoryVfs*>(ctx)->vfsRead(fd, dst, size);
+        },
+        .pread_p = nullptr,
+        .pwrite_p = nullptr,
+        .open_p = [](void* ctx, const char* path, int flags, int mode) -> int {
+            return static_cast<MemoryVfs*>(ctx)->vfsOpen(path, flags, mode);
+        },
+        .close_p = [](void* ctx, int fd) -> int {
+            return static_cast<MemoryVfs*>(ctx)->vfsClose(fd);
+        },
+        .fstat_p = [](void* ctx, int fd, struct stat* st) -> int {
+            return static_cast<MemoryVfs*>(ctx)->vfsFstat(fd, st);
+        },
+        .fcntl_p = nullptr,
+        .ioctl_p = nullptr,
+        .fsync_p = nullptr,
+#ifdef CONFIG_VFS_SUPPORT_DIR
+        .dir = nullptr,
+#endif
+#ifdef CONFIG_VFS_SUPPORT_TERMIOS
+        .termios = nullptr,
+#endif
+#if CONFIG_VFS_SUPPORT_SELECT
+        .select = nullptr,
+#endif
+    };
+};
+
 MemoryVfs::~MemoryVfs() {
     if (m_initialized) {
-        esp_vfs_unregister(m_mountPoint.c_str());
+        const esp_err_t err = esp_vfs_unregister_fs(m_mountPoint.c_str());
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to unregister MemoryVfs (err=%s)", esp_err_to_name(err));
+        }
     }
 }
 
@@ -26,24 +74,9 @@ esp_err_t MemoryVfs::init() {
         return ESP_ERR_INVALID_STATE;
     }
 
-    m_vfsImpl.flags = ESP_VFS_FLAG_CONTEXT_PTR;
-    m_vfsImpl.open_p = [](void* ctx, const char* path, int flags, int mode) -> int {
-        return static_cast<MemoryVfs*>(ctx)->vfsOpen(path, flags, mode);
-    };
-    m_vfsImpl.read_p = [](void* ctx, int fd, void* dst, size_t size) -> ssize_t {
-        return static_cast<MemoryVfs*>(ctx)->vfsRead(fd, dst, size);
-    };
-    m_vfsImpl.close_p = [](void* ctx, int fd) -> int {
-        return static_cast<MemoryVfs*>(ctx)->vfsClose(fd);
-    };
-    m_vfsImpl.lseek_p = [](void* ctx, int fd, off_t offset, int mode) -> off_t {
-        return static_cast<MemoryVfs*>(ctx)->vfsLseek(fd, offset, mode);
-    };
-    m_vfsImpl.fstat_p = [](void* ctx, int fd, struct stat* st) -> int {
-        return static_cast<MemoryVfs*>(ctx)->vfsFstat(fd, st);
-    };
-
-    esp_err_t err = esp_vfs_register(m_mountPoint.c_str(), &m_vfsImpl, this);
+    esp_err_t err = esp_vfs_register_fs(
+        m_mountPoint.c_str(), &VfsHooks::kOps,
+        ESP_VFS_FLAG_CONTEXT_PTR | ESP_VFS_FLAG_READONLY_FS | ESP_VFS_FLAG_STATIC, this);
     if (err == ESP_OK) {
         m_initialized = true;
         ESP_LOGI(TAG, "Mounted MemoryVfs at '%s'", m_mountPoint.c_str());
@@ -75,9 +108,9 @@ esp_err_t MemoryVfs::registerFile(std::string_view name, MemoryFileHandle file) 
 }
 
 esp_err_t MemoryVfs::insertFile(std::string_view name, MemoryFileHandle& file) {
-    const bool duplicate = std::any_of(m_files.begin(), m_files.end(), [name](const FileEntry& entry) {
-        return entry.file && entry.name == name;
-    });
+    const bool duplicate =
+        std::any_of(m_files.begin(), m_files.end(),
+                    [name](const FileEntry& entry) { return entry.file && entry.name == name; });
     if (duplicate) {
         return ESP_ERR_INVALID_SIZE;
     }
@@ -97,9 +130,8 @@ esp_err_t MemoryVfs::unregisterFile(std::string_view name) {
     MemoryFileHandle released;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        auto entry = std::find_if(m_files.begin(), m_files.end(), [name](const FileEntry& e) {
-            return e.file && e.name == name;
-        });
+        auto entry = std::find_if(m_files.begin(), m_files.end(),
+                                  [name](const FileEntry& e) { return e.file && e.name == name; });
         if (entry == m_files.end()) {
             return ESP_ERR_NOT_FOUND;
         }
@@ -113,8 +145,8 @@ esp_err_t MemoryVfs::unregisterFile(std::string_view name) {
 
 uint8_t MemoryVfs::openDescriptorCount() const {
     std::lock_guard<std::mutex> lock(m_mutex);
-    return static_cast<uint8_t>(std::count_if(m_fds.begin(), m_fds.end(),
-                                              [](const FdEntry& fd) { return fd.file != nullptr; }));
+    return static_cast<uint8_t>(std::count_if(
+        m_fds.begin(), m_fds.end(), [](const FdEntry& fd) { return fd.file != nullptr; }));
 }
 
 MemoryVfs::FdEntry* MemoryVfs::findDescriptor(int fd) {
@@ -145,8 +177,8 @@ int MemoryVfs::vfsOpen(const char* path, int flags, int /*mode*/) {
         return -1;
     }
 
-    auto freeFd = std::find_if(m_fds.begin(), m_fds.end(),
-                               [](const FdEntry& fd) { return !fd.file; });
+    auto freeFd =
+        std::find_if(m_fds.begin(), m_fds.end(), [](const FdEntry& fd) { return !fd.file; });
     if (freeFd == m_fds.end()) {
         errno = ENFILE;
         return -1;
@@ -204,18 +236,18 @@ off_t MemoryVfs::vfsLseek(int fd, off_t offset, int mode) {
     const auto fileSize = static_cast<off_t>(entry->file->size);
     off_t newPosition = 0;
     switch (mode) {
-        case SEEK_SET:
-            newPosition = offset;
-            break;
-        case SEEK_CUR:
-            newPosition = static_cast<off_t>(entry->position) + offset;
-            break;
-        case SEEK_END:
-            newPosition = fileSize + offset;
-            break;
-        default:
-            errno = EINVAL;
-            return -1;
+    case SEEK_SET:
+        newPosition = offset;
+        break;
+    case SEEK_CUR:
+        newPosition = static_cast<off_t>(entry->position) + offset;
+        break;
+    case SEEK_END:
+        newPosition = fileSize + offset;
+        break;
+    default:
+        errno = EINVAL;
+        return -1;
     }
 
     if (newPosition < 0 || newPosition > fileSize) {

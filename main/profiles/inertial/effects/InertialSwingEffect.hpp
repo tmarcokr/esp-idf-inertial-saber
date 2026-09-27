@@ -41,17 +41,12 @@ public:
      */
     void deactivate();
 
-    /**
-     * @brief Checks if the effect is currently active.
-     * @return True if active.
-     */
-    [[nodiscard]] bool isActive() const;
-
     bool test(const Core::SaberDataPacket& packet) override;
     void run() override;
 
 private:
     static constexpr const char* TAG = "InertialSwing";
+    static constexpr uint32_t kTelemetryLogIntervalCycles = 400;
 
     Espressif::Wrappers::Audio::AudioEngine& m_engine;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
@@ -60,7 +55,7 @@ private:
 
     std::atomic<bool> m_active{false};
 
-    Espressif::Wrappers::Audio::ChannelId m_chHum    = Espressif::Wrappers::Audio::INVALID_CHANNEL;
+    Espressif::Wrappers::Audio::ChannelId m_chHum = Espressif::Wrappers::Audio::INVALID_CHANNEL;
     Espressif::Wrappers::Audio::ChannelId m_chSwingL = Espressif::Wrappers::Audio::INVALID_CHANNEL;
     Espressif::Wrappers::Audio::ChannelId m_chSwingH = Espressif::Wrappers::Audio::INVALID_CHANNEL;
 

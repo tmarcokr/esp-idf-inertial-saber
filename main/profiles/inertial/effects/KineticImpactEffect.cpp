@@ -14,23 +14,21 @@
 
 namespace InertialSaber::Effects {
 
-static constexpr const char *TAG = "KineticImpact";
+static constexpr const char* TAG = "KineticImpact";
 
 KineticImpactEffect::KineticImpactEffect(
-    const Profiles::PowerStateMachine &power,
-    Espressif::Wrappers::Audio::AudioEngine &audio,
-    Espressif::Wrappers::SmartLed::Engine &ledEngine,
-    const InertialSaber::Profiles::Inertial::InertialDefinition &definition,
-    const Profiles::SoundFont &font)
+    const Profiles::PowerStateMachine& power, Espressif::Wrappers::Audio::AudioEngine& audio,
+    Espressif::Wrappers::SmartLed::Engine& ledEngine,
+    const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
+    const Profiles::SoundFont& font)
     : InertialEffect(2)
     , m_power(power)
     , m_audio(audio)
     , m_ledEngine(ledEngine)
     , m_def(definition)
-    , m_font(font)
-{}
+    , m_font(font) {}
 
-bool KineticImpactEffect::test(const Core::SaberDataPacket &packet) {
+bool KineticImpactEffect::test(const Core::SaberDataPacket& packet) {
     if (!m_power.isIgnited()) {
         clearKineticEnergyWindow();
         return false;
@@ -42,7 +40,7 @@ void KineticImpactEffect::clearKineticEnergyWindow() {
     m_kineticEnergyWindow.fill(0.0f);
 }
 
-bool KineticImpactEffect::detectClash(const Core::SaberDataPacket &packet) {
+bool KineticImpactEffect::detectClash(const Core::SaberDataPacket& packet) {
     m_kineticEnergyWindow[m_windowIdx] = packet.kineticEnergy;
     m_windowIdx = (m_windowIdx + 1) % m_kineticEnergyWindow.size();
 
@@ -55,7 +53,8 @@ bool KineticImpactEffect::detectClash(const Core::SaberDataPacket &packet) {
 
     float decelerationG = peakKineticEnergyG - packet.kineticEnergy;
 
-    if (decelerationG > m_def.clashThresholdG && (packet.timestampMs - m_lastClashTimeMs) > 500) {
+    if (decelerationG > m_def.clashThresholdG &&
+        (packet.timestampMs - m_lastClashTimeMs) > kClashDebounceMs) {
         m_lastClashTimeMs = packet.timestampMs;
         return true;
     }
@@ -67,10 +66,13 @@ void KineticImpactEffect::run() {
     const std::string path = m_font.randomPath(Profiles::FontCategory::Clash);
 
     m_audio.play(path, false, kFullVolume);
-    m_ledEngine.pushOverlay(std::make_unique<BladeClashFlash>(
-        m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.clashDurationMs));
+    if (!m_ledEngine.pushOverlay(std::make_unique<BladeClashFlash>(
+            m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.clashDurationMs))) {
+        ESP_LOGW(TAG, "Clash overlay dropped: no free overlay slot");
+    }
 
-    ESP_LOGI(TAG, "Clash triggered: %s (G drop threshold: %.2f)", path.c_str(), m_def.clashThresholdG);
+    ESP_LOGD(TAG, "Clash triggered: %s (G drop threshold: %.2f)", path.c_str(),
+             m_def.clashThresholdG);
 }
 
 } // namespace InertialSaber::Effects

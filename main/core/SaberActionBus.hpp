@@ -59,7 +59,7 @@ public:
     [[nodiscard]] esp_err_t start();
 
     /**
-     * @brief Signal the bus task to terminate and wait for cleanup.
+     * @brief Signal the bus task to exit, wait a fixed grace period (no join) and delete the input queue.
      */
     void stop();
 
@@ -92,7 +92,8 @@ public:
      * @brief Push a button state change into the bus input queue.
      *
      * Called by InputAdapters when a state transition is detected.
-     * Automatically wakes the bus task via notification.
+     * Automatically wakes the bus task via notification. Never blocks: when the
+     * queue is full the event is dropped and the bus task logs the drop count.
      *
      * @param inputId Button index (0...kMaxInputs-1).
      * @param descriptor Full state snapshot at the moment of transition.
@@ -100,14 +101,15 @@ public:
     void pushInputEvent(uint8_t inputId, const InputDescriptor& descriptor);
 
 private:
-    static constexpr uint32_t kBusTimeoutMs    = 10;
-    static constexpr uint8_t  kInputQueueDepth = 8;
+    static constexpr uint32_t kBusTimeoutMs = 10;
+    static constexpr uint8_t kInputQueueDepth = 8;
 
     const BusConfig m_config;
 
     std::atomic<TaskHandle_t> m_taskHandle{nullptr};
     std::atomic<QueueHandle_t> m_inputQueue{nullptr};
     std::atomic<bool> m_running{false};
+    std::atomic<uint32_t> m_droppedInputEvents{0};
 
     std::vector<std::unique_ptr<InertialEffect>> m_effects;
     std::vector<std::unique_ptr<InertialEffect>> m_effectsPendingDestruction;

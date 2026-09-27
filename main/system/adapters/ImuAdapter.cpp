@@ -1,15 +1,23 @@
 #include "ImuAdapter.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include <cmath>
+#include <numbers>
 
 namespace InertialSaber::System::Adapters {
 
 static constexpr const char* TAG = "ImuAdapter";
+static constexpr float kRadToDeg = 180.0f / std::numbers::pi_v<float>;
+static constexpr uint32_t kTaskStackSize = 4096;
+static constexpr uint32_t kStartupDelayMs = 100;
+static constexpr uint32_t kPollTimeoutMs = 20;
 
 ImuAdapter::ImuAdapter(Core::SaberActionBus& bus, Espressif::Wrappers::Sensors::Mpu6050& imu,
                        gpio_num_t interruptPin)
-    : m_bus(bus), m_imu(imu), m_interruptPin(interruptPin) {}
+    : m_bus(bus)
+    , m_imu(imu)
+    , m_interruptPin(interruptPin) {}
 
 ImuAdapter::~ImuAdapter() {
     if (m_isrHandlerAdded) {
@@ -21,17 +29,16 @@ ImuAdapter::~ImuAdapter() {
 }
 
 esp_err_t ImuAdapter::start() {
-    BaseType_t result = xTaskCreatePinnedToCore(
-        imuAdapterTask, "imu_adapter", 4096, this,
-        Hardware::HardwareConfig::kImuAdapterPriority,
-        &m_imuTaskHandle, Hardware::HardwareConfig::kImuAdapterCore);
+    BaseType_t result =
+        xTaskCreatePinnedToCore(imuAdapterTask, "imu_adapter", kTaskStackSize, this,
+                                Hardware::HardwareConfig::kImuAdapterPriority, &m_imuTaskHandle,
+                                Hardware::HardwareConfig::kImuAdapterCore);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "IMU adapter task creation failed");
         return ESP_FAIL;
     }
 
-    // ── IMU Interrupt Configuration ──
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << m_interruptPin),
         .mode = GPIO_MODE_INPUT,
@@ -39,7 +46,10 @@ esp_err_t ImuAdapter::start() {
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_POSEDGE,
     };
-    gpio_config(&io_conf);
+    const esp_err_t config_err = gpio_config(&io_conf);
+    if (config_err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to configure IMU interrupt pin: %s", esp_err_to_name(config_err));
+    }
 
     esp_err_t isr_err = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
     if (isr_err != ESP_OK && isr_err != ESP_ERR_INVALID_STATE) {
@@ -50,6 +60,10 @@ esp_err_t ImuAdapter::start() {
         m_isrHandlerAdded = true;
     } else {
         ESP_LOGE(TAG, "Failed to add IMU ISR handler: %s", esp_err_to_name(add_err));
+    }
+    if (config_err != ESP_OK || !m_isrHandlerAdded) {
+        ESP_LOGW(TAG, "IMU interrupt unavailable, polling every %lu ms",
+                 static_cast<unsigned long>(kPollTimeoutMs));
     }
 
     ESP_LOGI(TAG, "IMU Adapter started successfully");
@@ -74,27 +88,26 @@ void ImuAdapter::imuAdapterTask(void* arg) {
 }
 
 void ImuAdapter::imuLoop() {
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(kStartupDelayMs));
 
     while (true) {
-        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(20));
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kPollTimeoutMs));
 
         auto data = m_imu.readData();
         if (data) {
             auto linAccel = data->getLinearAcceleration();
-            float energy = std::sqrt(linAccel.x * linAccel.x +
-                                     linAccel.y * linAccel.y +
+            float energy = std::sqrt(linAccel.x * linAccel.x + linAccel.y * linAccel.y +
                                      linAccel.z * linAccel.z);
 
             auto angles = data->getEulerAngles();
-            float orientation = angles.roll * (180.0f / M_PI);
+            float orientation = angles.roll * kRadToDeg;
 
             const Core::MotionSample sample{
-                .kineticEnergyG  = energy,
+                .kineticEnergyG = energy,
                 .axisRotationDps = {static_cast<float>(data->gyro_x),
                                     static_cast<float>(data->gyro_y),
                                     static_cast<float>(data->gyro_z)},
-                .orientationDeg  = orientation,
+                .orientationDeg = orientation,
             };
 
             m_bus.updateMotion(sample);

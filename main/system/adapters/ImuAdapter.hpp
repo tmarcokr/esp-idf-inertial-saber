@@ -2,7 +2,6 @@
 
 #include "Mpu6050.hpp"
 #include "core/SaberActionBus.hpp"
-#include "system/hardware/HardwareConfig.hpp"
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"

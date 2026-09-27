@@ -77,3 +77,44 @@ The existing overrides (§1 FAT LFN, §2 PSRAM) still exist in v6.1 and apply un
 > Target-specific: placed in `sdkconfig.defaults.esp32s3`.
 
 ---
+
+### 5. Project Kconfig: Profile Parser Self-Test
+
+| Key | Default | Override | Since |
+|---|---|---|---|
+| `CONFIG_SABER_PARSER_SELF_TEST` | _(new option)_ | `y` | 2026-09-26 |
+
+**Reason**: A new project-owned `main/Kconfig.projbuild` ("InertialSaber" menu) replaces the previous `NDEBUG`-gated self-test with an explicit build option. When enabled, `ProfileParser::runSelfTest()` runs before hardware initialization in `SaberSystem.cpp`; a failing self-test aborts the boot with the error status. The option defaults to `y` so the default build keeps validating the parser at boot. Disable it (`# CONFIG_SABER_PARSER_SELF_TEST is not set`) in release builds to shorten boot time and save flash.
+
+> [!NOTE]
+> This is a project-defined option (not an ESP-IDF default), so it has no prior "default" value to compare against — it did not exist before this change.
+
+---
+
+### 6. Release Build Overlay (`sdkconfig.defaults.release`)
+
+| Key | Default | Override | Since |
+|---|---|---|---|
+| `CONFIG_COMPILER_OPTIMIZATION_PERF` | `not set` (`-Og`, via `OPTIMIZATION_DEBUG`) | `y` (`-O2`) | 2026-09-26 |
+| `CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_SILENT` | `not set` (`ASSERTIONS_ENABLE`) | `y` | 2026-09-26 |
+| `CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240` | `not set` (160 MHz) | `y` (240 MHz) | 2026-09-26 |
+| `CONFIG_LOG_DEFAULT_LEVEL_WARN` | `not set` (INFO) | `y` | 2026-09-26 |
+| `CONFIG_SABER_PARSER_SELF_TEST` | `y` (see §5) | `not set` | 2026-09-26 |
+
+**Reason**: `sdkconfig.defaults.release` is an **optional overlay**, not part of the default build. It is layered on top of `sdkconfig.defaults` (and the target-specific `sdkconfig.defaults.esp32s3`, appended automatically) only when explicitly requested:
+
+```bash
+idf.py -B build_release -D IDF_TARGET=esp32s3 -D SDKCONFIG=build_release/sdkconfig \
+  -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.release" build
+```
+
+1. **`-O2` optimization** — trades the default `-Og` (debug-friendly) for full performance optimization in release builds.
+2. **Silent assertions** — `assert()` and `configASSERT()` still abort the firmware, but without printing the failure message/expression, reducing flash usage. Left at the default (`ENABLE`, verbose) in the standard build.
+3. **240 MHz CPU** — raises the default 160 MHz clock for maximum headroom in release builds.
+4. **`LOG_DEFAULT_LEVEL_WARN`** — several components log at `INFO` on every play/stop event in real-time audio/visual paths; `WARN` avoids that overhead in release builds. Switch back to `INFO` if boot/profile-load messages are needed for field debugging.
+5. **Parser self-test disabled** — see §5; skipped in release builds to shorten boot time.
+
+> [!NOTE]
+> This overlay is opt-in via the build command above; it never affects the default `idf.py build` invocation or the standard `sdkconfig`.
+
+---

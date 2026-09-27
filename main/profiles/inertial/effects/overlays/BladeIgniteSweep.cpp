@@ -7,16 +7,15 @@ namespace InertialSaber::Effects {
 BladeIgniteSweep::BladeIgniteSweep(uint16_t numLeds, uint16_t hue, uint32_t durationMs)
     : m_numLeds(numLeds)
     , m_color(Espressif::Wrappers::SmartLed::hsvToRgb(hue, 255u, 255u))
-    , m_durationMs(durationMs > 0 ? durationMs : 1)
-{}
+    , m_durationMs(durationMs > 0 ? durationMs : 1) {}
 
 void BladeIgniteSweep::update(uint32_t deltaMs) {
     m_elapsed = std::min(m_elapsed + deltaMs, m_durationMs);
 }
 
 void BladeIgniteSweep::render(Espressif::Wrappers::SmartLed::Canvas& canvas) {
-    const uint16_t lit = static_cast<uint16_t>(
-        (static_cast<uint64_t>(m_elapsed) * m_numLeds) / m_durationMs);
+    const uint16_t lit =
+        static_cast<uint16_t>((static_cast<uint64_t>(m_elapsed) * m_numLeds) / m_durationMs);
 
     canvas.fillRange(0, lit, m_color);
     if (lit < m_numLeds) {

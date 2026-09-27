@@ -9,7 +9,7 @@ struct SaberDataPacket;
 namespace InertialSaber::Profiles {
 class PowerStateMachine;
 class ProfileManager;
-}
+} // namespace InertialSaber::Profiles
 
 namespace InertialSaber::Effects {
 
@@ -22,8 +22,7 @@ public:
      * @brief Construct a new ProfileCycleEffect.
      */
     ProfileCycleEffect(const Profiles::PowerStateMachine& power,
-                       Profiles::ProfileManager& profileManager,
-                       uint8_t buttonId);
+                       Profiles::ProfileManager& profileManager, uint8_t buttonId);
 
     /**
      * @brief Test if the profile cycle gesture is triggered.
@@ -37,8 +36,8 @@ public:
 
 private:
     const Profiles::PowerStateMachine& m_power;
-    Profiles::ProfileManager&      m_profileManager;
-    uint8_t                        m_buttonId;
+    Profiles::ProfileManager& m_profileManager;
+    uint8_t m_buttonId;
 };
 
 } // namespace InertialSaber::Effects

@@ -22,6 +22,7 @@ public:
      * @param numLeds Total number of LEDs in the blade.
      * @param dragLedCount Number of LEDs at the tip that show the thermal glow.
      * @param fadeRequest Set by the owner of the drag to start the fade-out; may be written from any task.
+     *                    Releasing the owner's reference without setting it also starts the fade-out.
      */
     BladeDragEffect(uint16_t numLeds, uint16_t dragLedCount,
                     std::shared_ptr<const std::atomic<bool>> fadeRequest);
@@ -31,6 +32,8 @@ public:
     [[nodiscard]] bool isFinished() const override;
 
 private:
+    [[nodiscard]] bool fadeRequested() const;
+
     uint16_t m_numLeds;
     uint16_t m_dragLedCount;
     std::shared_ptr<const std::atomic<bool>> m_fadeRequest;

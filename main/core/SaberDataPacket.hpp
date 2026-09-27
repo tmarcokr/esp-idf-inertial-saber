@@ -26,11 +26,7 @@ struct InputDescriptor {
     /**
      * @brief Semantic gesture resolved by the input adapter.
      */
-    enum class Gesture : uint8_t {
-        None     = 0,
-        Click    = 1,
-        HoldTick = 2
-    };
+    enum class Gesture : uint8_t { None = 0, Click = 1, HoldTick = 2 };
 
     Gesture gesture = Gesture::None;
     uint8_t pressCount = 0;
@@ -47,16 +43,16 @@ struct InputDescriptor {
 struct SaberDataPacket {
     /// Absolute linear acceleration magnitude in Gs (gravity subtracted).
     float kineticEnergy = 0.0f;
-    
+
     /// Angular velocity across XYZ axes in degrees per second.
     std::array<float, 3> axisRotation{};
-    
+
     /// Vertical alignment (-1.0 to 1.0) where 1.0 is pointing straight UP and -1.0 is straight DOWN.
     float orientation = 0.0f;
 
     /// Virtual inertia accumulator (0.0f to 1.0f).
     float inertialOverload = 0.0f;
-    
+
     /// True for exactly one cycle when inertialOverload reaches 1.0f.
     bool inertialBurst = false;
 

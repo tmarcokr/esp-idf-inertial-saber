@@ -1,4 +1,3 @@
-#include "profiles/inertial/InertialDefinition.hpp"
 #pragma once
 
 #include "core/InertialEffect.hpp"
@@ -7,9 +6,11 @@
 namespace InertialSaber::Profiles {
 class PowerStateMachine;
 class SoundFont;
+} // namespace InertialSaber::Profiles
+namespace InertialSaber::Profiles::Inertial {
+struct InertialDefinition;
 }
 namespace InertialSaber::Core {
-
 struct SaberDataPacket;
 }
 namespace Espressif::Wrappers::Audio {
@@ -26,24 +27,22 @@ namespace InertialSaber::Effects {
  */
 class BlasterEffect final : public Core::InertialEffect {
 public:
-    BlasterEffect(
-        const Profiles::PowerStateMachine&      power,
-        Espressif::Wrappers::Audio::AudioEngine& audio,
-        Espressif::Wrappers::SmartLed::Engine&   ledEngine,
-        const InertialSaber::Profiles::Inertial::InertialDefinition&          definition,
-        const Profiles::SoundFont&               font,
-        uint8_t                                  buttonId);
+    BlasterEffect(const Profiles::PowerStateMachine& power,
+                  Espressif::Wrappers::Audio::AudioEngine& audio,
+                  Espressif::Wrappers::SmartLed::Engine& ledEngine,
+                  const Profiles::Inertial::InertialDefinition& definition,
+                  const Profiles::SoundFont& font, uint8_t buttonId);
 
     bool test(const Core::SaberDataPacket& packet) override;
     void run() override;
 
 private:
-    const Profiles::PowerStateMachine&       m_power;
+    const Profiles::PowerStateMachine& m_power;
     Espressif::Wrappers::Audio::AudioEngine& m_audio;
-    Espressif::Wrappers::SmartLed::Engine&   m_ledEngine;
-    const InertialSaber::Profiles::Inertial::InertialDefinition&          m_def;
-    const Profiles::SoundFont&               m_font;
-    uint8_t                                  m_buttonId;
+    Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
+    const Profiles::Inertial::InertialDefinition& m_def;
+    const Profiles::SoundFont& m_font;
+    uint8_t m_buttonId;
 };
 
 } // namespace InertialSaber::Effects

@@ -25,7 +25,7 @@ public:
      */
     ~InputAdapter();
 
-    InputAdapter(const InputAdapter&)            = delete;
+    InputAdapter(const InputAdapter&) = delete;
     InputAdapter& operator=(const InputAdapter&) = delete;
 
     /**
@@ -44,18 +44,18 @@ private:
     static void clickTimerCallback(void* arg);
     static void holdTimerCallback(void* arg);
 
-    Core::SaberActionBus&            m_bus;
+    Core::SaberActionBus& m_bus;
     Espressif::Wrappers::GpioButton& m_mainButton;
 
     // Warning: m_stateMutex serialises the GpioButton poll task and the esp_timer task; hold it
     // only around state updates and non-blocking calls (esp_timer start/stop, pushInputEvent).
-    std::mutex            m_stateMutex;
+    std::mutex m_stateMutex;
     Core::InputDescriptor m_btnState{};
-    uint8_t               m_pendingClicks = 0;
-    uint8_t               m_holdLevel     = 0;
+    uint8_t m_pendingClicks = 0;
+    uint8_t m_holdLevel = 0;
 
     esp_timer_handle_t m_clickTimer = nullptr;
-    esp_timer_handle_t m_holdTimer  = nullptr;
+    esp_timer_handle_t m_holdTimer = nullptr;
 };
 
 } // namespace InertialSaber::System::Adapters

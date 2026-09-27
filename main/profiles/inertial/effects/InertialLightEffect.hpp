@@ -16,42 +16,41 @@ namespace InertialSaber::Effects {
  */
 class InertialLightEffect final : public Core::InertialEffect {
 public:
-  /** @brief Breathing frequency swing (Hz) applied on top of the base frequency at full blade tilt. */
-  static constexpr float kGravityBreathModulationHz = 0.5f;
+    /** @brief Breathing frequency swing (Hz) applied on top of the base frequency at full blade tilt. */
+    static constexpr float kGravityBreathModulationHz = 0.5f;
 
-  explicit InertialLightEffect(
-      Espressif::Wrappers::SmartLed::Engine& ledEngine,
-      const InertialSaber::Profiles::Inertial::InertialDefinition& definition);
+    explicit InertialLightEffect(
+        Espressif::Wrappers::SmartLed::Engine& ledEngine,
+        const InertialSaber::Profiles::Inertial::InertialDefinition& definition);
 
-  bool test(const Core::SaberDataPacket &packet) override;
-  void run() override;
+    bool test(const Core::SaberDataPacket& packet) override;
+    void run() override;
 
-  void activate();
-  void deactivate();
+    void activate();
+    void deactivate();
 
 private:
-  Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
-  const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
-  InertialBladeEffect* m_bladeEffect = nullptr;
-  bool m_active = false;
+    Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
+    const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
+    InertialBladeEffect* m_bladeEffect = nullptr;
+    bool m_active = false;
 
-  uint16_t m_baseHue;
-  float m_kineticEnergy = 0.0f;
-  float m_orientation = 0.0f;
-  float m_inertialOverload = 0.0f;
-  bool m_inertialBurst = false;
+    uint16_t m_baseHue;
+    float m_kineticEnergy = 0.0f;
+    float m_orientation = 0.0f;
+    float m_inertialOverload = 0.0f;
+    bool m_inertialBurst = false;
 
-  float m_breathPhase = 0.0f;
-  uint32_t m_lastTimestampMs = 0;
-  uint32_t m_deltaMs = 0;
+    float m_breathPhase = 0.0f;
+    uint32_t m_lastTimestampMs = 0;
+    uint32_t m_deltaMs = 0;
 
-  // ── Clean Code Physics Helpers ──
-  void updateBreathPhase();
-  bool isExcited() const;
-  float calculateIdlePulse() const;
-  float calculateThermalBleed() const;
-  float calculatePlasmaFlicker() const;
-  void triggerPlasmaRuptureOverlay();
+    void updateBreathPhase();
+    bool isExcited() const;
+    float calculateIdlePulse() const;
+    float calculateThermalBleed() const;
+    float calculatePlasmaFlicker() const;
+    void triggerPlasmaRuptureOverlay();
 };
 
 } // namespace InertialSaber::Effects
