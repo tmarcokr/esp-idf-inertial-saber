@@ -15,6 +15,8 @@ Unlike systems with fixed colors, effects in InertialSaber OS are **Relative**. 
 
 ### 2.1. Kinetic Impact (Clash)
 - **Trigger:** Sudden negative spike in `EnergiaTotal` (> 8.0G) within a 15ms window.
+  - **Window (implementation):** time-based. The effect keeps the kinetic energy of the IMU samples from the last **15 ms of IMU sample timestamps** (`SaberDataPacket::motionTimestampUs`), not a fixed number of bus cycles. A bus cycle that repeats an already-seen sample (timeout or input wake) adds nothing to the window. The drop is the peak inside the window minus the current sample.
+  - **Debounce:** at most one clash every **500 ms**.
 - **Visual:** **Complementary Burst.** Instant shift to `Hue + 180°`, `Brightness: 1.0`, `Saturation: 1.0`. Fades back to base color in 150ms.
 - **Audio:** High-priority "Override" sound with sharp attack.
 - **Haptic:** Single high-amplitude "Kinetic Kick" (Recoil).

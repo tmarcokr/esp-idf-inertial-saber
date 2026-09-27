@@ -23,6 +23,11 @@ Although the intelligence and trigger rules are compiled, heavy resources (`.wav
             └── swingl/  <-- Low variations (swingL)
 ```
 
+### 2.1. Profile Root Length Limit
+The `root_path` of a profile (in its `profile.json`) is normalized first: leading and trailing `/` are removed and a single trailing `/` is added. The normalized `root_path` must be **at most 96 characters** long. Audio paths are built in a fixed 128-byte buffer (`/sdcard/` + root + the longest file name, `enddrag/enddrag255.wav`), so a longer root cannot be played.
+
+A profile whose normalized `root_path` is longer than 96 characters is **rejected at parse time**: `ProfileParser::parse()` returns `ESP_ERR_INVALID_SIZE`, the error is logged with the actual length, and the profile is skipped during the SD scan. The other profiles load normally.
+
 ---
 
 ## 3. Class Architecture: The Effect Contract

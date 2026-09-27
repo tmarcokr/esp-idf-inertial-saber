@@ -33,7 +33,7 @@ A high-performance configuration model. Profiles are compiled C++ classes that e
 
 ## 📂 Project Structure
 
-- `main/`: Core application logic — action bus (`core/`), profiles and effects (`profiles/`), adapters and hardware layer (`system/`).
+- `main/`: Core application logic — action bus (`core/`), profiles and effects (`profiles/`), adapters, audio control and hardware layer (`system/`), on-device real-time metrics (`diagnostics/`).
 - `components/`: Hardware wrappers and peripheral drivers.
 - `docs/wiki/`: Official functional and technical specifications (The Source of Truth).
 - `.claude/` + `CLAUDE.md`: Claude Code configuration — an orchestrator protocol plus specialised subagents (architecture, implementation, audit, hardware review, documentation), procedure skills and guardrail hooks.
@@ -51,6 +51,7 @@ Explore the technical depth of InertialSaber OS:
 8. [**Kinetic Gestures**](./docs/wiki/KineticGestures.md) - Touchless operation and IMU patterns.
 9. [**Profiles & Configuration**](./docs/wiki/Profiles.md) - How to define saber identities.
 10. [**Action Bus & Effects**](./docs/wiki/SaberAction.md) - Event processing and trigger logic.
+11. [**Diagnostics**](./docs/wiki/Diagnostics.md) - On-device real-time metrics and the CSV format.
 
 
 ---
