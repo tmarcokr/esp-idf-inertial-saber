@@ -114,6 +114,8 @@ public:
     struct BootRecord {
         uint32_t durationMs;
         uint32_t mainStackFreeMin;
+        UBaseType_t mainPriority;
+        BaseType_t mainCore;
         uint32_t heapInternalFree;
         uint32_t heapPsramFree;
     };
@@ -133,7 +135,10 @@ public:
 
     [[nodiscard]] static TaskHandle_t taskHandle(TaskId id);
 
-    /** @brief Captures the main task's stack high-water mark, the boot duration and free heap. */
+    /**
+     * @brief Captures the main task's stack high-water mark, priority and core, the boot duration
+     * and free heap.
+     */
     static void recordBoot();
 
     [[nodiscard]] static BootRecord bootRecord();

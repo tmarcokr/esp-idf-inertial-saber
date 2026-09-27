@@ -11,6 +11,7 @@ namespace InertialSaber::Core {
  * @brief FreeRTOS parameters of the bus task.
  */
 struct BusTaskConfig {
+    const char* name;
     uint32_t stackSize;
     UBaseType_t priority;
     BaseType_t core;

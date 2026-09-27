@@ -42,7 +42,7 @@ esp_err_t SaberActionBus::start() {
 
     TaskHandle_t handle = nullptr;
     BaseType_t result =
-        xTaskCreatePinnedToCore(busTaskEntry, "saber_bus", m_config.task.stackSize, this,
+        xTaskCreatePinnedToCore(busTaskEntry, m_config.task.name, m_config.task.stackSize, this,
                                 m_config.task.priority, &handle, m_config.task.core);
 
     if (result != pdPASS) {

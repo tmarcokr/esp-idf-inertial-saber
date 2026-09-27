@@ -57,9 +57,11 @@ private:
         uint32_t psramEnd;
     };
 
-    struct StackReading {
+    struct TaskReading {
         bool known;
-        uint32_t freeMin;
+        uint32_t stackFreeMin;
+        UBaseType_t priority;
+        BaseType_t core;
     };
 
     struct BlockSnapshot {
@@ -70,7 +72,7 @@ private:
         RateStats busRate;
         RateStats imuRate;
         HeapStats heap;
-        std::array<StackReading, Diagnostics::kTaskCount> stacks;
+        std::array<TaskReading, Diagnostics::kTaskCount> tasks;
         std::array<uint32_t, Diagnostics::kCoreCount> coreAllocations;
         Diagnostics::Metrics::Snapshot live;
     };
@@ -88,9 +90,6 @@ private:
 
     class CsvWriter;
 
-    static constexpr uint32_t kTaskStackSize = 4096;
-    static constexpr UBaseType_t kTaskPriority = 1;
-    static constexpr BaseType_t kTaskCore = 1;
     static constexpr uint32_t kSampleIntervalMs = 100;
     static constexpr uint32_t kRateWindowMs = 1000;
     static constexpr uint32_t kFlushSettleMs = 2000;

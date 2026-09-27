@@ -11,7 +11,7 @@ namespace InertialSaber::System::Adapters {
 
 static constexpr const char* TAG = "ImuAdapter";
 static constexpr float kRadToDeg = 180.0f / std::numbers::pi_v<float>;
-static constexpr uint32_t kTaskStackSize = 4096;
+static constexpr const Hardware::TaskSpec& kTask = Hardware::TaskTable::kImuAdapter;
 static constexpr uint32_t kStartupDelayMs = 100;
 static constexpr uint32_t kPollTimeoutMs = 20;
 
@@ -31,10 +31,8 @@ ImuAdapter::~ImuAdapter() {
 }
 
 esp_err_t ImuAdapter::start() {
-    BaseType_t result =
-        xTaskCreatePinnedToCore(imuAdapterTask, "imu_adapter", kTaskStackSize, this,
-                                Hardware::HardwareConfig::kImuAdapterPriority, &m_imuTaskHandle,
-                                Hardware::HardwareConfig::kImuAdapterCore);
+    BaseType_t result = xTaskCreatePinnedToCore(imuAdapterTask, kTask.name, kTask.stackSize, this,
+                                                kTask.priority, &m_imuTaskHandle, kTask.core);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "IMU adapter task creation failed");

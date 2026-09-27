@@ -48,15 +48,15 @@ private:
     Board::StatusIndicatorType m_status{Board::kStatusIndicatorConfig};
     Espressif::Wrappers::SdCard m_sdCard{Hardware::makeSdConfig()};
     Espressif::Wrappers::Audio::AudioEngine m_audio{Hardware::makeAudioConfig()};
-    AudioController m_audioControl{m_audio, Hardware::HardwareConfig::kAudioControlTask};
+    AudioController m_audioControl{m_audio, Hardware::TaskTable::kAudioControl};
     Espressif::Wrappers::SmartLed::Engine m_blade{Board::kPins.bladeData,
                                                   Hardware::HardwareConfig::kNumLeds};
     Espressif::Wrappers::Sensors::Mpu6050 m_imu{Board::kPins.imuSda, Board::kPins.imuScl,
                                                 Board::kPins.imuInt};
     Espressif::Wrappers::GpioButton m_button{Board::kPins.mainButton, Board::kMainButtonActiveLow};
     Core::SaberActionBus m_bus{Hardware::HardwareConfig::kBusConfig};
-    PsramAudioCache m_audioCache;
-    ActiveProfileStore m_profileStore{Hardware::HardwareConfig::kProfileStoreTask};
+    PsramAudioCache m_audioCache{Hardware::TaskTable::kPsramLoader};
+    ActiveProfileStore m_profileStore{Hardware::TaskTable::kProfileStore};
     Profiles::SaberServices m_services{m_bus, m_audioControl, m_blade, m_audioCache, m_status};
     Profiles::ProfileManager m_profiles{m_services, m_profileStore};
     Adapters::ImuAdapter m_imuAdapter{m_bus, m_imu, Board::kPins.imuInt};

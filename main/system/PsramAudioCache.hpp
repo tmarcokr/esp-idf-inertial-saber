@@ -2,6 +2,7 @@
 
 #include "system/MemoryVfs.hpp"
 #include "system/audio/AudioPath.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "profiles/SoundFont.hpp"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
@@ -27,7 +28,9 @@ public:
     /** @brief Swing pairs that fit in the default /mem file table next to hum.wav. */
     static constexpr uint8_t kMaxSwingPairs = (kDefaultMaxFiles - 1) / 2;
 
-    explicit PsramAudioCache(uint8_t maxFiles = kDefaultMaxFiles, uint8_t maxFds = 8);
+    /** @param task Creation parameters of the loader task. */
+    explicit PsramAudioCache(const Hardware::TaskSpec& task, uint8_t maxFiles = kDefaultMaxFiles,
+                             uint8_t maxFds = 8);
     ~PsramAudioCache();
 
     PsramAudioCache(const PsramAudioCache&) = delete;
@@ -60,9 +63,6 @@ private:
     static constexpr uint32_t kCloseWaitMs = 200;
     static constexpr uint32_t kClosePollMs = 10;
     static constexpr size_t kPsramHeadroomBytes = 256 * 1024;
-    static constexpr uint32_t kLoaderStackSize = 4096;
-    static constexpr UBaseType_t kLoaderPriority = 2;
-    static constexpr BaseType_t kLoaderCore = 1;
 
     static void loaderTaskFn(void* pvParameters);
     [[noreturn]] void loaderLoop();
@@ -76,6 +76,7 @@ private:
     void releaseFile(const std::string& vfsName);
     void unloadAll();
 
+    const Hardware::TaskSpec m_taskSpec;
     Espressif::Wrappers::MemoryVfs m_vfs;
     TaskHandle_t m_loaderTask = nullptr;
 

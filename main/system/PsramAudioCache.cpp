@@ -38,8 +38,9 @@ AudioPath mountedPath(std::string_view prefix, uint8_t pairIndex) {
 
 } // namespace
 
-PsramAudioCache::PsramAudioCache(uint8_t maxFiles, uint8_t maxFds)
-    : m_vfs(kMountPoint, maxFiles, maxFds) {
+PsramAudioCache::PsramAudioCache(const Hardware::TaskSpec& task, uint8_t maxFiles, uint8_t maxFds)
+    : m_taskSpec(task)
+    , m_vfs(kMountPoint, maxFiles, maxFds) {
     m_registeredNames.reserve(maxFiles);
 }
 
@@ -54,9 +55,9 @@ esp_err_t PsramAudioCache::init() {
     esp_err_t err = m_vfs.init();
     if (err != ESP_OK) return err;
 
-    BaseType_t ret =
-        xTaskCreatePinnedToCore(&PsramAudioCache::loaderTaskFn, "psram_loader", kLoaderStackSize,
-                                this, kLoaderPriority, &m_loaderTask, kLoaderCore);
+    BaseType_t ret = xTaskCreatePinnedToCore(&PsramAudioCache::loaderTaskFn, m_taskSpec.name,
+                                             m_taskSpec.stackSize, this, m_taskSpec.priority,
+                                             &m_loaderTask, m_taskSpec.core);
     if (ret != pdPASS) {
         return ESP_ERR_NO_MEM;
     }

@@ -65,25 +65,30 @@ constexpr const char* kCounterNames[] = {
 };
 static_assert(std::size(kCounterNames) == Diagnostics::kCounterCount);
 
+using Hardware::TaskTable;
+
+constexpr const Hardware::TaskSpec& kTask = TaskTable::kMetricsReporter;
+
 struct TaskInfo {
     const char* name;
-    const char* componentTaskName;
+    const Hardware::TaskSpec& spec;
+    bool resolveByName;
 };
 
 constexpr TaskInfo kTaskInfo[] = {
-    {"main", nullptr},
-    {"saber_bus", nullptr},
-    {"imu_adapter", nullptr},
-    {"psram_loader", nullptr},
-    {"metrics", nullptr},
-    {"SmartLedTask", "SmartLedTask"},
-    {"gpio_btn_tsk", "gpio_btn_tsk"},
-    {"esp_timer", "esp_timer"},
-    {"audio_mixer", "audio_mixer"},
-    {"audio_sd_reader", "audio_sd_reader"},
-    {"audio_mem_reader", "audio_mem_reade"},
-    {"audio_ctrl", nullptr},
-    {"profile_store", nullptr},
+    {"main", TaskTable::kMain, false},
+    {"saber_bus", TaskTable::kBus, false},
+    {"imu_adapter", TaskTable::kImuAdapter, false},
+    {"psram_loader", TaskTable::kPsramLoader, false},
+    {"metrics", TaskTable::kMetricsReporter, false},
+    {"SmartLedTask", TaskTable::kSmartLed, true},
+    {"gpio_btn_tsk", TaskTable::kButtonPoll, true},
+    {"esp_timer", TaskTable::kEspTimer, true},
+    {"audio_mixer", TaskTable::kAudioMixer, true},
+    {"audio_sd_reader", TaskTable::kAudioSdReader, true},
+    {"audio_mem_reader", TaskTable::kAudioMemReader, true},
+    {"audio_ctrl", TaskTable::kAudioControl, false},
+    {"profile_store", TaskTable::kProfileStore, false},
 };
 static_assert(std::size(kTaskInfo) == Diagnostics::kTaskCount);
 
@@ -243,8 +248,8 @@ esp_err_t MetricsReporter::start() {
     resolveComponentTasks();
 
     const BaseType_t result =
-        xTaskCreatePinnedToCore(&MetricsReporter::taskEntry, "metrics", kTaskStackSize, this,
-                                kTaskPriority, &m_task, kTaskCore);
+        xTaskCreatePinnedToCore(&MetricsReporter::taskEntry, kTask.name, kTask.stackSize, this,
+                                kTask.priority, &m_task, kTask.core);
     if (result != pdPASS) {
         m_task = nullptr;
         ESP_LOGE(TAG, "Reporter task creation failed");
@@ -255,8 +260,9 @@ esp_err_t MetricsReporter::start() {
 
 void MetricsReporter::resolveComponentTasks() {
     for (size_t i = 0; i < Diagnostics::kTaskCount; ++i) {
-        if (const char* taskName = kTaskInfo[i].componentTaskName; taskName != nullptr) {
-            Diagnostics::Metrics::registerTask(static_cast<TaskId>(i), xTaskGetHandle(taskName));
+        if (kTaskInfo[i].resolveByName) {
+            Diagnostics::Metrics::registerTask(static_cast<TaskId>(i),
+                                               xTaskGetHandle(kTaskInfo[i].spec.name));
         }
     }
 }
@@ -423,11 +429,13 @@ void MetricsReporter::captureBlock(BlockSnapshot& block, int64_t nowUs) {
     for (size_t i = 0; i < Diagnostics::kTaskCount; ++i) {
         const auto id = static_cast<TaskId>(i);
         if (id == TaskId::Main) {
-            block.stacks[i] = {true, Diagnostics::Metrics::bootRecord().mainStackFreeMin};
+            const Diagnostics::Metrics::BootRecord boot = Diagnostics::Metrics::bootRecord();
+            block.tasks[i] = {true, boot.mainStackFreeMin, boot.mainPriority, boot.mainCore};
         } else if (TaskHandle_t handle = Diagnostics::Metrics::taskHandle(id); handle != nullptr) {
-            block.stacks[i] = {true, static_cast<uint32_t>(uxTaskGetStackHighWaterMark(handle))};
+            block.tasks[i] = {true, static_cast<uint32_t>(uxTaskGetStackHighWaterMark(handle)),
+                              uxTaskPriorityGet(handle), xTaskGetCoreID(handle)};
         } else {
-            block.stacks[i] = {false, 0};
+            block.tasks[i] = {false, 0, 0, 0};
         }
     }
 
@@ -629,12 +637,22 @@ bool MetricsReporter::writeSessionBlock(const BlockSnapshot& block) {
 
     bool stackMarginOk = true;
     for (size_t i = 0; i < Diagnostics::kTaskCount; ++i) {
-        const StackReading& stack = block.stacks[i];
-        if (stack.known) {
-            csv.number("task", kTaskInfo[i].name, "stack_free_min", stack.freeMin, "B");
-            stackMarginOk = stackMarginOk && stack.freeMin >= kStackMarginBytes;
+        const TaskInfo& info = kTaskInfo[i];
+        const TaskReading& task = block.tasks[i];
+        csv.number("task", info.name, "size", info.spec.stackSize, "B");
+        if (task.known) {
+            csv.number("task", info.name, "stack_free_min", task.stackFreeMin, "B");
+            csv.number("task", info.name, "priority", static_cast<uint32_t>(task.priority), "");
+            if (task.core == tskNO_AFFINITY) {
+                csv.text("task", info.name, "core", "any", "");
+            } else {
+                csv.number("task", info.name, "core", static_cast<uint32_t>(task.core), "");
+            }
+            stackMarginOk = stackMarginOk && task.stackFreeMin >= kStackMarginBytes;
         } else {
-            csv.text("task", kTaskInfo[i].name, "stack_free_min", "missing", "B");
+            csv.text("task", info.name, "stack_free_min", "missing", "B");
+            csv.text("task", info.name, "priority", "missing", "");
+            csv.text("task", info.name, "core", "missing", "");
         }
     }
 

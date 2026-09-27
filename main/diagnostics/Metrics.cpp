@@ -37,6 +37,8 @@ struct LiveDuration {
 struct LiveBoot {
     Counter32 durationMs{0};
     Counter32 mainStackFreeMin{0};
+    Counter32 mainPriority{0};
+    Counter32 mainCore{0};
     Counter32 heapInternalFree{0};
     Counter32 heapPsramFree{0};
 };
@@ -137,6 +139,10 @@ void Metrics::recordBoot() {
                                  std::memory_order_relaxed);
     s_live.boot.mainStackFreeMin.store(static_cast<uint32_t>(uxTaskGetStackHighWaterMark(nullptr)),
                                        std::memory_order_relaxed);
+    s_live.boot.mainPriority.store(static_cast<uint32_t>(uxTaskPriorityGet(nullptr)),
+                                   std::memory_order_relaxed);
+    s_live.boot.mainCore.store(static_cast<uint32_t>(xTaskGetCoreID(nullptr)),
+                               std::memory_order_relaxed);
     s_live.boot.heapInternalFree.store(
         static_cast<uint32_t>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),
         std::memory_order_relaxed);
@@ -149,6 +155,9 @@ Metrics::BootRecord Metrics::bootRecord() {
     return {
         .durationMs = s_live.boot.durationMs.load(std::memory_order_acquire),
         .mainStackFreeMin = s_live.boot.mainStackFreeMin.load(std::memory_order_relaxed),
+        .mainPriority =
+            static_cast<UBaseType_t>(s_live.boot.mainPriority.load(std::memory_order_relaxed)),
+        .mainCore = static_cast<BaseType_t>(s_live.boot.mainCore.load(std::memory_order_relaxed)),
         .heapInternalFree = s_live.boot.heapInternalFree.load(std::memory_order_relaxed),
         .heapPsramFree = s_live.boot.heapPsramFree.load(std::memory_order_relaxed),
     };

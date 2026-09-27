@@ -132,7 +132,8 @@ esp_err_t SaberSystem::bringUpBlade() {
 
     m_blade.setGlobalBrightness(Hardware::HardwareConfig::kBladeBrightness);
     m_blade.setTargetFps(Hardware::HardwareConfig::kBladeTargetFps);
-    m_blade.start();
+    m_blade.start(Hardware::TaskTable::kSmartLed.priority,
+                  Hardware::TaskTable::kSmartLed.stackSize);
 
     ESP_LOGI(TAG, "SmartLed Engine ready (%d LEDs on GPIO %d)", Hardware::HardwareConfig::kNumLeds,
              static_cast<int>(Board::kPins.bladeData));
