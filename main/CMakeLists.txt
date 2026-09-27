@@ -6,6 +6,8 @@ idf_component_register(
          "system/status/RgbStatusIndicator.cpp"
          "system/MemoryVfs.cpp"
          "system/PsramAudioCache.cpp"
+         "system/audio/AudioController.cpp"
+         "system/persistence/ActiveProfileStore.cpp"
          "core/SaberActionBus.cpp"
          "profiles/inertial/effects/InertialSwingEffect.cpp"
          "profiles/inertial/effects/InertialLightEffect.cpp"

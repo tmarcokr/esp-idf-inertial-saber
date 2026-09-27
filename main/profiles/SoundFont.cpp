@@ -32,6 +32,10 @@ constexpr std::string_view layoutFor(FontCategory category) {
     return "";
 }
 
+constexpr size_t kLongestLeafLength = std::string_view("enddrag/enddrag255.wav").size();
+static_assert(kSdMountPoint.size() + SoundFont::kMaxRootLength + kLongestLeafLength <=
+              System::AudioPath::kMaxLength);
+
 } // namespace
 
 SoundFont::SoundFont(std::string_view rootPath, const Inertial::FontCounts& counts)
@@ -41,6 +45,9 @@ SoundFont::SoundFont(std::string_view rootPath, const Inertial::FontCounts& coun
     if (m_root.empty()) {
         ESP_LOGW(TAG, "Empty font root '%.*s'; paths resolve to the SD mount point",
                  static_cast<int>(rootPath.size()), rootPath.data());
+    } else if (m_root.size() > kMaxRootLength) {
+        ESP_LOGE(TAG, "Font root '%s' exceeds %u characters; its sounds cannot play",
+                 m_root.c_str(), static_cast<unsigned>(kMaxRootLength));
     }
 }
 
@@ -83,32 +90,38 @@ uint8_t SoundFont::swingPairCount() const {
     return m_counts.swingPair;
 }
 
-std::string SoundFont::pathFor(FontCategory category, uint8_t index) const {
-    return std::string(m_sdRoot)
+System::AudioPath SoundFont::pathFor(FontCategory category, uint8_t index) const {
+    return System::AudioPath(m_sdRoot)
         .append(layoutFor(category))
-        .append(std::to_string(index))
+        .appendNumber(index)
         .append(".wav");
 }
 
-std::string SoundFont::randomPath(FontCategory category) const {
+System::AudioPath SoundFont::randomPath(FontCategory category) const {
     const auto index = static_cast<uint8_t>(esp_random() % std::max<uint8_t>(count(category), 1));
     return pathFor(category, static_cast<uint8_t>(index + 1));
 }
 
-std::string SoundFont::humPath() const {
-    return m_sdRoot + "hum.wav";
+System::AudioPath SoundFont::humPath() const {
+    return System::AudioPath(m_sdRoot).append("hum.wav");
 }
 
-std::string SoundFont::selectionPath() const {
-    return m_sdRoot + "font.wav";
+System::AudioPath SoundFont::selectionPath() const {
+    return System::AudioPath(m_sdRoot).append("font.wav");
 }
 
-std::string SoundFont::swingLowPath(uint8_t pairIndex) const {
-    return m_sdRoot + "swingl/swingl" + std::to_string(pairIndex) + ".wav";
+System::AudioPath SoundFont::swingLowPath(uint8_t pairIndex) const {
+    return System::AudioPath(m_sdRoot)
+        .append("swingl/swingl")
+        .appendNumber(pairIndex)
+        .append(".wav");
 }
 
-std::string SoundFont::swingHighPath(uint8_t pairIndex) const {
-    return m_sdRoot + "swingh/swingh" + std::to_string(pairIndex) + ".wav";
+System::AudioPath SoundFont::swingHighPath(uint8_t pairIndex) const {
+    return System::AudioPath(m_sdRoot)
+        .append("swingh/swingh")
+        .appendNumber(pairIndex)
+        .append(".wav");
 }
 
 } // namespace InertialSaber::Profiles

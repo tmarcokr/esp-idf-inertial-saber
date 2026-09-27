@@ -1,8 +1,9 @@
 #pragma once
 
 #include "core/InertialEffect.hpp"
-#include "AudioEngine.hpp"
+#include "system/audio/AudioController.hpp"
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 
@@ -27,17 +28,19 @@ namespace InertialSaber::Effects {
  */
 class DragEffect final : public Core::InertialEffect {
 public:
+    /** @brief Audio voices acquired per instance (drag loop). */
+    static constexpr size_t kVoiceCount = 1;
+
     /**
      * @brief Construct a new Drag Effect.
      * @param power Power state machine of the active profile.
-     * @param audio Audio engine reference.
+     * @param audio Audio controller; one persistent voice is acquired for the drag loop.
      * @param ledEngine SmartLed engine reference.
      * @param definition Active inertial definition.
      * @param font Sound font of the active profile.
      * @param buttonId Trigger button identifier.
      */
-    DragEffect(const Profiles::PowerStateMachine& power,
-               Espressif::Wrappers::Audio::AudioEngine& audio,
+    DragEffect(const Profiles::PowerStateMachine& power, System::AudioController& audio,
                Espressif::Wrappers::SmartLed::Engine& ledEngine,
                const Profiles::Inertial::InertialDefinition& definition,
                const Profiles::SoundFont& font, uint8_t buttonId);
@@ -47,14 +50,13 @@ public:
 
 private:
     const Profiles::PowerStateMachine& m_power;
-    Espressif::Wrappers::Audio::AudioEngine& m_audio;
+    System::AudioController& m_audio;
     Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
     const Profiles::Inertial::InertialDefinition& m_def;
     const Profiles::SoundFont& m_font;
     uint8_t m_buttonId;
 
-    Espressif::Wrappers::Audio::ChannelId m_audioChannel =
-        Espressif::Wrappers::Audio::INVALID_CHANNEL;
+    System::AudioVoice m_loop;
     std::shared_ptr<std::atomic<bool>> m_overlayFadeRequest;
     bool m_active = false;
     bool m_triggerMet = false;

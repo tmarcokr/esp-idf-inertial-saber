@@ -1,6 +1,6 @@
 #include "KineticImpactEffect.hpp"
 #include "diagnostics/Metrics.hpp"
-#include "AudioEngine.hpp"
+#include "system/audio/AudioController.hpp"
 #include "AudioLevels.hpp"
 #include "overlays/BladeClashFlash.hpp"
 #include "Engine.hpp"
@@ -11,14 +11,12 @@
 
 #include "esp_log.h"
 
-#include <string>
-
 namespace InertialSaber::Effects {
 
 static constexpr const char* TAG = "KineticImpact";
 
 KineticImpactEffect::KineticImpactEffect(
-    const Profiles::PowerStateMachine& power, Espressif::Wrappers::Audio::AudioEngine& audio,
+    const Profiles::PowerStateMachine& power, System::AudioController& audio,
     Espressif::Wrappers::SmartLed::Engine& ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
     const Profiles::SoundFont& font)
@@ -65,9 +63,9 @@ bool KineticImpactEffect::detectClash(const Core::SaberDataPacket& packet) {
 
 void KineticImpactEffect::run() {
     SABER_METRIC_SCOPE(Diagnostics::Metric::RunClash);
-    const std::string path = m_font.randomPath(Profiles::FontCategory::Clash);
+    const System::AudioPath path = m_font.randomPath(Profiles::FontCategory::Clash);
 
-    m_audio.play(path, false, kFullVolume);
+    m_audio.playOneShot(path, kFullVolume);
     if (!m_ledEngine.pushOverlay(std::make_unique<BladeClashFlash>(
             m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.clashDurationMs))) {
         SABER_METRIC_COUNT(Diagnostics::Counter::OverlaysDropped);

@@ -1,14 +1,11 @@
 #include "profiles/ProfileManager.hpp"
 #include "profiles/ProfileLoader.hpp"
-#include "system/Raii.hpp"
 #include "esp_log.h"
-#include <cstdio>
-#include <utility>
+#include <optional>
 
 namespace InertialSaber::Profiles {
 
 static constexpr const char* TAG = "ProfileManager";
-static constexpr const char* kActiveProfilePath = "/sdcard/active_profile.txt";
 
 esp_err_t ProfileManager::init() {
     ESP_LOGI(TAG, "Initializing profiles...");
@@ -22,21 +19,15 @@ esp_err_t ProfileManager::init() {
     }
 
     m_activeIndex = 0;
-    if (System::UniqueFile file = System::openFile(kActiveProfilePath, "r")) {
-        unsigned int loadedIndex = 0;
-        if (fscanf(file.get(), "%u", &loadedIndex) == 1) {
-            if (loadedIndex < m_profiles.size()) {
-                m_activeIndex = loadedIndex;
-                ESP_LOGI(TAG, "Restored active profile index: %u", loadedIndex);
-            } else {
-                ESP_LOGW(TAG, "Loaded active index %u out of bounds (%u profiles). Resetting to 0.",
-                         loadedIndex, static_cast<unsigned>(m_profiles.size()));
-            }
+    if (const std::optional<size_t> storedIndex = m_store.load(); storedIndex.has_value()) {
+        if (*storedIndex < m_profiles.size()) {
+            m_activeIndex = *storedIndex;
+            ESP_LOGI(TAG, "Restored active profile index: %u",
+                     static_cast<unsigned>(m_activeIndex));
         } else {
-            ESP_LOGW(TAG, "Failed to parse active_profile.txt content");
+            ESP_LOGW(TAG, "Loaded active index %u out of bounds (%u profiles). Resetting to 0.",
+                     static_cast<unsigned>(*storedIndex), static_cast<unsigned>(m_profiles.size()));
         }
-    } else {
-        ESP_LOGW(TAG, "active_profile.txt not found, defaulting to index 0");
     }
     ESP_LOGI(TAG, "Initialized %u profile(s), active index: %u",
              static_cast<unsigned>(m_profiles.size()), static_cast<unsigned>(m_activeIndex));
@@ -61,23 +52,8 @@ void ProfileManager::next() {
     ESP_LOGI(TAG, "Loading next profile at index %u...", m_activeIndex);
     m_profiles[m_activeIndex]->load(m_services, *this);
     if (m_activeIndex != previousIndex) {
-        saveActiveIndex();
+        m_store.saveAsync(m_activeIndex);
     }
-}
-
-void ProfileManager::saveActiveIndex() {
-    System::UniqueFile file = System::openFile(kActiveProfilePath, "w");
-    if (!file) {
-        ESP_LOGE(TAG, "Failed to open active_profile.txt for writing");
-        return;
-    }
-    const bool written = fprintf(file.get(), "%u\n", static_cast<unsigned>(m_activeIndex)) > 0;
-    const bool closed = System::closeFile(std::move(file));
-    if (!written || !closed) {
-        ESP_LOGE(TAG, "Failed to write active_profile.txt");
-        return;
-    }
-    ESP_LOGI(TAG, "Saved active profile index: %u", static_cast<unsigned>(m_activeIndex));
 }
 
 } // namespace InertialSaber::Profiles

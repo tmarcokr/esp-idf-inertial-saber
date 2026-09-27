@@ -10,6 +10,16 @@
 
 namespace InertialSaber::System::Hardware {
 
+/**
+ * @brief FreeRTOS creation parameters of a task owned by main/.
+ */
+struct TaskSpec {
+    const char* name;
+    uint32_t stackSize;
+    UBaseType_t priority;
+    BaseType_t core;
+};
+
 struct HardwareConfig {
     static constexpr Core::BusConfig kBusConfig{
         .task = {.stackSize = 8192, .priority = 8, .core = 0},
@@ -17,6 +27,11 @@ struct HardwareConfig {
     };
     static constexpr UBaseType_t kImuAdapterPriority = kBusConfig.task.priority + 1;
     static constexpr BaseType_t kImuAdapterCore = kBusConfig.task.core;
+
+    static constexpr TaskSpec kAudioControlTask{
+        .name = "audio_ctrl", .stackSize = 4096, .priority = 7, .core = 1};
+    static constexpr TaskSpec kProfileStoreTask{
+        .name = "profile_store", .stackSize = 3072, .priority = 1, .core = 1};
 
     static constexpr uint32_t kClickWindowMs = 400;
     static constexpr uint32_t kHoldTickMs = 500;

@@ -1,6 +1,5 @@
 #include "DragEffect.hpp"
 #include "diagnostics/Metrics.hpp"
-#include "AudioEngine.hpp"
 #include "AudioLevels.hpp"
 #include "overlays/BladeDragEffect.hpp"
 #include "Engine.hpp"
@@ -11,14 +10,11 @@
 
 #include "esp_log.h"
 
-#include <string>
-
 namespace InertialSaber::Effects {
 
 static constexpr const char* TAG = "DragEffect";
 
-DragEffect::DragEffect(const Profiles::PowerStateMachine& power,
-                       Espressif::Wrappers::Audio::AudioEngine& audio,
+DragEffect::DragEffect(const Profiles::PowerStateMachine& power, System::AudioController& audio,
                        Espressif::Wrappers::SmartLed::Engine& ledEngine,
                        const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
                        const Profiles::SoundFont& font, uint8_t buttonId)
@@ -28,7 +24,12 @@ DragEffect::DragEffect(const Profiles::PowerStateMachine& power,
     , m_ledEngine(ledEngine)
     , m_def(definition)
     , m_font(font)
-    , m_buttonId(buttonId) {}
+    , m_buttonId(buttonId)
+    , m_loop(audio.acquireVoice()) {
+    if (!m_loop.valid()) {
+        ESP_LOGE(TAG, "No audio voice for the drag loop; drag plays without its loop");
+    }
+}
 
 bool DragEffect::test(const Core::SaberDataPacket& packet) {
     if (!m_power.isIgnited()) {
@@ -56,9 +57,9 @@ void DragEffect::run() {
     if (m_triggerMet && !m_active) {
         m_active = true;
 
-        const std::string path = m_font.randomPath(Profiles::FontCategory::Drag);
+        const System::AudioPath path = m_font.randomPath(Profiles::FontCategory::Drag);
 
-        m_audioChannel = m_audio.play(path, true, kFullVolume);
+        m_loop.play(path, true, kFullVolume);
 
         m_overlayFadeRequest = std::make_shared<std::atomic<bool>>(false);
         auto overlay = std::make_unique<BladeDragEffect>(m_ledEngine.numLeds(), m_def.dragLedCount,
@@ -73,13 +74,10 @@ void DragEffect::run() {
     } else if (!m_triggerMet && m_active) {
         m_active = false;
 
-        if (m_audioChannel != Espressif::Wrappers::Audio::INVALID_CHANNEL) {
-            m_audio.stop(m_audioChannel);
-            m_audioChannel = Espressif::Wrappers::Audio::INVALID_CHANNEL;
-        }
+        m_loop.stop();
 
-        const std::string endPath = m_font.randomPath(Profiles::FontCategory::DragEnd);
-        m_audio.play(endPath, false, kFullVolume);
+        const System::AudioPath endPath = m_font.randomPath(Profiles::FontCategory::DragEnd);
+        m_audio.playOneShot(endPath, kFullVolume);
 
         if (m_overlayFadeRequest) {
             m_overlayFadeRequest->store(true);

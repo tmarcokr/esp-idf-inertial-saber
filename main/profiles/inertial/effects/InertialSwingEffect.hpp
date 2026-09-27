@@ -2,11 +2,11 @@
 
 #include "profiles/inertial/InertialDefinition.hpp"
 #include "core/InertialEffect.hpp"
-#include "AudioEngine.hpp"
+#include "system/audio/AudioController.hpp"
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
-#include <string>
 
 namespace InertialSaber::System {
 class PsramAudioCache;
@@ -21,12 +21,15 @@ namespace InertialSaber::Effects {
  * @brief Physics-driven audio engine implementing the InertialSwing specification.
  *
  * Priority 0 Flow Modulator. Transforms kinetic data from the SaberDataPacket
- * into real-time volume commands on three persistent audio channels (hum, swingL,
+ * into real-time volume commands on three persistent audio voices (hum, swingL,
  * swingH) plus one-shot triggers for Inertial Burst events.
  */
 class InertialSwingEffect final : public Core::InertialEffect {
 public:
-    InertialSwingEffect(Espressif::Wrappers::Audio::AudioEngine& engine,
+    /** @brief Audio voices acquired per instance (hum, swingL, swingH). */
+    static constexpr size_t kVoiceCount = 3;
+
+    InertialSwingEffect(InertialSaber::System::AudioController& audio,
                         const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
                         const InertialSaber::Profiles::SoundFont& font,
                         const InertialSaber::System::PsramAudioCache& audioCache);
@@ -37,7 +40,7 @@ public:
     void activate();
 
     /**
-     * @brief Stop all audio channels and reset internal state.
+     * @brief Stop all audio voices and reset internal state.
      */
     void deactivate();
 
@@ -48,16 +51,16 @@ private:
     static constexpr const char* TAG = "InertialSwing";
     static constexpr uint32_t kTelemetryLogIntervalCycles = 400;
 
-    Espressif::Wrappers::Audio::AudioEngine& m_engine;
+    InertialSaber::System::AudioController& m_audio;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
     const InertialSaber::Profiles::SoundFont& m_font;
     const InertialSaber::System::PsramAudioCache& m_audioCache;
 
     std::atomic<bool> m_active{false};
 
-    Espressif::Wrappers::Audio::ChannelId m_chHum = Espressif::Wrappers::Audio::INVALID_CHANNEL;
-    Espressif::Wrappers::Audio::ChannelId m_chSwingL = Espressif::Wrappers::Audio::INVALID_CHANNEL;
-    Espressif::Wrappers::Audio::ChannelId m_chSwingH = Espressif::Wrappers::Audio::INVALID_CHANNEL;
+    InertialSaber::System::AudioVoice m_hum;
+    InertialSaber::System::AudioVoice m_swingLow;
+    InertialSaber::System::AudioVoice m_swingHigh;
 
     float m_kineticEnergy = 0.0f;
     float m_orientation = 0.0f;
@@ -75,8 +78,8 @@ private:
     uint32_t m_lastMovementTimeMs = 0;
 
     struct SwingPathPair {
-        std::string low;
-        std::string high;
+        InertialSaber::System::AudioPath low;
+        InertialSaber::System::AudioPath high;
     };
 
     float computeMasterVolume() const;

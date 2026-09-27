@@ -29,6 +29,8 @@ enum class Metric : uint8_t {
     SwingActivate,
     SwingSwap,
     ImuRead,
+    AudioPlayCall,
+    AudioLatency,
     Count
 };
 
@@ -41,6 +43,8 @@ enum class Counter : uint8_t {
     ImuPollTimeouts,
     OverlaysDropped,
     BusCycles,
+    AudioCommandsDropped,
+    AudioPlayFailed,
     Count
 };
 
@@ -57,6 +61,8 @@ enum class TaskId : uint8_t {
     AudioMixer,
     AudioSdReader,
     AudioMemReader,
+    AudioControl,
+    ProfileStore,
     Count
 };
 

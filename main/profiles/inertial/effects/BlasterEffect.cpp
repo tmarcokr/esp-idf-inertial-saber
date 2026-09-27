@@ -1,6 +1,6 @@
 #include "BlasterEffect.hpp"
 #include "diagnostics/Metrics.hpp"
-#include "AudioEngine.hpp"
+#include "system/audio/AudioController.hpp"
 #include "AudioLevels.hpp"
 #include "overlays/BladeBlasterBlock.hpp"
 #include "Engine.hpp"
@@ -11,14 +11,12 @@
 
 #include "esp_log.h"
 
-#include <string>
-
 namespace InertialSaber::Effects {
 
 static constexpr const char* TAG = "BlasterEffect";
 
 BlasterEffect::BlasterEffect(
-    const Profiles::PowerStateMachine& power, Espressif::Wrappers::Audio::AudioEngine& audio,
+    const Profiles::PowerStateMachine& power, System::AudioController& audio,
     Espressif::Wrappers::SmartLed::Engine& ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
     const Profiles::SoundFont& font, uint8_t buttonId)
@@ -45,9 +43,9 @@ bool BlasterEffect::test(const Core::SaberDataPacket& packet) {
 
 void BlasterEffect::run() {
     SABER_METRIC_SCOPE(Diagnostics::Metric::RunBlaster);
-    const std::string path = m_font.randomPath(Profiles::FontCategory::Blaster);
+    const System::AudioPath path = m_font.randomPath(Profiles::FontCategory::Blaster);
 
-    m_audio.play(path, false, kFullVolume);
+    m_audio.playOneShot(path, kFullVolume);
     if (!m_ledEngine.pushOverlay(std::make_unique<BladeBlasterBlock>(
             m_ledEngine.numLeds(), m_def.blasterLedCount, m_def.blasterDurationMs))) {
         SABER_METRIC_COUNT(Diagnostics::Counter::OverlaysDropped);

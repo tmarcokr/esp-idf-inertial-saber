@@ -9,41 +9,44 @@
 #include <algorithm>
 #include <cmath>
 #include <numbers>
-#include <string>
 
 namespace InertialSaber::Effects {
 
-using Espressif::Wrappers::Audio::INVALID_CHANNEL;
-
 InertialSwingEffect::InertialSwingEffect(
-    Espressif::Wrappers::Audio::AudioEngine& engine,
+    InertialSaber::System::AudioController& audio,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
     const InertialSaber::Profiles::SoundFont& font,
     const InertialSaber::System::PsramAudioCache& audioCache)
     : InertialEffect(0)
-    , m_engine(engine)
+    , m_audio(audio)
     , m_def(definition)
     , m_font(font)
-    , m_audioCache(audioCache) {}
+    , m_audioCache(audioCache)
+    , m_hum(audio.acquireVoice())
+    , m_swingLow(audio.acquireVoice())
+    , m_swingHigh(audio.acquireVoice()) {
+    if (!m_hum.valid() || !m_swingLow.valid() || !m_swingHigh.valid()) {
+        ESP_LOGE(TAG, "Missing audio voice (hum=%d swingL=%d swingH=%d); those layers stay silent",
+                 m_hum.valid(), m_swingLow.valid(), m_swingHigh.valid());
+    }
+}
 
 void InertialSwingEffect::activate() {
     if (m_active.load()) return;
     SABER_METRIC_SCOPE(Diagnostics::Metric::SwingActivate);
 
-    m_chHum =
-        m_engine.play(InertialSaber::System::PsramAudioCache::humPath(), true, m_def.humBaseVolume);
+    m_hum.play(InertialSaber::System::PsramAudioCache::humPath(), true, m_def.humBaseVolume);
 
-    auto paths = provideSwingPaths();
-    m_chSwingL = m_engine.play(paths.low, true, 0);
-    m_chSwingH = m_engine.play(paths.high, true, 0);
+    const SwingPathPair paths = provideSwingPaths();
+    m_swingLow.play(paths.low, true, 0);
+    m_swingHigh.play(paths.high, true, 0);
 
     m_needsSwap = false;
     m_wasMoving = false;
     m_lastMovementTimeMs = 0;
 
     m_active.store(true);
-    ESP_LOGD(TAG, "Activated — pair %u, hum=%d, swL=%d, swH=%d", m_currentPairIndex, m_chHum,
-             m_chSwingL, m_chSwingH);
+    ESP_LOGD(TAG, "Activated — pair %u", m_currentPairIndex);
 }
 
 void InertialSwingEffect::deactivate() {
@@ -51,20 +54,11 @@ void InertialSwingEffect::deactivate() {
 
     m_active.store(false);
 
-    if (m_chHum != INVALID_CHANNEL) {
-        m_engine.stop(m_chHum);
-        m_chHum = INVALID_CHANNEL;
-    }
-    if (m_chSwingL != INVALID_CHANNEL) {
-        m_engine.stop(m_chSwingL);
-        m_chSwingL = INVALID_CHANNEL;
-    }
-    if (m_chSwingH != INVALID_CHANNEL) {
-        m_engine.stop(m_chSwingH);
-        m_chSwingH = INVALID_CHANNEL;
-    }
+    m_hum.stop();
+    m_swingLow.stop();
+    m_swingHigh.stop();
 
-    ESP_LOGD(TAG, "Deactivated — all channels stopped");
+    ESP_LOGD(TAG, "Deactivated — all voices stopped");
 }
 
 bool InertialSwingEffect::test(const Core::SaberDataPacket& packet) {
@@ -79,10 +73,6 @@ bool InertialSwingEffect::test(const Core::SaberDataPacket& packet) {
 
 void InertialSwingEffect::run() {
     SABER_METRIC_SCOPE(Diagnostics::Metric::RunSwing);
-    if (m_chHum == INVALID_CHANNEL || m_chSwingL == INVALID_CHANNEL ||
-        m_chSwingH == INVALID_CHANNEL)
-        return;
-
     float masterVolume = computeMasterVolume();
     float finalMix = computeFinalMix();
 
@@ -115,8 +105,8 @@ void InertialSwingEffect::applySwingVolumes(float masterVolume, float finalMix) 
     auto volL = static_cast<uint16_t>(masterVolume * (1.0f - finalMix) * kFullVolume);
     auto volH = static_cast<uint16_t>(masterVolume * finalMix * kFullVolume);
 
-    m_engine.setChannelVolume(m_chSwingL, volL);
-    m_engine.setChannelVolume(m_chSwingH, volH);
+    m_swingLow.setVolume(volL);
+    m_swingHigh.setVolume(volH);
 
     if (++m_logCounter >= kTelemetryLogIntervalCycles) {
         m_logCounter = 0;
@@ -133,13 +123,13 @@ void InertialSwingEffect::applyHumDucking(float masterVolume) {
     float humRatio = std::max(0.0f, 1.0f - duckingAmount);
     auto humVol = static_cast<uint16_t>(m_def.humBaseVolume * humRatio);
 
-    m_engine.setChannelVolume(m_chHum, humVol);
+    m_hum.setVolume(humVol);
 }
 
 void InertialSwingEffect::handleInertialBurst() {
     if (!m_inertialBurst || m_font.count(Profiles::FontCategory::Burst) == 0) return;
 
-    m_engine.play(m_font.randomPath(Profiles::FontCategory::Burst), false, kFullVolume);
+    m_audio.playOneShot(m_font.randomPath(Profiles::FontCategory::Burst), kFullVolume);
 
     ESP_LOGD(TAG, "Inertial Burst triggered");
 }
@@ -190,15 +180,15 @@ void InertialSwingEffect::executeSwap() {
     if (availablePairs <= 1) return;
     SABER_METRIC_SCOPE(Diagnostics::Metric::SwingSwap);
 
-    if (m_chSwingL != INVALID_CHANNEL) m_engine.stop(m_chSwingL);
-    if (m_chSwingH != INVALID_CHANNEL) m_engine.stop(m_chSwingH);
+    m_swingLow.stop();
+    m_swingHigh.stop();
 
-    auto paths = provideSwingPaths();
+    const SwingPathPair paths = provideSwingPaths();
 
-    m_chSwingL = m_engine.play(paths.low, true, 0);
-    m_chSwingH = m_engine.play(paths.high, true, 0);
+    m_swingLow.play(paths.low, true, 0);
+    m_swingHigh.play(paths.high, true, 0);
 
-    ESP_LOGD(TAG, "Pair swapped → %u (swL=%d, swH=%d)", m_currentPairIndex, m_chSwingL, m_chSwingH);
+    ESP_LOGD(TAG, "Pair swapped → %u", m_currentPairIndex);
 }
 
 } // namespace InertialSaber::Effects

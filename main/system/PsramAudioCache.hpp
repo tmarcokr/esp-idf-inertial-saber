@@ -1,6 +1,7 @@
 #pragma once
 
 #include "system/MemoryVfs.hpp"
+#include "system/audio/AudioPath.hpp"
 #include "profiles/SoundFont.hpp"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
@@ -43,11 +44,11 @@ public:
     [[nodiscard]] uint8_t loadedSwingPairCount() const;
 
     /** @brief /mem path of the hum file. */
-    [[nodiscard]] static std::string humPath();
+    [[nodiscard]] static AudioPath humPath();
     /** @brief /mem path of the low swing of the 1-based @p pairIndex. */
-    [[nodiscard]] static std::string swingLowPath(uint8_t pairIndex);
+    [[nodiscard]] static AudioPath swingLowPath(uint8_t pairIndex);
     /** @brief /mem path of the high swing of the 1-based @p pairIndex. */
-    [[nodiscard]] static std::string swingHighPath(uint8_t pairIndex);
+    [[nodiscard]] static AudioPath swingHighPath(uint8_t pairIndex);
 
 private:
     struct PreloadJob {
@@ -70,7 +71,7 @@ private:
     [[nodiscard]] bool isSuperseded(uint32_t generation) const;
     void waitForDescriptorsClosed();
 
-    [[nodiscard]] esp_err_t loadFile(const std::string& sdPath, const std::string& vfsName);
+    [[nodiscard]] esp_err_t loadFile(const AudioPath& sdPath, const std::string& vfsName);
     void unloadFile(const std::string& vfsName);
     void releaseFile(const std::string& vfsName);
     void unloadAll();

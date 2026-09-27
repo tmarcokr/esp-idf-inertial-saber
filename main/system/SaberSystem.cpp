@@ -66,6 +66,8 @@ esp_err_t SaberSystem::internalStart() {
     }
     ESP_LOGI(TAG, "Button ready (GPIO %d)", static_cast<int>(Board::kPins.mainButton));
 
+    if ((err = m_profileStore.start()) != ESP_OK) return err;
+
     ESP_LOGI(TAG, "Loading Profiles...");
     if ((err = m_profiles.init()) != ESP_OK) {
         ESP_LOGE(TAG, "No usable profile: action bus not started, ignition disabled");
@@ -104,6 +106,12 @@ esp_err_t SaberSystem::bringUpAudio() {
     }
 
     m_audio.setGlobalVolume(Hardware::HardwareConfig::kAudioGlobalVolume);
+
+    err = m_audioControl.start();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Audio controller start failed: %s", esp_err_to_name(err));
+        return err;
+    }
 
     ESP_LOGI(TAG, "Audio Engine ready (9 channels, 44.1kHz)");
     return ESP_OK;

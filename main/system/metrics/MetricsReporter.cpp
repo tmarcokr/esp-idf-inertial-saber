@@ -53,13 +53,15 @@ constexpr MetricInfo kMetricInfo[] = {
     {"run_blaster", MetricKind::Scope},      {"run_clash", MetricKind::Scope},
     {"run_drag", MetricKind::Scope},         {"run_profile_cycle", MetricKind::Scope},
     {"swing_activate", MetricKind::Scope},   {"swing_swap", MetricKind::Scope},
-    {"imu_read", MetricKind::Scope},
+    {"imu_read", MetricKind::Scope},         {"audio_play_call", MetricKind::Scope},
+    {"audio_latency", MetricKind::Duration},
 };
 static_assert(std::size(kMetricInfo) == Diagnostics::kMetricCount);
 
 constexpr const char* kCounterNames[] = {
-    "bus_timeout_wakes", "input_events_dropped", "imu_samples", "imu_empty_reads",
-    "imu_poll_timeouts", "overlays_dropped",     "bus_cycles",
+    "bus_timeout_wakes", "input_events_dropped",   "imu_samples",
+    "imu_empty_reads",   "imu_poll_timeouts",      "overlays_dropped",
+    "bus_cycles",        "audio_commands_dropped", "audio_play_failed",
 };
 static_assert(std::size(kCounterNames) == Diagnostics::kCounterCount);
 
@@ -80,6 +82,8 @@ constexpr TaskInfo kTaskInfo[] = {
     {"audio_mixer", "audio_mixer"},
     {"audio_sd_reader", "audio_sd_reader"},
     {"audio_mem_reader", "audio_mem_reade"},
+    {"audio_ctrl", nullptr},
+    {"profile_store", nullptr},
 };
 static_assert(std::size(kTaskInfo) == Diagnostics::kTaskCount);
 
