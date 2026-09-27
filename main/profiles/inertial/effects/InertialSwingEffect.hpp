@@ -49,7 +49,7 @@ public:
 
 private:
     static constexpr const char* TAG = "InertialSwing";
-    static constexpr uint32_t kTelemetryLogIntervalCycles = 400;
+    static constexpr uint32_t kTelemetryLogIntervalMs = 2000;
 
     InertialSaber::System::AudioController& m_audio;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
@@ -68,7 +68,7 @@ private:
     bool m_inertialBurst = false;
     uint32_t m_timestampMs = 0;
 
-    uint32_t m_logCounter = 0;
+    uint32_t m_lastTelemetryMs = 0;
 
     uint8_t m_currentPairIndex = 0;
 

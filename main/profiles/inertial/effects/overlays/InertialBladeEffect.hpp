@@ -11,7 +11,7 @@ namespace InertialSaber::Effects {
 
 /**
  * @brief SmartLed IEffect that renders HSB values received atomically from the
- * bus task. Acts as a lock-free bridge between InertialLightEffect (800Hz) and
+ * bus task. Acts as a lock-free bridge between InertialLightEffect (bus rate) and
  * the SmartLed Engine render loop (100 FPS).
  */
 class InertialBladeEffect final : public Espressif::Wrappers::SmartLed::IEffect {
