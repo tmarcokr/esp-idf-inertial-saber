@@ -98,6 +98,7 @@ void PowerToggleEffect::run() {
 
     case State::Locked:
     case State::Faulted:
+    case State::Switching:
         break;
     }
 }

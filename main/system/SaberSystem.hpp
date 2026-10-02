@@ -29,8 +29,8 @@ public:
     SaberSystem() = default;
 
     /**
-     * @brief Joins the bus task before any member is destroyed, so no effect runs on a destroyed
-     * profile.
+     * @brief Joins the bus task and then the profile_ctrl task before any member is destroyed, so
+     * no effect runs on a destroyed profile.
      */
     ~SaberSystem();
 
@@ -58,7 +58,8 @@ private:
     PsramAudioCache m_audioCache{Hardware::TaskTable::kPsramLoader};
     ActiveProfileStore m_profileStore{Hardware::TaskTable::kProfileStore};
     Profiles::SaberServices m_services{m_bus, m_audioControl, m_blade, m_audioCache, m_status};
-    Profiles::ProfileManager m_profiles{m_services, m_profileStore};
+    Profiles::ProfileManager m_profiles{m_services, m_profileStore,
+                                        Hardware::TaskTable::kProfileControl};
     Adapters::ImuAdapter m_imuAdapter{m_bus, m_imu, Board::kPins.imuInt};
     Adapters::InputAdapter m_inputAdapter{m_bus, m_button};
 #if CONFIG_SABER_METRICS

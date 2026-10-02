@@ -16,10 +16,6 @@ using Event = PowerStateMachine::Event;
 
 constexpr std::optional<State> nextState(State from, Event event) {
     switch (event) {
-    case Event::Lock:
-        if (from == State::Locked || from == State::Retracted || from == State::Faulted)
-            return State::Locked;
-        break;
     case Event::PreloadDone:
         if (from == State::Locked) return State::Retracted;
         break;
@@ -38,6 +34,9 @@ constexpr std::optional<State> nextState(State from, Event event) {
     case Event::RetractionElapsed:
         if (from == State::Retracting) return State::Retracted;
         break;
+    case Event::SwitchRequested:
+        if (from == State::Retracted || from == State::Faulted) return State::Switching;
+        break;
     }
     return std::nullopt;
 }
@@ -45,13 +44,14 @@ constexpr std::optional<State> nextState(State from, Event event) {
 } // namespace
 
 bool PowerStateMachine::handle(Event event) {
-    const std::optional<State> next = nextState(m_state, event);
+    const State current = state();
+    const std::optional<State> next = nextState(current, event);
     if (!next) {
         ESP_LOGW(TAG, "Rejected event %u in state %u", static_cast<unsigned>(event),
-                 static_cast<unsigned>(m_state));
+                 static_cast<unsigned>(current));
         return false;
     }
-    m_state = *next;
+    m_state.store(*next, std::memory_order_relaxed);
     if (event == Event::IgniteRequested) SABER_METRIC_SESSION_BEGIN();
     if (event == Event::RetractionElapsed) SABER_METRIC_SESSION_END();
     return true;

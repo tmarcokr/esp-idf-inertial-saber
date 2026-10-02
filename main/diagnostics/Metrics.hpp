@@ -67,6 +67,7 @@ enum class TaskId : uint8_t {
     AudioMemReader,
     AudioControl,
     ProfileStore,
+    ProfileControl,
     Count
 };
 

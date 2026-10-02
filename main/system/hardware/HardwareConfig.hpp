@@ -43,6 +43,8 @@ struct TaskTable {
         .name = "psram_loader", .stackSize = 4096, .priority = 2, .core = 1};
     static constexpr TaskSpec kProfileStore{
         .name = "profile_store", .stackSize = 3072, .priority = 1, .core = 1};
+    static constexpr TaskSpec kProfileControl{
+        .name = "profile_ctrl", .stackSize = 6144, .priority = 3, .core = 1};
     static constexpr TaskSpec kMetricsReporter{
         .name = "metrics", .stackSize = 4096, .priority = 1, .core = 1};
 
@@ -76,6 +78,10 @@ struct TaskTable {
 
 static_assert(TaskTable::kImuAdapter.priority > TaskTable::kBus.priority &&
               TaskTable::kImuAdapter.core == TaskTable::kBus.core);
+static_assert(TaskTable::kProfileControl.core != TaskTable::kBus.core,
+              "profile_ctrl allocations must never be attributed to the bus core");
+static_assert(TaskTable::kProfileControl.priority < TaskTable::kAudioControl.priority &&
+              TaskTable::kProfileControl.priority > TaskTable::kPsramLoader.priority);
 
 struct HardwareConfig {
     static constexpr Core::BusConfig kBusConfig{

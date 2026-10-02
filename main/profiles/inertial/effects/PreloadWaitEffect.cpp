@@ -18,13 +18,15 @@ PreloadWaitEffect::PreloadWaitEffect(Profiles::PowerStateMachine& power,
                                      System::AudioController& audio,
                                      const System::PsramAudioCache& audioCache,
                                      System::Status::StatusIndicator& status,
-                                     const Profiles::SoundFont& font)
+                                     const Profiles::SoundFont& font,
+                                     std::optional<uint32_t> switchRequestedUs)
     : InertialEffect(0)
     , m_power(power)
     , m_audio(audio)
     , m_audioCache(audioCache)
     , m_status(status)
-    , m_font(font) {}
+    , m_font(font)
+    , m_switchRequestedUs(switchRequestedUs) {}
 
 bool PreloadWaitEffect::test(const Core::SaberDataPacket&) {
     return m_power.state() == Profiles::PowerStateMachine::State::Locked;

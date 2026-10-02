@@ -9,7 +9,7 @@ namespace InertialSaber::Effects {
 
 static constexpr const char* TAG = "ProfileCycle";
 
-ProfileCycleEffect::ProfileCycleEffect(const Profiles::PowerStateMachine& power,
+ProfileCycleEffect::ProfileCycleEffect(Profiles::PowerStateMachine& power,
                                        Profiles::ProfileManager& profileManager, uint8_t buttonId)
     : InertialEffect(1)
     , m_power(power)
@@ -18,6 +18,7 @@ ProfileCycleEffect::ProfileCycleEffect(const Profiles::PowerStateMachine& power,
 
 bool ProfileCycleEffect::test(const Core::SaberDataPacket& packet) {
     if (!m_power.isRetracted() && !m_power.isFaulted()) return false;
+    if (m_profileManager.switchPending()) return false;
     if (m_buttonId >= Core::kMaxInputs) return false;
 
     const auto& input = packet.inputs[m_buttonId];
@@ -28,7 +29,9 @@ bool ProfileCycleEffect::test(const Core::SaberDataPacket& packet) {
 void ProfileCycleEffect::run() {
     SABER_METRIC_SCOPE(Diagnostics::Metric::RunProfileCycle);
     ESP_LOGD(TAG, "Profile cycle triggered");
-    m_profileManager.next();
+    if (m_power.handle(Profiles::PowerStateMachine::Event::SwitchRequested)) {
+        m_profileManager.requestNext();
+    }
 }
 
 } // namespace InertialSaber::Effects

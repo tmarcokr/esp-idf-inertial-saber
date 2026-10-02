@@ -14,15 +14,18 @@ class ProfileManager;
 namespace InertialSaber::Effects {
 
 /**
- * @brief Cycles to the next profile on a Click with pressCount=3 while the saber is retracted or its preload has faulted.
+ * @brief Requests the next profile on a Click with pressCount=3 while the saber is retracted or its preload has faulted.
+ *
+ * Ignored while a previous switch is pending. Moves its set to Switching and posts the request
+ * to the ProfileManager; the switch itself runs off the bus.
  */
 class ProfileCycleEffect final : public Core::InertialEffect {
 public:
     /**
      * @brief Construct a new ProfileCycleEffect.
      */
-    ProfileCycleEffect(const Profiles::PowerStateMachine& power,
-                       Profiles::ProfileManager& profileManager, uint8_t buttonId);
+    ProfileCycleEffect(Profiles::PowerStateMachine& power, Profiles::ProfileManager& profileManager,
+                       uint8_t buttonId);
 
     /**
      * @brief Test if the profile cycle gesture is triggered.
@@ -30,12 +33,12 @@ public:
     bool test(const Core::SaberDataPacket& packet) override;
 
     /**
-     * @brief Execute the profile cycle.
+     * @brief Request the profile cycle.
      */
     void run() override;
 
 private:
-    const Profiles::PowerStateMachine& m_power;
+    Profiles::PowerStateMachine& m_power;
     Profiles::ProfileManager& m_profileManager;
     uint8_t m_buttonId;
 };

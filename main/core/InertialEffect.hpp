@@ -19,7 +19,7 @@ public:
     /**
      * @brief Construct an effect with a fixed evaluation priority.
      * @param priority Lower values are evaluated first; equal priorities are evaluated in
-     *        registration order.
+     *        the order they were added to their EffectSet.
      */
     explicit InertialEffect(uint8_t priority) : m_priority(priority) {}
 

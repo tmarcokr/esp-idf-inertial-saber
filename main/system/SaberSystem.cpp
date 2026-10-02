@@ -12,6 +12,7 @@ using Status::SystemStatus;
 
 SaberSystem::~SaberSystem() {
     m_bus.stop();
+    m_profiles.stop();
 }
 
 esp_err_t SaberSystem::start() {
@@ -84,6 +85,7 @@ esp_err_t SaberSystem::internalStart() {
         ESP_LOGE(TAG, "Bus start failed");
         return err;
     }
+    if ((err = m_profiles.start()) != ESP_OK) return err;
 
     SABER_METRIC_RECORD_BOOT();
 #if CONFIG_SABER_METRICS
