@@ -7,6 +7,7 @@
 
 #include "esp_app_desc.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "esp_timer.h"
 
 #include <sys/stat.h>
@@ -119,6 +120,45 @@ constexpr const char* optimizationLevel() {
 #else
     return "none";
 #endif
+}
+
+constexpr const char* resetReasonName(esp_reset_reason_t reason) {
+    switch (reason) {
+    case ESP_RST_UNKNOWN:
+        return "UNKNOWN";
+    case ESP_RST_POWERON:
+        return "POWERON";
+    case ESP_RST_EXT:
+        return "EXT";
+    case ESP_RST_SW:
+        return "SW";
+    case ESP_RST_PANIC:
+        return "PANIC";
+    case ESP_RST_INT_WDT:
+        return "INT_WDT";
+    case ESP_RST_TASK_WDT:
+        return "TASK_WDT";
+    case ESP_RST_WDT:
+        return "WDT";
+    case ESP_RST_DEEPSLEEP:
+        return "DEEPSLEEP";
+    case ESP_RST_BROWNOUT:
+        return "BROWNOUT";
+    case ESP_RST_SDIO:
+        return "SDIO";
+    case ESP_RST_USB:
+        return "USB";
+    case ESP_RST_JTAG:
+        return "JTAG";
+    case ESP_RST_EFUSE:
+        return "EFUSE";
+    case ESP_RST_PWR_GLITCH:
+        return "PWR_GLITCH";
+    case ESP_RST_CPU_LOCKUP:
+        return "CPU_LOCKUP";
+    default:
+        return nullptr;
+    }
 }
 
 constexpr const char* passFail(bool pass) {
@@ -579,6 +619,12 @@ MetricsReporter::WriteOutcome MetricsReporter::writeBootBlock() {
     csv.number("meta", "log_level", "", CONFIG_LOG_DEFAULT_LEVEL, "");
     csv.text("meta", "optimization", "", optimizationLevel(), "");
     csv.number("boot", "duration", "", boot.durationMs, "ms");
+    const esp_reset_reason_t resetReason = esp_reset_reason();
+    if (const char* name = resetReasonName(resetReason); name != nullptr) {
+        csv.text("boot", "reset_reason", "", name, "");
+    } else {
+        csv.number("boot", "reset_reason", "", static_cast<uint32_t>(resetReason), "");
+    }
     csv.number("boot", "heap_internal_free", "", boot.heapInternalFree, "B");
     csv.number("boot", "heap_psram_free", "", boot.heapPsramFree, "B");
     csv.number("task", kTaskInfo[static_cast<size_t>(TaskId::Main)].name, "stack_free_min",

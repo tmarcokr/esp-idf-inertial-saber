@@ -112,6 +112,7 @@ The header line is written with block 0, once per file.
 | `meta,log_level,` | — | `CONFIG_LOG_DEFAULT_LEVEL` (0 none … 3 info … 5 verbose). |
 | `meta,optimization,` | — | `debug`, `perf`, `size` or `none`. |
 | `boot,duration,` | ms | Time from power-up to the end of `SaberSystem::start()`. |
+| `boot,reset_reason,` | — | Cause of the current boot (`esp_reset_reason()`): `POWERON`, `EXT`, `SW`, `PANIC`, `INT_WDT`, `TASK_WDT`, `WDT`, `DEEPSLEEP`, `BROWNOUT`, `SDIO`, `USB`, `JTAG`, `EFUSE`, `PWR_GLITCH`, `CPU_LOCKUP`, `UNKNOWN`, or the numeric value for a reason not in this list. In a battery test, anything other than `POWERON` (or `USB`/`JTAG` right after flashing) means an unexpected reboot. |
 | `boot,heap_internal_free,` | B | Free internal heap at the end of boot. |
 | `boot,heap_psram_free,` | B | Free PSRAM heap at the end of boot. |
 | `task,main,stack_free_min` | B | Minimum free stack of the main task over the whole boot sequence. |
