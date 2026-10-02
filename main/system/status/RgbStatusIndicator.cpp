@@ -15,7 +15,7 @@ constexpr Color kErrorColor{255, 0, 0};
 constexpr Color kOffColor{0, 0, 0};
 constexpr int64_t kBlinkHalfPeriodMs = 250;
 #if CONFIG_SABER_METRICS
-constexpr Color kWritingColor{0, 0, 64};
+constexpr Color kWriteColor{0, 0, 64};
 constexpr Color kWriteFailedColor = kErrorColor;
 constexpr int64_t kActivityBlinkHalfPeriodMs = 100;
 #endif
@@ -58,7 +58,9 @@ Color RgbStatusIndicator::colorFor(ActivitySignal signal) {
     case ActivitySignal::None:
         return kOffColor;
     case ActivitySignal::Writing:
-        return blink(kWritingColor, kActivityBlinkHalfPeriodMs);
+        return kWriteColor;
+    case ActivitySignal::Written:
+        return blink(kWriteColor, kActivityBlinkHalfPeriodMs);
     case ActivitySignal::WriteFailed:
         return blink(kWriteFailedColor, kActivityBlinkHalfPeriodMs);
     }

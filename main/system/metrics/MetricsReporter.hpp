@@ -5,6 +5,7 @@
 #if CONFIG_SABER_METRICS
 
 #include "diagnostics/Metrics.hpp"
+#include "system/PsramAudioCache.hpp"
 #include "system/status/StatusIndicator.hpp"
 
 #include "AudioEngine.hpp"
@@ -22,16 +23,18 @@ namespace InertialSaber::System::Monitoring {
 
 /**
  * @brief Low-priority task that aggregates the live metrics per ignition session and appends them
- * as CSV blocks to /sdcard/metrics/session_NNN.csv while the saber is retracted and the audio idle.
+ * as CSV blocks to /sdcard/metrics/session_NNN.csv while the saber is retracted, the audio idle and
+ * no PSRAM preload is reading the SD card.
  */
 class MetricsReporter {
 public:
     /**
      * @param audio Engine whose lock-free output level gates the SD writes.
-     * @param status Indicator that signals every write attempt and its failure.
+     * @param audioCache Cache whose preload status gates the SD writes.
+     * @param status Indicator that signals every write attempt and its outcome.
      */
     MetricsReporter(const Espressif::Wrappers::Audio::AudioEngine& audio,
-                    Status::StatusIndicator& status);
+                    const PsramAudioCache& audioCache, Status::StatusIndicator& status);
     ~MetricsReporter();
 
     MetricsReporter(const MetricsReporter&) = delete;
@@ -94,12 +97,13 @@ private:
     };
 
     enum class WriteOutcome : uint8_t { Written, Dropped, Deferred };
+    enum class FlushOutcome : uint8_t { Written, Failed, Postponed };
 
     class CsvWriter;
 
     static constexpr uint32_t kSampleIntervalMs = 100;
     static constexpr uint32_t kSignalRefreshMs = 50;
-    static constexpr uint32_t kWritingSignalMs = 1000;
+    static constexpr uint32_t kWrittenSignalMs = 1000;
     static constexpr uint32_t kWriteFailedSignalMs = 2000;
     static constexpr uint32_t kRateWindowMs = 1000;
     static constexpr uint32_t kFlushSettleMs = 2000;
@@ -125,7 +129,7 @@ private:
     void captureBlock(BlockSnapshot& block, int64_t nowUs);
     [[nodiscard]] bool flushDue(int64_t nowUs) const;
     void flush(int64_t nowUs);
-    [[nodiscard]] bool writePending();
+    [[nodiscard]] FlushOutcome writePending();
     void startSignal(Status::ActivitySignal signal, int64_t nowUs);
     void updateSignal(int64_t nowUs);
     void warnSdUnavailable(const char* path);
@@ -134,6 +138,7 @@ private:
     [[nodiscard]] WriteOutcome writeSessionBlock(const BlockSnapshot& block);
 
     const Espressif::Wrappers::Audio::AudioEngine& m_audio;
+    const PsramAudioCache& m_audioCache;
     Status::StatusIndicator& m_status;
     TaskHandle_t m_task = nullptr;
 

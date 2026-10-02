@@ -63,13 +63,14 @@ Blocks are captured in RAM (a ring of 4 pending blocks in PSRAM) and written lat
 1. The saber is retracted (no active session).
 2. At least **2 s** have passed since the last retraction (for block 0: since the reporter started).
 3. The audio output has been idle (output level ≤ 140) for at least **500 ms**. The threshold sits above the small residual the mixer keeps outputting in silence: it is twice the residual bound of the configured DC-blocker cutoff, so it follows the cutoff preset.
+4. No PSRAM preload is in progress (at boot and after every profile change), so the metrics never compete with the preload for the SD card.
 
-Right before each block is written, the reporter re-checks that no ignition has started; if one has, the write is postponed. Each block is written with its own open → append → close, so the data already written survives a power cut. After each write attempt the next one waits another 2 s.
+Right before each block is written, the reporter re-checks that no ignition has started; if one has, the write is postponed. Each block is written with its own open → append → close, so the data already written survives a power cut. After each write attempt ends, the next one waits another 2 s.
 
 > [!IMPORTANT]
 > **Wait 5 s after retracting before cutting power.** Otherwise the last block (or block 0, right after boot) may not be written yet.
 
-**Status LED signal.** Every write attempt is shown on the status LED: fast **blue** blinking (100 ms half-period) for at least 1 s, or fast **red** blinking for 2 s if the file could not be opened or the write failed. The LED then returns to the current system status. No blink within ~5 s of a retraction means the reporter never attempted the write.
+**Status LED signal.** Every write attempt is shown on the status LED: solid **blue** while the write is in progress, then, counted from the end of the write, fast **blue** blinking (100 ms half-period) for 1 s if it succeeded, or fast **red** blinking for 2 s if the file could not be opened or the write failed. If an ignition starts before any block is written, the solid blue ends without a blink. The LED then returns to the current system status. No blue or red signal within ~5 s of a retraction means the reporter never attempted the write.
 
 If the saber is ignited again before the pending blocks are written, they stay in the ring. When the ring already holds 4 blocks, the next retraction does not capture a new block (see `lost_before`, §4.2).
 

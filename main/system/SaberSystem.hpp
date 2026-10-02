@@ -62,7 +62,7 @@ private:
     Adapters::ImuAdapter m_imuAdapter{m_bus, m_imu, Board::kPins.imuInt};
     Adapters::InputAdapter m_inputAdapter{m_bus, m_button};
 #if CONFIG_SABER_METRICS
-    Monitoring::MetricsReporter m_metricsReporter{m_audio, m_status};
+    Monitoring::MetricsReporter m_metricsReporter{m_audio, m_audioCache, m_status};
 #endif
 };
 

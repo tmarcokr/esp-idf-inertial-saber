@@ -14,9 +14,10 @@ enum class SystemStatus : uint8_t { Booting, Preloading, Ready, Error };
 
 #if CONFIG_SABER_METRICS
 /**
- * @brief Transient storage activity rendered over the system status in metrics builds.
+ * @brief Transient storage activity rendered over the system status in metrics builds:
+ * Writing while a write is in progress, then Written or WriteFailed for a while after it ends.
  */
-enum class ActivitySignal : uint8_t { None, Writing, WriteFailed };
+enum class ActivitySignal : uint8_t { None, Writing, Written, WriteFailed };
 #endif
 
 /**
@@ -25,8 +26,8 @@ enum class ActivitySignal : uint8_t { None, Writing, WriteFailed };
  * show() is called from the main task during start-up and from the bus task afterwards, never
  * concurrently. In metrics builds showActivity() is called from the metrics reporter task;
  * implementations serialise it with show().
- * Animated states (Preloading and every ActivitySignal except None) require periodic calls;
- * both methods are idempotent.
+ * Animated states (Preloading, ActivitySignal::Written and ActivitySignal::WriteFailed) require
+ * periodic calls; both methods are idempotent.
  */
 class StatusIndicator {
 public:

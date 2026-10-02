@@ -277,8 +277,10 @@ private:
 };
 
 MetricsReporter::MetricsReporter(const Espressif::Wrappers::Audio::AudioEngine& audio,
+                                 const PsramAudioCache& audioCache,
                                  Status::StatusIndicator& status)
     : m_audio(audio)
+    , m_audioCache(audioCache)
     , m_status(status) {}
 
 MetricsReporter::~MetricsReporter() {
@@ -508,49 +510,65 @@ bool MetricsReporter::flushDue(int64_t nowUs) const {
     if (m_sessionActive || Diagnostics::Metrics::sessionActive()) return false;
     if (m_pendingCount == 0 && m_bootBlockWritten) return false;
     if (nowUs < m_nextFlushAttemptUs) return false;
+    if (m_audioCache.preloadStatus() == PsramAudioCache::PreloadStatus::Pending) return false;
     if (nowUs - m_lastEndUs < static_cast<int64_t>(kFlushSettleMs) * kUsPerMs) return false;
     return m_audioIdle &&
            nowUs - m_audioIdleSinceUs >= static_cast<int64_t>(kAudioIdleHoldMs) * kUsPerMs;
 }
 
 void MetricsReporter::flush(int64_t nowUs) {
-    m_nextFlushAttemptUs = nowUs + static_cast<int64_t>(kFlushSettleMs) * kUsPerMs;
-
     startSignal(Status::ActivitySignal::Writing, nowUs);
-    if (!writePending()) {
-        startSignal(Status::ActivitySignal::WriteFailed, esp_timer_get_time());
+    const FlushOutcome outcome = writePending();
+    const int64_t doneUs = esp_timer_get_time();
+    m_nextFlushAttemptUs = doneUs + static_cast<int64_t>(kFlushSettleMs) * kUsPerMs;
+
+    switch (outcome) {
+    case FlushOutcome::Written:
+        startSignal(Status::ActivitySignal::Written, doneUs);
+        break;
+    case FlushOutcome::Failed:
+        startSignal(Status::ActivitySignal::WriteFailed, doneUs);
+        break;
+    case FlushOutcome::Postponed:
+        startSignal(Status::ActivitySignal::None, doneUs);
+        break;
     }
 }
 
-bool MetricsReporter::writePending() {
+MetricsReporter::FlushOutcome MetricsReporter::writePending() {
     if (!m_filePathResolved) {
         m_filePathResolved = resolveFilePath();
-        if (!m_filePathResolved) return false;
+        if (!m_filePathResolved) return FlushOutcome::Failed;
     }
 
+    bool attempted = false;
     bool allWritten = true;
     if (!m_bootBlockWritten) {
-        if (Diagnostics::Metrics::sessionActive()) return allWritten;
+        if (Diagnostics::Metrics::sessionActive()) return FlushOutcome::Postponed;
         const WriteOutcome outcome = writeBootBlock();
-        if (outcome == WriteOutcome::Deferred) return false;
+        if (outcome == WriteOutcome::Deferred) return FlushOutcome::Failed;
         m_bootBlockWritten = true;
+        attempted = true;
         allWritten = outcome == WriteOutcome::Written;
     }
 
-    while (m_pendingCount > 0) {
-        if (Diagnostics::Metrics::sessionActive()) return allWritten;
+    while (m_pendingCount > 0 && !Diagnostics::Metrics::sessionActive()) {
         const WriteOutcome outcome = writeSessionBlock(m_pending[m_pendingHead]);
-        if (outcome == WriteOutcome::Deferred) return false;
+        if (outcome == WriteOutcome::Deferred) return FlushOutcome::Failed;
         m_pendingHead = (m_pendingHead + 1) % kMaxPendingBlocks;
         --m_pendingCount;
+        attempted = true;
         allWritten = allWritten && outcome == WriteOutcome::Written;
     }
-    return allWritten;
+
+    if (!attempted) return FlushOutcome::Postponed;
+    return allWritten ? FlushOutcome::Written : FlushOutcome::Failed;
 }
 
 void MetricsReporter::startSignal(Status::ActivitySignal signal, int64_t nowUs) {
-    const uint32_t durationMs =
-        signal == Status::ActivitySignal::WriteFailed ? kWriteFailedSignalMs : kWritingSignalMs;
+    const uint32_t durationMs = signal == Status::ActivitySignal::WriteFailed ? kWriteFailedSignalMs
+                                : signal == Status::ActivitySignal::Written   ? kWrittenSignalMs
+                                                                              : 0;
     m_signal = signal;
     m_signalEndUs = nowUs + static_cast<int64_t>(durationMs) * kUsPerMs;
     m_status.showActivity(signal);
