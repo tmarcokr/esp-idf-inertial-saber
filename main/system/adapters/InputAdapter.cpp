@@ -91,20 +91,32 @@ void InputAdapter::onPressDown() {
 
 void InputAdapter::onPressUp() {
     const uint32_t now = esp_timer_get_time() / 1000;
-    std::lock_guard lock(m_stateMutex);
+    uint8_t clickCount = 0;
+    {
+        std::lock_guard lock(m_stateMutex);
 
-    (void)esp_timer_stop(m_holdTimer);
-    m_holdLevel = 0;
+        (void)esp_timer_stop(m_holdTimer);
+        m_holdLevel = 0;
 
-    m_btnState.previous = m_btnState.current;
-    m_btnState.current = Core::InputDescriptor::State::Released;
-    m_btnState.holdDurationMs = now - m_btnState.lastTransitionMs;
-    m_btnState.lastTransitionMs = now;
-    m_btnState.holdLevel = 0;
+        m_btnState.previous = m_btnState.current;
+        m_btnState.current = Core::InputDescriptor::State::Released;
+        m_btnState.holdDurationMs = now - m_btnState.lastTransitionMs;
+        m_btnState.lastTransitionMs = now;
+        m_btnState.holdLevel = 0;
 
-    m_btnState.gesture = Core::InputDescriptor::Gesture::None;
-    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
-    m_btnState.gesture = Core::InputDescriptor::Gesture::None;
+        m_btnState.gesture = Core::InputDescriptor::Gesture::None;
+        m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
+        m_btnState.gesture = Core::InputDescriptor::Gesture::None;
+
+        if (m_clickResolveOnRelease) {
+            m_clickResolveOnRelease = false;
+            clickCount = emitClickLocked();
+        }
+    }
+
+    if (clickCount != 0) {
+        ESP_LOGD(TAG, "Gesture resolved on release: Click x%u", static_cast<unsigned>(clickCount));
+    }
 }
 
 void InputAdapter::onFirstHoldTick() {
@@ -115,6 +127,7 @@ void InputAdapter::onFirstHoldTick() {
 
         (void)esp_timer_stop(m_clickTimer);
         m_pendingClicks = 0;
+        m_clickResolveOnRelease = false;
 
         level = emitHoldTickLocked();
         timerErr = esp_timer_start_periodic(
@@ -134,17 +147,14 @@ void InputAdapter::resolveClickGesture() {
     {
         std::lock_guard lock(m_stateMutex);
 
-        count = m_pendingClicks;
-        m_pendingClicks = 0;
-        if (count == 0) return;
+        if (m_pendingClicks == 0) return;
 
-        using Gesture = Core::InputDescriptor::Gesture;
-        m_btnState.pressCount = count;
-        m_btnState.gesture = Gesture::Click;
+        if (m_btnState.current == Core::InputDescriptor::State::Pressed) {
+            m_clickResolveOnRelease = true;
+            return;
+        }
 
-        m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
-        m_btnState.gesture = Gesture::None;
-        m_btnState.pressCount = 0;
+        count = emitClickLocked();
     }
 
     ESP_LOGD(TAG, "Gesture resolved: Click x%u", static_cast<unsigned>(count));
@@ -163,6 +173,22 @@ void InputAdapter::resolveHoldTick() {
 
     ESP_LOGD(TAG, "Gesture resolved: HoldTick level=%u (%u ms)", static_cast<unsigned>(level),
              static_cast<unsigned>(level * Hardware::HardwareConfig::kHoldTickMs));
+}
+
+uint8_t InputAdapter::emitClickLocked() {
+    const uint8_t count = m_pendingClicks;
+    m_pendingClicks = 0;
+    if (count == 0) return 0;
+
+    using Gesture = Core::InputDescriptor::Gesture;
+    m_btnState.pressCount = count;
+    m_btnState.gesture = Gesture::Click;
+
+    m_bus.pushInputEvent(Core::kMainButtonInputId, m_btnState);
+    m_btnState.gesture = Gesture::None;
+    m_btnState.pressCount = 0;
+
+    return count;
 }
 
 uint8_t InputAdapter::emitHoldTickLocked() {
