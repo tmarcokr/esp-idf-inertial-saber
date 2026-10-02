@@ -42,6 +42,7 @@ private:
     static constexpr int64_t kClashWindowUs = static_cast<int64_t>(kClashWindowMs) * 1000;
     static constexpr size_t kKineticEnergyHistorySize = 16;
     static constexpr uint32_t kClashDebounceMs = 500;
+    static constexpr uint32_t kClashRetriggerWindowMs = 1000;
     static constexpr uint32_t kMaxImuRateHz = 1000;
     static_assert(kKineticEnergyHistorySize >= kClashWindowMs * kMaxImuRateHz / 1000 + 1,
                   "Clash history ring cannot hold a full window at the maximum IMU rate");
@@ -67,6 +68,7 @@ private:
     size_t m_historySize = 0;
     int64_t m_lastSampleTimestampUs = 0;
     uint32_t m_lastClashTimeMs = 0;
+    uint32_t m_previousClashTimeMs = 0;
 };
 
 } // namespace InertialSaber::Effects

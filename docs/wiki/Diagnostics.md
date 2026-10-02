@@ -192,6 +192,8 @@ Rows appear in this order.
 | `audio_commands_dropped` | Audio commands lost because the `audio_ctrl` queue was full. |
 | `audio_play_failed` | Play requests with an invalid or truncated path, or that the audio engine rejected (no channel). |
 | `inertial_bursts` | Inertial Bursts fired by the Overload accumulator. |
+| `clash_detections` | Clashes detected (each one plays a clash sound and flash). |
+| `clash_retrigger_lt_1s` | Clash detections that followed the previous detection by less than 1000 ms. |
 
 **Heap** — sampled at ignition, every 100 ms while ignited, and at retraction. Dips shorter than 100 ms can be missed.
 

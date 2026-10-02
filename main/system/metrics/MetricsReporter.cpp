@@ -75,9 +75,9 @@ constexpr MetricInfo kMetricInfo[] = {
 static_assert(std::size(kMetricInfo) == Diagnostics::kMetricCount);
 
 constexpr const char* kCounterNames[] = {
-    "bus_timeout_wakes", "input_events_dropped", "imu_samples", "imu_empty_reads",
-    "imu_poll_timeouts", "overlays_dropped",     "bus_cycles",  "audio_commands_dropped",
-    "audio_play_failed", "inertial_bursts",
+    "bus_timeout_wakes", "input_events_dropped", "imu_samples",      "imu_empty_reads",
+    "imu_poll_timeouts", "overlays_dropped",     "bus_cycles",       "audio_commands_dropped",
+    "audio_play_failed", "inertial_bursts",      "clash_detections", "clash_retrigger_lt_1s",
 };
 static_assert(std::size(kCounterNames) == Diagnostics::kCounterCount);
 
