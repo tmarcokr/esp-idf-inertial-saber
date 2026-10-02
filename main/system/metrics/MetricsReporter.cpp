@@ -2,6 +2,7 @@
 
 #if CONFIG_SABER_METRICS
 
+#include "profiles/ProfileManager.hpp"
 #include "system/Raii.hpp"
 #include "system/hardware/HardwareConfig.hpp"
 
@@ -280,9 +281,11 @@ private:
 
 MetricsReporter::MetricsReporter(const Espressif::Wrappers::Audio::AudioEngine& audio,
                                  const PsramAudioCache& audioCache,
+                                 const Profiles::ProfileManager& profiles,
                                  Status::StatusIndicator& status)
     : m_audio(audio)
     , m_audioCache(audioCache)
+    , m_profiles(profiles)
     , m_status(status) {}
 
 MetricsReporter::~MetricsReporter() {
@@ -508,11 +511,16 @@ void MetricsReporter::captureBlock(BlockSnapshot& block, int64_t nowUs) {
     }
 }
 
+bool MetricsReporter::sdQuiet() const {
+    return m_audioCache.preloadStatus() != PsramAudioCache::PreloadStatus::Pending &&
+           !m_profiles.switchPending() && !m_profiles.savePending();
+}
+
 bool MetricsReporter::flushDue(int64_t nowUs) const {
     if (m_sessionActive || Diagnostics::Metrics::sessionActive()) return false;
     if (m_pendingCount == 0 && m_bootBlockWritten) return false;
     if (nowUs < m_nextFlushAttemptUs) return false;
-    if (m_audioCache.preloadStatus() == PsramAudioCache::PreloadStatus::Pending) return false;
+    if (!sdQuiet()) return false;
     if (nowUs - m_lastEndUs < static_cast<int64_t>(kFlushSettleMs) * kUsPerMs) return false;
     return m_audioIdle &&
            nowUs - m_audioIdleSinceUs >= static_cast<int64_t>(kAudioIdleHoldMs) * kUsPerMs;
@@ -546,7 +554,7 @@ MetricsReporter::FlushOutcome MetricsReporter::writePending() {
     bool attempted = false;
     bool allWritten = true;
     if (!m_bootBlockWritten) {
-        if (Diagnostics::Metrics::sessionActive()) return FlushOutcome::Postponed;
+        if (Diagnostics::Metrics::sessionActive() || !sdQuiet()) return FlushOutcome::Postponed;
         const WriteOutcome outcome = writeBootBlock();
         if (outcome == WriteOutcome::Deferred) return FlushOutcome::Failed;
         m_bootBlockWritten = true;
@@ -554,7 +562,7 @@ MetricsReporter::FlushOutcome MetricsReporter::writePending() {
         allWritten = outcome == WriteOutcome::Written;
     }
 
-    while (m_pendingCount > 0 && !Diagnostics::Metrics::sessionActive()) {
+    while (m_pendingCount > 0 && !Diagnostics::Metrics::sessionActive() && sdQuiet()) {
         const WriteOutcome outcome = writeSessionBlock(m_pending[m_pendingHead]);
         if (outcome == WriteOutcome::Deferred) return FlushOutcome::Failed;
         m_pendingHead = (m_pendingHead + 1) % kMaxPendingBlocks;

@@ -24,13 +24,14 @@ namespace InertialSaber::Profiles {
  *
  * The bus only posts a request (requestNext()); the profile_ctrl task builds the next effect
  * set, requests its preload, stages it on the bus and destroys the set it replaces. The new
- * active index is saved on profile_ctrl kSaveDelayMs after the last switch, never while the
- * preload is pending, and only once the blade has stayed retracted or faulted for kSaveDelayMs.
+ * active index is saved on profile_ctrl no earlier than kSaveDelayMs after the last switch, and
+ * only when a check finds the preload finished and the blade retracted or faulted. A check that
+ * finds the blade lit postpones the save to kSaveDelayMs after a later check finds it idle again.
  *
  * Thread safety:
  *   - init(), loadActive(), start() and stop(): main task only.
  *   - requestNext(): bus task only.
- *   - switchPending(): any task.
+ *   - switchPending() and savePending(): any task.
  */
 class ProfileManager {
 public:
@@ -87,6 +88,9 @@ public:
     /** @brief True from requestNext() until the replaced set has been destroyed. Any task. */
     [[nodiscard]] bool switchPending() const;
 
+    /** @brief True while a save of the active index is armed or being written. Any task. */
+    [[nodiscard]] bool savePending() const;
+
 private:
     static constexpr uint32_t kSaveDelayMs = 1500;
     static constexpr uint32_t kSavePollMs = 100;
@@ -118,7 +122,7 @@ private:
     SemaphoreHandle_t m_exitSemaphore = nullptr;
 
     std::optional<size_t> m_savedIndex;
-    bool m_saveArmed = false;
+    std::atomic<bool> m_saveArmed{false};
     bool m_saveWaitingForIdle = false;
     int64_t m_saveDueUs = 0;
 };

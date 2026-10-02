@@ -111,6 +111,10 @@ bool ProfileManager::switchPending() const {
     return m_switchPending.load(std::memory_order_acquire);
 }
 
+bool ProfileManager::savePending() const {
+    return m_saveArmed.load(std::memory_order_acquire);
+}
+
 void ProfileManager::taskEntry(void* arg) {
     auto* manager = static_cast<ProfileManager*>(arg);
     manager->run();
@@ -185,15 +189,15 @@ std::unique_ptr<Core::EffectSet> ProfileManager::waitForRetiredEffects() {
 void ProfileManager::armSave(int64_t nowUs) {
     m_saveWaitingForIdle = false;
     if (m_savedIndex == m_activeIndex) {
-        m_saveArmed = false;
+        m_saveArmed.store(false, std::memory_order_release);
         return;
     }
-    m_saveArmed = true;
     m_saveDueUs = nowUs + int64_t{kSaveDelayMs} * 1000;
+    m_saveArmed.store(true, std::memory_order_release);
 }
 
 void ProfileManager::serviceSave(int64_t nowUs) {
-    if (!m_saveArmed || nowUs < m_saveDueUs) return;
+    if (!m_saveArmed.load(std::memory_order_relaxed) || nowUs < m_saveDueUs) return;
 
     if (m_services.audioCache.preloadStatus() == System::PsramAudioCache::PreloadStatus::Pending) {
         m_saveDueUs = nowUs + int64_t{kSavePollMs} * 1000;
@@ -210,7 +214,6 @@ void ProfileManager::serviceSave(int64_t nowUs) {
         return;
     }
 
-    m_saveArmed = false;
     esp_err_t err = ESP_FAIL;
     {
         SABER_METRIC_SCOPE(Diagnostics::Metric::ProfileSave);
@@ -219,10 +222,11 @@ void ProfileManager::serviceSave(int64_t nowUs) {
     if (err == ESP_OK) {
         m_savedIndex = m_activeIndex;
     }
+    m_saveArmed.store(false, std::memory_order_release);
 }
 
 TickType_t ProfileManager::nextWakeTicks(int64_t nowUs) const {
-    if (!m_saveArmed) return portMAX_DELAY;
+    if (!m_saveArmed.load(std::memory_order_relaxed)) return portMAX_DELAY;
 
     const int64_t remainingUs = m_saveDueUs - nowUs;
     if (remainingUs <= 0) return 1;

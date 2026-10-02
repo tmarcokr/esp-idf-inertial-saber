@@ -69,9 +69,9 @@ Blocks are captured in RAM (a ring of 4 pending blocks in PSRAM) and written lat
 1. The saber is retracted (no active session).
 2. At least **2 s** have passed since the last retraction (for block 0: since the reporter started).
 3. The audio output has been idle (output level ≤ 140) for at least **500 ms**. The threshold sits above the small residual the mixer keeps outputting in silence: it is twice the residual bound of the configured DC-blocker cutoff, so it follows the cutoff preset.
-4. No PSRAM preload is in progress (at boot and after every profile change), so the metrics never compete with the preload for the SD card.
+4. No PSRAM preload is in progress (at boot and after every profile change), no profile change is pending and no active-profile save is pending or being written, so the metrics never compete with them for the SD card.
 
-Right before each block is written, the reporter re-checks that no ignition has started; if one has, the write is postponed. Each block is written with its own open → append → close, so the data already written survives a power cut. After each write attempt ends, the next one waits another 2 s.
+Right before each block is written, the reporter re-checks that no ignition has started and that condition 4 still holds; if not, the remaining blocks stay pending and are written at a later opportunity. Each block is written with its own open → append → close, so the data already written survives a power cut. After each write attempt ends, the next one waits another 2 s.
 
 > [!IMPORTANT]
 > **Wait 5 s after retracting before cutting power.** Otherwise the last block (or block 0, right after boot) may not be written yet.
