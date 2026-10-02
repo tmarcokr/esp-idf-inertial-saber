@@ -69,6 +69,8 @@ Right before each block is written, the reporter re-checks that no ignition has 
 > [!IMPORTANT]
 > **Wait 5 s after retracting before cutting power.** Otherwise the last block (or block 0, right after boot) may not be written yet.
 
+**Status LED signal.** Every write attempt is shown on the status LED: fast **blue** blinking (100 ms half-period) for at least 1 s, or fast **red** blinking for 2 s if the file could not be opened or the write failed. The LED then returns to the current system status. No blink within ~5 s of a retraction means the reporter never attempted the write.
+
 If the saber is ignited again before the pending blocks are written, they stay in the ring. When the ring already holds 4 blocks, the next retraction does not capture a new block (see `lost_before`, §4.2).
 
 ### 3.4. Comparing files

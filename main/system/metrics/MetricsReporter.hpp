@@ -5,6 +5,7 @@
 #if CONFIG_SABER_METRICS
 
 #include "diagnostics/Metrics.hpp"
+#include "system/status/StatusIndicator.hpp"
 
 #include "AudioEngine.hpp"
 
@@ -25,8 +26,12 @@ namespace InertialSaber::System::Monitoring {
  */
 class MetricsReporter {
 public:
-    /** @param audio Engine whose lock-free output level gates the SD writes. */
-    explicit MetricsReporter(const Espressif::Wrappers::Audio::AudioEngine& audio);
+    /**
+     * @param audio Engine whose lock-free output level gates the SD writes.
+     * @param status Indicator that signals every write attempt and its failure.
+     */
+    MetricsReporter(const Espressif::Wrappers::Audio::AudioEngine& audio,
+                    Status::StatusIndicator& status);
     ~MetricsReporter();
 
     MetricsReporter(const MetricsReporter&) = delete;
@@ -88,9 +93,14 @@ private:
         void operator()(void* p) const { heap_caps_free(p); }
     };
 
+    enum class WriteOutcome : uint8_t { Written, Dropped, Deferred };
+
     class CsvWriter;
 
     static constexpr uint32_t kSampleIntervalMs = 100;
+    static constexpr uint32_t kSignalRefreshMs = 50;
+    static constexpr uint32_t kWritingSignalMs = 1000;
+    static constexpr uint32_t kWriteFailedSignalMs = 2000;
     static constexpr uint32_t kRateWindowMs = 1000;
     static constexpr uint32_t kFlushSettleMs = 2000;
     static constexpr uint32_t kAudioIdleHoldMs = 500;
@@ -116,13 +126,20 @@ private:
     void captureBlock(BlockSnapshot& block, int64_t nowUs);
     [[nodiscard]] bool flushDue(int64_t nowUs) const;
     void flush(int64_t nowUs);
+    [[nodiscard]] bool writePending();
+    void startSignal(Status::ActivitySignal signal, int64_t nowUs);
+    void updateSignal(int64_t nowUs);
     void warnSdUnavailable(const char* path);
     [[nodiscard]] bool resolveFilePath();
-    [[nodiscard]] bool writeBootBlock();
-    [[nodiscard]] bool writeSessionBlock(const BlockSnapshot& block);
+    [[nodiscard]] WriteOutcome writeBootBlock();
+    [[nodiscard]] WriteOutcome writeSessionBlock(const BlockSnapshot& block);
 
     const Espressif::Wrappers::Audio::AudioEngine& m_audio;
+    Status::StatusIndicator& m_status;
     TaskHandle_t m_task = nullptr;
+
+    Status::ActivitySignal m_signal = Status::ActivitySignal::None;
+    int64_t m_signalEndUs = 0;
 
     std::unique_ptr<BlockSnapshot[], HeapCapsFree> m_pending;
     std::unique_ptr<char[], HeapCapsFree> m_text;

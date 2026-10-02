@@ -14,9 +14,19 @@ constexpr Color kReadyColor{0, 32, 0};
 constexpr Color kErrorColor{255, 0, 0};
 constexpr Color kOffColor{0, 0, 0};
 constexpr int64_t kBlinkHalfPeriodMs = 250;
+#if CONFIG_SABER_METRICS
+constexpr Color kWritingColor{0, 0, 64};
+constexpr Color kWriteFailedColor = kErrorColor;
+constexpr int64_t kActivityBlinkHalfPeriodMs = 100;
+#endif
 
 constexpr bool isSameColor(const Color& a, const Color& b) {
     return a.r == b.r && a.g == b.g && a.b == b.b;
+}
+
+Color blink(const Color& color, int64_t halfPeriodMs) {
+    const bool blinkOn = ((esp_timer_get_time() / 1000LL) / halfPeriodMs) % 2 == 0;
+    return blinkOn ? color : kOffColor;
 }
 
 } // namespace
@@ -28,17 +38,40 @@ esp_err_t RgbStatusIndicator::init() {
 }
 
 void RgbStatusIndicator::show(SystemStatus status) {
+#if CONFIG_SABER_METRICS
+    const std::lock_guard<std::mutex> lock(m_mutex);
+    m_status = status;
+    if (m_activity != ActivitySignal::None) return;
+#endif
     write(colorFor(status));
 }
+
+#if CONFIG_SABER_METRICS
+void RgbStatusIndicator::showActivity(ActivitySignal signal) {
+    const std::lock_guard<std::mutex> lock(m_mutex);
+    m_activity = signal;
+    write(signal == ActivitySignal::None ? colorFor(m_status) : colorFor(signal));
+}
+
+Color RgbStatusIndicator::colorFor(ActivitySignal signal) {
+    switch (signal) {
+    case ActivitySignal::None:
+        return kOffColor;
+    case ActivitySignal::Writing:
+        return blink(kWritingColor, kActivityBlinkHalfPeriodMs);
+    case ActivitySignal::WriteFailed:
+        return blink(kWriteFailedColor, kActivityBlinkHalfPeriodMs);
+    }
+    return kOffColor;
+}
+#endif
 
 Color RgbStatusIndicator::colorFor(SystemStatus status) {
     switch (status) {
     case SystemStatus::Booting:
         return kBootingColor;
-    case SystemStatus::Preloading: {
-        const bool blinkOn = ((esp_timer_get_time() / 1000LL) / kBlinkHalfPeriodMs) % 2 == 0;
-        return blinkOn ? kPreloadingColor : kOffColor;
-    }
+    case SystemStatus::Preloading:
+        return blink(kPreloadingColor, kBlinkHalfPeriodMs);
     case SystemStatus::Ready:
         return kReadyColor;
     case SystemStatus::Error:

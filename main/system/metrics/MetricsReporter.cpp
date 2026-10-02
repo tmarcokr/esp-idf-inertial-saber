@@ -221,8 +221,10 @@ private:
     bool m_ok = true;
 };
 
-MetricsReporter::MetricsReporter(const Espressif::Wrappers::Audio::AudioEngine& audio)
-    : m_audio(audio) {}
+MetricsReporter::MetricsReporter(const Espressif::Wrappers::Audio::AudioEngine& audio,
+                                 Status::StatusIndicator& status)
+    : m_audio(audio)
+    , m_status(status) {}
 
 MetricsReporter::~MetricsReporter() {
     if (m_task != nullptr) {
@@ -281,8 +283,9 @@ void MetricsReporter::run() {
 
     while (true) {
         uint32_t bits = 0;
-        const BaseType_t notified =
-            xTaskNotifyWait(0, ULONG_MAX, &bits, pdMS_TO_TICKS(kSampleIntervalMs));
+        const uint32_t waitMs =
+            m_signal != Status::ActivitySignal::None ? kSignalRefreshMs : kSampleIntervalMs;
+        const BaseType_t notified = xTaskNotifyWait(0, ULONG_MAX, &bits, pdMS_TO_TICKS(waitMs));
         const int64_t nowUs = esp_timer_get_time();
 
         if (notified == pdTRUE) {
@@ -293,6 +296,7 @@ void MetricsReporter::run() {
         }
         updateRates(nowUs);
         updateAudioIdle(nowUs);
+        updateSignal(nowUs);
 
         if (flushDue(nowUs)) {
             flush(nowUs);
@@ -457,23 +461,52 @@ bool MetricsReporter::flushDue(int64_t nowUs) const {
 void MetricsReporter::flush(int64_t nowUs) {
     m_nextFlushAttemptUs = nowUs + static_cast<int64_t>(kFlushSettleMs) * kUsPerMs;
 
+    startSignal(Status::ActivitySignal::Writing, nowUs);
+    if (!writePending()) {
+        startSignal(Status::ActivitySignal::WriteFailed, esp_timer_get_time());
+    }
+}
+
+bool MetricsReporter::writePending() {
     if (!m_filePathResolved) {
         m_filePathResolved = resolveFilePath();
-        if (!m_filePathResolved) return;
+        if (!m_filePathResolved) return false;
     }
 
+    bool allWritten = true;
     if (!m_bootBlockWritten) {
-        if (Diagnostics::Metrics::sessionActive()) return;
-        if (!writeBootBlock()) return;
+        if (Diagnostics::Metrics::sessionActive()) return allWritten;
+        const WriteOutcome outcome = writeBootBlock();
+        if (outcome == WriteOutcome::Deferred) return false;
         m_bootBlockWritten = true;
+        allWritten = outcome == WriteOutcome::Written;
     }
 
     while (m_pendingCount > 0) {
-        if (Diagnostics::Metrics::sessionActive()) return;
-        if (!writeSessionBlock(m_pending[m_pendingHead])) return;
+        if (Diagnostics::Metrics::sessionActive()) return allWritten;
+        const WriteOutcome outcome = writeSessionBlock(m_pending[m_pendingHead]);
+        if (outcome == WriteOutcome::Deferred) return false;
         m_pendingHead = (m_pendingHead + 1) % kMaxPendingBlocks;
         --m_pendingCount;
+        allWritten = allWritten && outcome == WriteOutcome::Written;
     }
+    return allWritten;
+}
+
+void MetricsReporter::startSignal(Status::ActivitySignal signal, int64_t nowUs) {
+    const uint32_t durationMs =
+        signal == Status::ActivitySignal::WriteFailed ? kWriteFailedSignalMs : kWritingSignalMs;
+    m_signal = signal;
+    m_signalEndUs = nowUs + static_cast<int64_t>(durationMs) * kUsPerMs;
+    m_status.showActivity(signal);
+}
+
+void MetricsReporter::updateSignal(int64_t nowUs) {
+    if (m_signal == Status::ActivitySignal::None) return;
+    if (nowUs >= m_signalEndUs) {
+        m_signal = Status::ActivitySignal::None;
+    }
+    m_status.showActivity(m_signal);
 }
 
 void MetricsReporter::warnSdUnavailable(const char* path) {
@@ -519,11 +552,11 @@ bool MetricsReporter::resolveFilePath() {
     return true;
 }
 
-bool MetricsReporter::writeBootBlock() {
+MetricsReporter::WriteOutcome MetricsReporter::writeBootBlock() {
     UniqueFile file = openFile(m_filePath.data(), "a");
     if (!file) {
         warnSdUnavailable(m_filePath.data());
-        return false;
+        return WriteOutcome::Deferred;
     }
     m_sdWarningLogged = false;
 
@@ -554,17 +587,17 @@ bool MetricsReporter::writeBootBlock() {
     const bool written = csv.finish();
     if (!closeFile(std::move(file)) || !written) {
         ESP_LOGW(TAG, "Boot block write to %s failed; not retried", m_filePath.data());
-        return true;
+        return WriteOutcome::Dropped;
     }
     ESP_LOGI(TAG, "Boot block written to %s", m_filePath.data());
-    return true;
+    return WriteOutcome::Written;
 }
 
-bool MetricsReporter::writeSessionBlock(const BlockSnapshot& block) {
+MetricsReporter::WriteOutcome MetricsReporter::writeSessionBlock(const BlockSnapshot& block) {
     UniqueFile file = openFile(m_filePath.data(), "a");
     if (!file) {
         warnSdUnavailable(m_filePath.data());
-        return false;
+        return WriteOutcome::Deferred;
     }
     m_sdWarningLogged = false;
 
@@ -675,10 +708,10 @@ bool MetricsReporter::writeSessionBlock(const BlockSnapshot& block) {
         ESP_LOGW(TAG, "Block %" PRIu32 " write to %s failed; dropped", block.block,
                  m_filePath.data());
         ++m_sessionsLost;
-        return true;
+        return WriteOutcome::Dropped;
     }
     ESP_LOGI(TAG, "Block %" PRIu32 " written to %s", block.block, m_filePath.data());
-    return true;
+    return WriteOutcome::Written;
 }
 
 } // namespace InertialSaber::System::Monitoring

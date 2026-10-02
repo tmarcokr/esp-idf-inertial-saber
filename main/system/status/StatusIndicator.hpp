@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esp_err.h"
+#include "sdkconfig.h"
 
 #include <cstdint>
 
@@ -11,11 +12,21 @@ namespace InertialSaber::System::Status {
  */
 enum class SystemStatus : uint8_t { Booting, Preloading, Ready, Error };
 
+#if CONFIG_SABER_METRICS
+/**
+ * @brief Transient storage activity rendered over the system status in metrics builds.
+ */
+enum class ActivitySignal : uint8_t { None, Writing, WriteFailed };
+#endif
+
 /**
  * @brief Board-independent status output.
  *
- * Not thread-safe: called from the main task during start-up and from the bus task afterwards, never concurrently.
- * Animated states (Preloading) require show() to be called periodically; show() is idempotent.
+ * show() is called from the main task during start-up and from the bus task afterwards, never
+ * concurrently. In metrics builds showActivity() is called from the metrics reporter task;
+ * implementations serialise it with show().
+ * Animated states (Preloading and every ActivitySignal except None) require periodic calls;
+ * both methods are idempotent.
  */
 class StatusIndicator {
 public:
@@ -30,6 +41,13 @@ public:
      * @brief Render the given status.
      */
     virtual void show(SystemStatus status) = 0;
+
+#if CONFIG_SABER_METRICS
+    /**
+     * @brief Render @p signal over the current status; ActivitySignal::None restores the status.
+     */
+    virtual void showActivity(ActivitySignal signal) = 0;
+#endif
 };
 
 } // namespace InertialSaber::System::Status

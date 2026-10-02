@@ -4,6 +4,11 @@
 #include "RgbLed.hpp"
 
 #include "driver/gpio.h"
+#include "sdkconfig.h"
+
+#if CONFIG_SABER_METRICS
+#include <mutex>
+#endif
 
 namespace InertialSaber::System::Status {
 
@@ -26,6 +31,9 @@ public:
 
     [[nodiscard]] esp_err_t init() override;
     void show(SystemStatus status) override;
+#if CONFIG_SABER_METRICS
+    void showActivity(ActivitySignal signal) override;
+#endif
 
 private:
     static Espressif::Wrappers::Color colorFor(SystemStatus status);
@@ -34,6 +42,14 @@ private:
     Espressif::Wrappers::RgbLed m_led;
     Espressif::Wrappers::Color m_lastColor{};
     bool m_hasLastColor = false;
+
+#if CONFIG_SABER_METRICS
+    static Espressif::Wrappers::Color colorFor(ActivitySignal signal);
+
+    std::mutex m_mutex;
+    SystemStatus m_status = SystemStatus::Booting;
+    ActivitySignal m_activity = ActivitySignal::None;
+#endif
 };
 
 } // namespace InertialSaber::System::Status
