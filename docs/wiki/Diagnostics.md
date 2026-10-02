@@ -157,6 +157,10 @@ Rows appear in this order.
 | `audio_play_call` | scope | One `AudioEngine::play()` call in the `audio_ctrl` task. |
 | `audio_latency` | duration | From the moment an effect queues a play command to the end of the `play()` call. |
 | `motion_age` | duration | Age of the IMU sample when the bus cycle uses it (bus cycle time − `motionTimestampUs`). |
+| `profile_commit` | scope | The bus taking over a staged profile effect set at the top of a cycle (pointer swap and physics update). Must not allocate; counted in `bus_loop_allocs`. |
+| `profile_build` | scope | Building the next profile's effect set in the `profile_ctrl` task (allocations expected, on core 1). |
+| `profile_save` | scope | Writing the active profile index to the SD card in the `profile_ctrl` task. |
+| `profile_switch` | duration | From the accepted profile-cycle request to the end of the new profile's preload, when the saber unlocks. Not recorded at boot or when the preload fails. |
 
 | Kind | Stats written |
 | :--- | :--- |
@@ -204,7 +208,7 @@ Rows appear in this order.
 | `heap,internal_min_since_boot,` | B | Lowest free internal heap since boot, as tracked by the heap (exact). |
 | `heap,psram_free,start\|min\|end` | B | Same as `internal_free`, for PSRAM. |
 
-**Tasks** — `task,<name>,<stat>` for every task, in this order: `main`, `saber_bus`, `imu_adapter`, `psram_loader`, `metrics`, `SmartLedTask`, `gpio_btn_tsk`, `esp_timer`, `audio_mixer`, `audio_sd_reader`, `audio_mem_reader`, `audio_ctrl`, `profile_store`.
+**Tasks** — `task,<name>,<stat>` for every task, in this order: `main`, `saber_bus`, `imu_adapter`, `psram_loader`, `metrics`, `SmartLedTask`, `gpio_btn_tsk`, `esp_timer`, `audio_mixer`, `audio_sd_reader`, `audio_mem_reader`, `audio_ctrl`, `profile_ctrl`.
 
 | Stat | Unit | Meaning |
 | :--- | :--- | :--- |

@@ -7,6 +7,7 @@
 #include "system/status/StatusIndicator.hpp"
 #include "system/audio/AudioController.hpp"
 #include "esp_log.h"
+#include "esp_timer.h"
 
 namespace InertialSaber::Effects {
 
@@ -52,6 +53,10 @@ void PreloadWaitEffect::run() {
     }
 
     m_power.handle(Profiles::PowerStateMachine::Event::PreloadDone);
+    if (m_switchRequestedUs) {
+        SABER_METRIC_DURATION(Diagnostics::Metric::ProfileSwitch,
+                              static_cast<uint32_t>(esp_timer_get_time()) - *m_switchRequestedUs);
+    }
 
     m_status.show(SystemStatus::Ready);
 

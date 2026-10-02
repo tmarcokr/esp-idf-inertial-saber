@@ -71,6 +71,8 @@ constexpr MetricInfo kMetricInfo[] = {
     {"swing_activate", MetricKind::Scope},   {"swing_swap", MetricKind::Scope},
     {"imu_read", MetricKind::Scope},         {"audio_play_call", MetricKind::Scope},
     {"audio_latency", MetricKind::Duration}, {"motion_age", MetricKind::Duration},
+    {"profile_commit", MetricKind::Scope},   {"profile_build", MetricKind::Scope},
+    {"profile_save", MetricKind::Scope},     {"profile_switch", MetricKind::Duration},
 };
 static_assert(std::size(kMetricInfo) == Diagnostics::kMetricCount);
 

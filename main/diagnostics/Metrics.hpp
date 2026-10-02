@@ -32,6 +32,10 @@ enum class Metric : uint8_t {
     AudioPlayCall,
     AudioLatency,
     MotionAge,
+    ProfileCommit,
+    ProfileBuild,
+    ProfileSave,
+    ProfileSwitch,
     Count
 };
 

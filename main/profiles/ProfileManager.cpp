@@ -137,8 +137,12 @@ void ProfileManager::performSwitch() {
     const size_t nextIndex = (m_activeIndex + 1) % m_profiles.size();
     const ConfigurableProfile& profile = *m_profiles[nextIndex];
 
-    ProfileEffects built =
-        profile.buildEffects(m_services, *this, m_requestedAtUs.load(std::memory_order_relaxed));
+    ProfileEffects built;
+    {
+        SABER_METRIC_SCOPE(Diagnostics::Metric::ProfileBuild);
+        built = profile.buildEffects(m_services, *this,
+                                     m_requestedAtUs.load(std::memory_order_relaxed));
+    }
     configASSERT(built.set != nullptr);
 
     m_services.audioCache.requestPreload(profile.font());
@@ -207,7 +211,12 @@ void ProfileManager::serviceSave(int64_t nowUs) {
     }
 
     m_saveArmed = false;
-    if (m_store.save(m_activeIndex) == ESP_OK) {
+    esp_err_t err = ESP_FAIL;
+    {
+        SABER_METRIC_SCOPE(Diagnostics::Metric::ProfileSave);
+        err = m_store.save(m_activeIndex);
+    }
+    if (err == ESP_OK) {
         m_savedIndex = m_activeIndex;
     }
 }

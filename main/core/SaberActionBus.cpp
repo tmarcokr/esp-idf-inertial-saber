@@ -108,6 +108,7 @@ void SaberActionBus::commitStagedEffects() {
     if (m_retiredEffects.load(std::memory_order_acquire) != nullptr) {
         return;
     }
+    SABER_METRIC_SCOPE(Diagnostics::Metric::ProfileCommit);
     EffectSet* const staged = m_stagedEffects.exchange(nullptr, std::memory_order_acq_rel);
     EffectSet* const previous = m_activeEffects.release();
     configASSERT(previous != nullptr);
