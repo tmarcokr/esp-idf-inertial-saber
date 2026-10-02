@@ -23,10 +23,16 @@ Metrics are controlled by one Kconfig option, `CONFIG_SABER_METRICS` (menu "Iner
 
 | Build | `CONFIG_SABER_METRICS` | Result |
 | :--- | :--- | :--- |
-| Default (`idf.py build`) | `y` (default) | Metrics recorded and written to the SD card. Also selects `CONFIG_HEAP_USE_HOOKS`. |
-| Release overlay (`sdkconfig.defaults.release`) | `not set` | Every `SABER_METRIC_*` macro compiles to nothing; its arguments are not evaluated. No reporter task, no allocation hook. |
+| Default (`idf.py build`) | `not set` (default) | Every `SABER_METRIC_*` macro compiles to nothing; its arguments are not evaluated. No reporter task, no allocation hook. |
+| Metrics build (enabled in `menuconfig`) | `y` | Metrics recorded and written to the SD card. Also selects `CONFIG_HEAP_USE_HOOKS`. |
+| Release overlay (`sdkconfig.defaults.release`) | `not set` (explicit) | Same as the default build. |
 
-To toggle it in a local build, use `idf.py menuconfig` → *InertialSaber* → *Record real-time metrics and write them to /sdcard/metrics*.
+Metrics are opt-in. To toggle them in a local build, use `idf.py menuconfig` → *InertialSaber* → *Record real-time metrics and write them to /sdcard/metrics*.
+
+For a board test: enable the option, flash, run the test, collect the CSV files, then disable the option again and rebuild.
+
+> [!NOTE]
+> With ESP-IDF 6.1, an existing local `sdkconfig` created while the default was `y` keeps `CONFIG_SABER_METRICS=y` through its `# default:` value tracking. Run `idf.py refresh-config --policy kconfig` once, or switch the option off in `menuconfig`. See [sdkconfig Overrides](sdkconfig_overrides.md) §7.
 
 To confirm that a build carries no metrics code:
 

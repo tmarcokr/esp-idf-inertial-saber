@@ -10,7 +10,7 @@ menu "InertialSaber"
 
     config SABER_METRICS
         bool "Record real-time metrics and write them to /sdcard/metrics"
-        default y
+        default n
         select HEAP_USE_HOOKS
         help
             Records bus cycle and effect run() timings, loop and IMU rates, event
