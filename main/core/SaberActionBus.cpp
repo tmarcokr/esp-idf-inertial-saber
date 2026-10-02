@@ -1,5 +1,7 @@
 #include "SaberActionBus.hpp"
 
+#include "diagnostics/Metrics.hpp"
+
 #include "esp_log.h"
 #include "esp_timer.h"
 
@@ -10,10 +12,16 @@ namespace InertialSaber::Core {
 
 static constexpr const char* TAG = "SaberActionBus";
 
-SaberActionBus::SaberActionBus(const BusConfig& config) : m_config(config) {}
+SaberActionBus::SaberActionBus(const BusConfig& config)
+    : m_config(config)
+    , m_exitSemaphore(xSemaphoreCreateBinaryStatic(&m_exitSemaphoreControl)) {
+    m_effects.reserve(kMaxEffects);
+    m_effectsPendingDestruction.reserve(kMaxEffects);
+}
 
 SaberActionBus::~SaberActionBus() {
     stop();
+    vSemaphoreDelete(m_exitSemaphore);
 }
 
 esp_err_t SaberActionBus::start() {
@@ -34,7 +42,7 @@ esp_err_t SaberActionBus::start() {
 
     TaskHandle_t handle = nullptr;
     BaseType_t result =
-        xTaskCreatePinnedToCore(busTaskEntry, "saber_bus", m_config.task.stackSize, this,
+        xTaskCreatePinnedToCore(busTaskEntry, m_config.task.name, m_config.task.stackSize, this,
                                 m_config.task.priority, &handle, m_config.task.core);
 
     if (result != pdPASS) {
@@ -44,6 +52,7 @@ esp_err_t SaberActionBus::start() {
         return ESP_FAIL;
     }
     m_taskHandle = handle;
+    SABER_METRIC_REGISTER_TASK(Diagnostics::TaskId::Bus, handle);
 
     ESP_LOGI(TAG, "Bus started on core %d (priority %d)", static_cast<int>(m_config.task.core),
              static_cast<int>(m_config.task.priority));
@@ -51,17 +60,15 @@ esp_err_t SaberActionBus::start() {
 }
 
 void SaberActionBus::stop() {
-    if (!m_running) {
+    const TaskHandle_t handle = m_taskHandle.exchange(nullptr);
+    if (handle == nullptr) {
         return;
     }
+    configASSERT(xTaskGetCurrentTaskHandle() != handle);
 
     m_running = false;
-
-    if (TaskHandle_t handle = m_taskHandle.exchange(nullptr); handle != nullptr) {
-        xTaskNotifyGive(handle);
-        // Warning: there is no join; the delay lets the bus task exit before its queue is deleted.
-        vTaskDelay(pdMS_TO_TICKS(kBusTimeoutMs * 2));
-    }
+    xTaskNotifyGive(handle);
+    xSemaphoreTake(m_exitSemaphore, portMAX_DELAY);
 
     if (QueueHandle_t queue = m_inputQueue.exchange(nullptr); queue != nullptr) {
         vQueueDelete(queue);
@@ -83,9 +90,15 @@ void SaberActionBus::registerEffect(std::unique_ptr<InertialEffect> effect) {
     if (!effect) {
         return;
     }
-    m_effects.push_back(std::move(effect));
-    std::sort(m_effects.begin(), m_effects.end(),
-              [](const auto& a, const auto& b) { return a->priority() < b->priority(); });
+    if (m_effects.size() >= kMaxEffects) {
+        ESP_LOGE(TAG, "Effect rejected: the bus holds at most %u effects",
+                 static_cast<unsigned>(kMaxEffects));
+        return;
+    }
+    const auto position = std::upper_bound(
+        m_effects.begin(), m_effects.end(), effect->priority(),
+        [](uint8_t priority, const auto& fx) { return priority < fx->priority(); });
+    m_effects.insert(position, std::move(effect));
     m_effectsChanged = true;
 }
 
@@ -126,41 +139,48 @@ void SaberActionBus::pushInputEvent(uint8_t inputId, const InputDescriptor& desc
 void SaberActionBus::busTaskEntry(void* arg) {
     auto* bus = static_cast<SaberActionBus*>(arg);
     bus->busLoop();
+    xSemaphoreGive(bus->m_exitSemaphore);
     vTaskDelete(nullptr);
 }
 
 void SaberActionBus::busLoop() {
     while (m_running) {
-        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kBusTimeoutMs));
+        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kBusTimeoutMs)) == 0) {
+            SABER_METRIC_COUNT(Diagnostics::Counter::BusTimeoutWakes);
+        }
 
         if (!m_running) {
             break;
         }
 
-        m_packet.timestampMs = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        SABER_METRIC_INTERVAL(Diagnostics::Metric::BusInterval);
+        SABER_METRIC_COUNT(Diagnostics::Counter::BusCycles);
+        {
+            SABER_METRIC_SCOPE(Diagnostics::Metric::BusCycle);
 
-        applyStagedMotion();
-        computeInertialOverload();
-        drainInputQueue();
+            m_packet.timestampMs = static_cast<uint32_t>(esp_timer_get_time() / 1000);
 
-        m_effectsChanged = false;
-        std::vector<InertialEffect*> activeEffects;
-        activeEffects.reserve(m_effects.size());
-        for (const auto& fx : m_effects) {
-            activeEffects.push_back(fx.get());
-        }
-
-        for (auto* effect : activeEffects) {
-            if (m_effectsChanged) {
-                break;
+            applyStagedMotion();
+            if (m_packet.motionTimestampUs != 0) {
+                SABER_METRIC_DURATION(
+                    Diagnostics::Metric::MotionAge,
+                    static_cast<uint32_t>(esp_timer_get_time() - m_packet.motionTimestampUs));
             }
-            if (effect->test(m_packet)) {
-                effect->run();
-            }
-        }
+            computeInertialOverload();
+            drainInputQueue();
 
-        m_effectsPendingDestruction.clear();
-        m_packet.inputs = {};
+            m_effectsChanged = false;
+            // Warning: run() may replace the effects; check m_effectsChanged before indexing again.
+            for (size_t i = 0; i < m_effects.size() && !m_effectsChanged; ++i) {
+                InertialEffect* effect = m_effects[i].get();
+                if (effect->test(m_packet)) {
+                    effect->run();
+                }
+            }
+
+            m_effectsPendingDestruction.clear();
+            m_packet.inputs = {};
+        }
     }
 
     ESP_LOGI(TAG, "Bus task exiting");
@@ -177,6 +197,7 @@ void SaberActionBus::drainInputQueue() {
 
     if (const uint32_t dropped = m_droppedInputEvents.exchange(0, std::memory_order_relaxed);
         dropped > 0) {
+        SABER_METRIC_ADD(Diagnostics::Counter::InputEventsDropped, dropped);
         ESP_LOGW(TAG, "Input queue full: dropped %lu event(s)",
                  static_cast<unsigned long>(dropped));
     }
@@ -190,6 +211,7 @@ void SaberActionBus::loadStagedMotionToPacket() {
     m_packet.kineticEnergy = sample.kineticEnergyG;
     m_packet.axisRotation = sample.axisRotationDps;
     m_packet.orientation = sample.orientationDeg;
+    m_packet.motionTimestampUs = sample.timestampUs;
 }
 
 void SaberActionBus::filterStagedMotionWarmUp() {
@@ -279,6 +301,7 @@ void SaberActionBus::evaluateInertialBurst() {
     m_packet.inertialBurst = false;
     if (m_overloadLevel >= 1.0f) {
         m_packet.inertialBurst = true;
+        SABER_METRIC_COUNT(Diagnostics::Counter::InertialBursts);
         m_lastBurstTimeMs = m_packet.timestampMs;
         m_overloadLevel = 0.0f;
     }

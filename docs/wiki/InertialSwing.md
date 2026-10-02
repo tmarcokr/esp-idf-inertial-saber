@@ -68,7 +68,7 @@ To avoid saturating the ESP32's I2C/SD bus, only one pair of files (`swingL/H`) 
 
 ## 5. Mixer Integration (Final Formulas)
 
-For implementation on the ESP32, the volume of each channel is calculated in each frame (800Hz) following this order of precedence:
+For implementation on the ESP32, the volume of each channel is calculated in each bus cycle (about 155 Hz on average, measured on the reference board, debug build) following this order of precedence:
 
 ### 5.1. Master Swing Volume Calculation
 Determines the global presence of the movement sound based on total inertia.

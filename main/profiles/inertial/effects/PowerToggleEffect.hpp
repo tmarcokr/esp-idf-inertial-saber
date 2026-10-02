@@ -17,8 +17,8 @@ namespace InertialSaber::Effects {
 class InertialSwingEffect;
 class InertialLightEffect;
 } // namespace InertialSaber::Effects
-namespace Espressif::Wrappers::Audio {
-class AudioEngine;
+namespace InertialSaber::System {
+class AudioController;
 }
 namespace Espressif::Wrappers::SmartLed {
 class Engine;
@@ -32,7 +32,7 @@ namespace InertialSaber::Effects {
 class PowerToggleEffect final : public Core::InertialEffect {
 public:
     PowerToggleEffect(Profiles::PowerStateMachine& power, InertialSwingEffect& swing,
-                      InertialLightEffect& light, Espressif::Wrappers::Audio::AudioEngine& audio,
+                      InertialLightEffect& light, System::AudioController& audio,
                       Espressif::Wrappers::SmartLed::Engine& ledEngine,
                       const Profiles::Inertial::InertialDefinition& definition,
                       const Profiles::SoundFont& font, uint8_t buttonId);
@@ -49,7 +49,7 @@ private:
     Profiles::PowerStateMachine& m_power;
     InertialSwingEffect& m_swing;
     InertialLightEffect& m_light;
-    Espressif::Wrappers::Audio::AudioEngine& m_audio;
+    System::AudioController& m_audio;
     Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
     const Profiles::Inertial::InertialDefinition& m_def;
     const Profiles::SoundFont& m_font;

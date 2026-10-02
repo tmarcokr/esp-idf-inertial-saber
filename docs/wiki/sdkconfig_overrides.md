@@ -5,6 +5,9 @@ This document tracks all non-default `sdkconfig` modifications required by Inert
 > [!IMPORTANT]
 > After any `idf.py set-target` or `idf.py fullclean`, verify that all overrides listed here are present in the active `sdkconfig`. If using `sdkconfig.defaults`, they will be applied automatically.
 
+> [!NOTE]
+> **Existing local `sdkconfig` files (ESP-IDF 6.1).** ESP-IDF 6.1 marks every option that still holds its Kconfig default with a `# default:` line in `sdkconfig`. On the next build, options marked this way pick up the new value from `sdkconfig.defaults`. Options without the marker (set by hand or through `menuconfig`) keep their local value. This is how `CONFIG_FREERTOS_HZ` (§8) and `CONFIG_ESP_MAIN_TASK_STACK_SIZE` (§9) reached existing local `sdkconfig` files without a manual edit. If a local `sdkconfig` has a customised value for one of these keys, set the value listed here by hand (or with `idf.py menuconfig`).
+
 ---
 
 ## Override Log
@@ -100,6 +103,7 @@ The existing overrides (§1 FAT LFN, §2 PSRAM) still exist in v6.1 and apply un
 | `CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240` | `not set` (160 MHz) | `y` (240 MHz) | 2026-09-26 |
 | `CONFIG_LOG_DEFAULT_LEVEL_WARN` | `not set` (INFO) | `y` | 2026-09-26 |
 | `CONFIG_SABER_PARSER_SELF_TEST` | `y` (see §5) | `not set` | 2026-09-26 |
+| `CONFIG_SABER_METRICS` | `not set` (see §7; `y` until 2026-10-02) | `not set` (explicit) | 2026-09-27 |
 
 **Reason**: `sdkconfig.defaults.release` is an **optional overlay**, not part of the default build. It is layered on top of `sdkconfig.defaults` (and the target-specific `sdkconfig.defaults.esp32s3`, appended automatically) only when explicitly requested:
 
@@ -113,8 +117,79 @@ idf.py -B build_release -D IDF_TARGET=esp32s3 -D SDKCONFIG=build_release/sdkconf
 3. **240 MHz CPU** — raises the default 160 MHz clock for maximum headroom in release builds.
 4. **`LOG_DEFAULT_LEVEL_WARN`** — several components log at `INFO` on every play/stop event in real-time audio/visual paths; `WARN` avoids that overhead in release builds. Switch back to `INFO` if boot/profile-load messages are needed for field debugging.
 5. **Parser self-test disabled** — see §5; skipped in release builds to shorten boot time.
+6. **Metrics disabled** — see §7; the instrumentation compiles to nothing and `CONFIG_HEAP_USE_HOOKS` is no longer selected. Since 2026-10-02 this matches the Kconfig default; the overlay keeps the entry explicitly.
 
 > [!NOTE]
 > This overlay is opt-in via the build command above; it never affects the default `idf.py build` invocation or the standard `sdkconfig`.
+
+---
+
+### 7. Project Kconfig: Real-Time Metrics
+
+| Key | Default | Override | Since |
+|---|---|---|---|
+| `CONFIG_SABER_METRICS` | _(new option)_ | `y` | 2026-09-27 |
+| `CONFIG_SABER_METRICS` | `y` | `not set` (Kconfig `default n`; opt-in) | 2026-10-02 |
+| `CONFIG_HEAP_USE_HOOKS` | `not set` | `y` (selected by `CONFIG_SABER_METRICS`, metrics builds only) | 2026-09-27 |
+
+**Reason**: `CONFIG_SABER_METRICS` (menu "InertialSaber" in `main/Kconfig.projbuild`) enables the on-device metrics described in [Diagnostics](Diagnostics.md). It records bus cycle and effect `run()` timings, loop and IMU rates, event counters, heap allocations per CPU core, free heap and task stack high-water marks, and writes them to `/sdcard/metrics/session_NNN.csv` while the saber is retracted. The option defaulted to `y` until 2026-10-02. It now defaults to `n` (`default n` in `main/Kconfig.projbuild`), so metrics are opt-in and the default development build no longer produces the CSV. For a board test: enable the option with `idf.py menuconfig` → *InertialSaber* → *Record real-time metrics and write them to /sdcard/metrics*, flash, run the test, collect the CSV files, then disable the option again and rebuild.
+
+`CONFIG_SABER_METRICS` uses `select HEAP_USE_HOOKS`, so one switch controls both options. `CONFIG_HEAP_USE_HOOKS` makes the heap call `esp_heap_trace_alloc_hook()` on every allocation. The project defines this hook in `main/system/metrics/MetricsAllocHook.cpp` (compiled only when both options are set) to count allocations per CPU core. No `sdkconfig.defaults*` entry is needed for `CONFIG_HEAP_USE_HOOKS`.
+
+**Cost** (metrics builds only): about +11.4 KB flash, +0.8 KB internal RAM (`.bss`), a 4 KB reporter task stack and about 10 KB of PSRAM buffers.
+
+The release overlay (§6) still disables the option explicitly (`# CONFIG_SABER_METRICS is not set`). All `SABER_METRIC_*` macros then compile to nothing and `CONFIG_HEAP_USE_HOOKS` returns to its default (`not set`). Check that no metrics code is left in the image with:
+
+```bash
+nm build_release/esp-idf-inertial-saber.elf | grep -c InertialSaber11Diagnostics   # 0 when metrics are off
+```
+
+> [!NOTE]
+> This is a project-defined option. When it was added as a new symbol, its default applied to an existing local `sdkconfig` on the next build without a manual edit.
+
+> [!IMPORTANT]
+> **Default change on 2026-10-02 (ESP-IDF 6.1).** A local `sdkconfig` created while the default was `y` keeps `CONFIG_SABER_METRICS=y` through its `# default:` value tracking. Run `idf.py refresh-config --policy kconfig` once, or switch the option off in `idf.py menuconfig`.
+
+---
+
+### 8. FreeRTOS Tick Rate
+
+| Key | Default | Override | Since |
+|---|---|---|---|
+| `CONFIG_FREERTOS_HZ` | `100` | `1000` | 2026-09-27 |
+
+**Reason**: At 100 Hz every FreeRTOS timeout and delay is rounded to 10 ms ticks. At 1000 Hz they have 1 ms granularity:
+1. **Bus fallback timeout** — the bus waits for a notification with a 10 ms timeout. At 100 Hz this became anything from 0 to 10 ms; it is now an exact 10 ms.
+2. **IMU poll** — the IMU task's 20 ms poll timeout is now exact.
+3. **PSRAM loader** — the loader's 10 ms close-wait poll is now exact.
+4. **Short component delays** — `pdMS_TO_TICKS(x)` with `x < 10` no longer rounds to 0. For example, the 2 ms delay in `Mpu6050::resetFifo()` was a plain yield and is now a real 2 ms wait.
+5. **Log timestamps** have 1 ms resolution.
+
+The bus packet timestamps no longer depend on the tick: they come from `esp_timer` (see [SaberAction](SaberAction.md) §2.1).
+
+**Cost**: one tick interrupt per millisecond per core, about 0.3–0.5 % CPU, and finer time slicing between ready tasks of equal priority. 1000 Hz is the highest rate ESP-IDF supports.
+
+This entry also closes the earlier gap where the tick rate had no entry in this registry.
+
+> [!NOTE]
+> Placed in `sdkconfig.defaults` (all targets). The metrics boot block records the active value as `0,meta,tick_rate` (see [Diagnostics](Diagnostics.md)).
+
+---
+
+### 9. Main Task Stack
+
+| Key | Default | Override | Since |
+|---|---|---|---|
+| `CONFIG_ESP_MAIN_TASK_STACK_SIZE` | `3584` | `6144` | 2026-09-27 |
+
+**Reason**: The main task runs the whole boot sequence: the profile parser self-test (§5), the SD profile scan, cJSON parsing, `std::string` work and the first profile load. A `-fstack-usage` estimate puts this path at about 3.6–4.3 KB against the 4 KB it had (3584 + 512). With the new value the real stack is 6656 B, because ESP-IDF adds `TASK_EXTRA_STACK_SIZE` (512 B) to the configured size.
+
+**Cost**: boot only. `app_main` returns after start-up and the main task is deleted, which frees its stack.
+
+> [!NOTE]
+> **Confirmed on the board (2026-10-02).** The metrics boot block records the minimum free stack of the main task as `0,task,main,stack_free_min`. The board test measured 3356 B on each of 3 boots, against a 6656 B task stack: about 3.3 KB of headroom. The value stays at 6144 for now. A reduction to about 4.6 KB is possible and is tracked separately.
+
+> [!NOTE]
+> Placed in `sdkconfig.defaults` (all targets).
 
 ---

@@ -1,6 +1,7 @@
 #include "PowerToggleEffect.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "profiles/PowerStateMachine.hpp"
-#include "AudioEngine.hpp"
+#include "system/audio/AudioController.hpp"
 #include "AudioLevels.hpp"
 #include "overlays/BladeIgniteSweep.hpp"
 #include "overlays/BladeRetractSweep.hpp"
@@ -16,7 +17,6 @@
 
 #include <cinttypes>
 #include <memory>
-#include <string>
 
 namespace InertialSaber::Effects {
 
@@ -29,8 +29,7 @@ static uint32_t nowMs() {
 
 PowerToggleEffect::PowerToggleEffect(
     Profiles::PowerStateMachine& power, InertialSwingEffect& swing, InertialLightEffect& light,
-    Espressif::Wrappers::Audio::AudioEngine& audio,
-    Espressif::Wrappers::SmartLed::Engine& ledEngine,
+    System::AudioController& audio, Espressif::Wrappers::SmartLed::Engine& ledEngine,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
     const Profiles::SoundFont& font, uint8_t buttonId)
     : InertialEffect(1)
@@ -72,6 +71,7 @@ bool PowerToggleEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void PowerToggleEffect::run() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::RunPowerToggle);
     using State = Profiles::PowerStateMachine::State;
     switch (m_power.state()) {
     case State::Retracted:
@@ -103,11 +103,12 @@ void PowerToggleEffect::run() {
 }
 
 void PowerToggleEffect::beginIgnition() {
-    const std::string path = m_font.randomPath(Profiles::FontCategory::Ignition);
+    const System::AudioPath path = m_font.randomPath(Profiles::FontCategory::Ignition);
 
-    m_audio.play(path, false, kFullVolume);
+    m_audio.playOneShot(path, kFullVolume);
     if (!m_ledEngine.pushOverlay(std::make_unique<BladeIgniteSweep>(
             m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.ignitionDurationMs))) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::OverlaysDropped);
         ESP_LOGW(TAG, "Ignition overlay dropped: no free overlay slot");
     }
 
@@ -130,7 +131,7 @@ void PowerToggleEffect::tickIgnition() {
 
     if (elapsed >= m_def.ignitionDurationMs) {
         m_power.handle(Profiles::PowerStateMachine::Event::IgnitionElapsed);
-        ESP_LOGI(TAG, "Saber ON");
+        ESP_LOGD(TAG, "Saber ON");
     }
 }
 
@@ -138,11 +139,12 @@ void PowerToggleEffect::beginRetraction() {
     m_swing.deactivate();
     m_light.deactivate();
 
-    const std::string path = m_font.randomPath(Profiles::FontCategory::Retraction);
+    const System::AudioPath path = m_font.randomPath(Profiles::FontCategory::Retraction);
 
-    m_audio.play(path, false, kRetractionVolume);
+    m_audio.playOneShot(path, kRetractionVolume);
     if (!m_ledEngine.pushOverlay(std::make_unique<BladeRetractSweep>(
             m_ledEngine.numLeds(), m_def.bladeBaseHue, m_def.retractionDurationMs))) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::OverlaysDropped);
         ESP_LOGW(TAG, "Retraction overlay dropped: no free overlay slot");
     }
 
@@ -156,7 +158,7 @@ void PowerToggleEffect::beginRetraction() {
 void PowerToggleEffect::tickRetraction() {
     if ((nowMs() - m_sequenceStartMs) >= m_def.retractionDurationMs) {
         m_power.handle(Profiles::PowerStateMachine::Event::RetractionElapsed);
-        ESP_LOGI(TAG, "Saber OFF");
+        ESP_LOGD(TAG, "Saber OFF");
     }
 }
 

@@ -13,8 +13,8 @@ struct InertialDefinition;
 namespace InertialSaber::Core {
 struct SaberDataPacket;
 }
-namespace Espressif::Wrappers::Audio {
-class AudioEngine;
+namespace InertialSaber::System {
+class AudioController;
 }
 namespace Espressif::Wrappers::SmartLed {
 class Engine;
@@ -27,8 +27,7 @@ namespace InertialSaber::Effects {
  */
 class BlasterEffect final : public Core::InertialEffect {
 public:
-    BlasterEffect(const Profiles::PowerStateMachine& power,
-                  Espressif::Wrappers::Audio::AudioEngine& audio,
+    BlasterEffect(const Profiles::PowerStateMachine& power, System::AudioController& audio,
                   Espressif::Wrappers::SmartLed::Engine& ledEngine,
                   const Profiles::Inertial::InertialDefinition& definition,
                   const Profiles::SoundFont& font, uint8_t buttonId);
@@ -38,7 +37,7 @@ public:
 
 private:
     const Profiles::PowerStateMachine& m_power;
-    Espressif::Wrappers::Audio::AudioEngine& m_audio;
+    System::AudioController& m_audio;
     Espressif::Wrappers::SmartLed::Engine& m_ledEngine;
     const Profiles::Inertial::InertialDefinition& m_def;
     const Profiles::SoundFont& m_font;

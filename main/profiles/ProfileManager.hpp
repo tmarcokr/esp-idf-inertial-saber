@@ -2,6 +2,7 @@
 
 #include "profiles/ConfigurableProfile.hpp"
 #include "profiles/SaberServices.hpp"
+#include "system/persistence/ActiveProfileStore.hpp"
 #include "esp_err.h"
 #include <vector>
 #include <memory>
@@ -13,7 +14,13 @@ namespace InertialSaber::Profiles {
  */
 class ProfileManager {
 public:
-    explicit ProfileManager(const SaberServices& services) : m_services(services) {}
+    /**
+     * @param services Services wired into every loaded profile.
+     * @param store Persistence of the active profile index.
+     */
+    ProfileManager(const SaberServices& services, System::ActiveProfileStore& store)
+        : m_services(services)
+        , m_store(store) {}
     ~ProfileManager() = default;
 
     ProfileManager(const ProfileManager&) = delete;
@@ -37,9 +44,10 @@ public:
     void next();
 
 private:
-    void saveActiveIndex();
+    void logActiveProfile() const;
 
     const SaberServices& m_services;
+    System::ActiveProfileStore& m_store;
     std::vector<std::unique_ptr<ConfigurableProfile>> m_profiles;
     size_t m_activeIndex = 0;
 };

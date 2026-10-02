@@ -2,8 +2,8 @@
 
 #include "core/SaberActionBus.hpp"
 #include "system/PsramAudioCache.hpp"
+#include "system/audio/AudioController.hpp"
 #include "system/status/StatusIndicator.hpp"
-#include "AudioEngine.hpp"
 #include "Engine.hpp"
 
 namespace InertialSaber::Profiles {
@@ -13,7 +13,7 @@ namespace InertialSaber::Profiles {
  */
 struct SaberServices {
     Core::SaberActionBus& bus;
-    Espressif::Wrappers::Audio::AudioEngine& audio;
+    System::AudioController& audioControl;
     Espressif::Wrappers::SmartLed::Engine& blade;
     System::PsramAudioCache& audioCache;
     System::Status::StatusIndicator& status;

@@ -1,6 +1,8 @@
 #include "ImuAdapter.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "system/hardware/HardwareConfig.hpp"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "driver/gpio.h"
 #include <cmath>
 #include <numbers>
@@ -9,7 +11,7 @@ namespace InertialSaber::System::Adapters {
 
 static constexpr const char* TAG = "ImuAdapter";
 static constexpr float kRadToDeg = 180.0f / std::numbers::pi_v<float>;
-static constexpr uint32_t kTaskStackSize = 4096;
+static constexpr const Hardware::TaskSpec& kTask = Hardware::TaskTable::kImuAdapter;
 static constexpr uint32_t kStartupDelayMs = 100;
 static constexpr uint32_t kPollTimeoutMs = 20;
 
@@ -29,15 +31,14 @@ ImuAdapter::~ImuAdapter() {
 }
 
 esp_err_t ImuAdapter::start() {
-    BaseType_t result =
-        xTaskCreatePinnedToCore(imuAdapterTask, "imu_adapter", kTaskStackSize, this,
-                                Hardware::HardwareConfig::kImuAdapterPriority, &m_imuTaskHandle,
-                                Hardware::HardwareConfig::kImuAdapterCore);
+    BaseType_t result = xTaskCreatePinnedToCore(imuAdapterTask, kTask.name, kTask.stackSize, this,
+                                                kTask.priority, &m_imuTaskHandle, kTask.core);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "IMU adapter task creation failed");
         return ESP_FAIL;
     }
+    SABER_METRIC_REGISTER_TASK(Diagnostics::TaskId::Imu, m_imuTaskHandle);
 
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << m_interruptPin),
@@ -91,10 +92,16 @@ void ImuAdapter::imuLoop() {
     vTaskDelay(pdMS_TO_TICKS(kStartupDelayMs));
 
     while (true) {
-        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kPollTimeoutMs));
+        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(kPollTimeoutMs)) == 0) {
+            SABER_METRIC_COUNT(Diagnostics::Counter::ImuPollTimeouts);
+        }
 
-        auto data = m_imu.readData();
-        if (data) {
+        auto data = readMotion();
+        if (!data) {
+            SABER_METRIC_COUNT(Diagnostics::Counter::ImuEmptyReads);
+        } else {
+            const int64_t sampleTimeUs = esp_timer_get_time();
+            SABER_METRIC_COUNT(Diagnostics::Counter::ImuSamples);
             auto linAccel = data->getLinearAcceleration();
             float energy = std::sqrt(linAccel.x * linAccel.x + linAccel.y * linAccel.y +
                                      linAccel.z * linAccel.z);
@@ -108,11 +115,17 @@ void ImuAdapter::imuLoop() {
                                     static_cast<float>(data->gyro_y),
                                     static_cast<float>(data->gyro_z)},
                 .orientationDeg = orientation,
+                .timestampUs = sampleTimeUs,
             };
 
             m_bus.updateMotion(sample);
         }
     }
+}
+
+std::optional<Espressif::Wrappers::Sensors::MotionData> ImuAdapter::readMotion() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::ImuRead);
+    return m_imu.readData();
 }
 
 } // namespace InertialSaber::System::Adapters

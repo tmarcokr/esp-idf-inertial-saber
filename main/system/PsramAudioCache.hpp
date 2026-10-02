@@ -1,6 +1,8 @@
 #pragma once
 
 #include "system/MemoryVfs.hpp"
+#include "system/audio/AudioPath.hpp"
+#include "system/hardware/HardwareConfig.hpp"
 #include "profiles/SoundFont.hpp"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
@@ -26,7 +28,9 @@ public:
     /** @brief Swing pairs that fit in the default /mem file table next to hum.wav. */
     static constexpr uint8_t kMaxSwingPairs = (kDefaultMaxFiles - 1) / 2;
 
-    explicit PsramAudioCache(uint8_t maxFiles = kDefaultMaxFiles, uint8_t maxFds = 8);
+    /** @param task Creation parameters of the loader task. */
+    explicit PsramAudioCache(const Hardware::TaskSpec& task, uint8_t maxFiles = kDefaultMaxFiles,
+                             uint8_t maxFds = 8);
     ~PsramAudioCache();
 
     PsramAudioCache(const PsramAudioCache&) = delete;
@@ -43,11 +47,11 @@ public:
     [[nodiscard]] uint8_t loadedSwingPairCount() const;
 
     /** @brief /mem path of the hum file. */
-    [[nodiscard]] static std::string humPath();
+    [[nodiscard]] static AudioPath humPath();
     /** @brief /mem path of the low swing of the 1-based @p pairIndex. */
-    [[nodiscard]] static std::string swingLowPath(uint8_t pairIndex);
+    [[nodiscard]] static AudioPath swingLowPath(uint8_t pairIndex);
     /** @brief /mem path of the high swing of the 1-based @p pairIndex. */
-    [[nodiscard]] static std::string swingHighPath(uint8_t pairIndex);
+    [[nodiscard]] static AudioPath swingHighPath(uint8_t pairIndex);
 
 private:
     struct PreloadJob {
@@ -59,9 +63,6 @@ private:
     static constexpr uint32_t kCloseWaitMs = 200;
     static constexpr uint32_t kClosePollMs = 10;
     static constexpr size_t kPsramHeadroomBytes = 256 * 1024;
-    static constexpr uint32_t kLoaderStackSize = 4096;
-    static constexpr UBaseType_t kLoaderPriority = 2;
-    static constexpr BaseType_t kLoaderCore = 1;
 
     static void loaderTaskFn(void* pvParameters);
     [[noreturn]] void loaderLoop();
@@ -70,11 +71,12 @@ private:
     [[nodiscard]] bool isSuperseded(uint32_t generation) const;
     void waitForDescriptorsClosed();
 
-    [[nodiscard]] esp_err_t loadFile(const std::string& sdPath, const std::string& vfsName);
+    [[nodiscard]] esp_err_t loadFile(const AudioPath& sdPath, const std::string& vfsName);
     void unloadFile(const std::string& vfsName);
     void releaseFile(const std::string& vfsName);
     void unloadAll();
 
+    const Hardware::TaskSpec m_taskSpec;
     Espressif::Wrappers::MemoryVfs m_vfs;
     TaskHandle_t m_loaderTask = nullptr;
 

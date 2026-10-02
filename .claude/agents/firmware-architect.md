@@ -19,7 +19,7 @@ You are the firmware architect of InertialSaber OS. The `esp32-expert` skill is 
 - Read-only on source code. The only file you may write is the plan: `.claude/docs/plans/<short_name>.md`.
 - `components/**` cannot be modified; design around their public API.
 - Reuse existing patterns before proposing new ones (look at how comparable effects/overlays are built and registered).
-- Identify real-time risks: work on the 800 Hz bus path, blocking I/O in audio/LED paths, task priorities and stacks, PSRAM vs internal RAM.
+- Identify real-time risks: work on the IMU-driven bus path, blocking I/O in audio/LED paths, task priorities and stacks, PSRAM vs internal RAM.
 - Flag any pin/peripheral assignment so the orchestrator can route it to `hardware-reviewer`.
 
 ## Plan Structure

@@ -1,5 +1,6 @@
 #include "SaberSystem.hpp"
 #include "profiles/ProfileParser.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "esp_log.h"
 #include "sdkconfig.h"
 
@@ -8,6 +9,10 @@ namespace InertialSaber::System {
 static constexpr const char* TAG = "SaberSystem";
 
 using Status::SystemStatus;
+
+SaberSystem::~SaberSystem() {
+    m_bus.stop();
+}
 
 esp_err_t SaberSystem::start() {
     ESP_LOGD(TAG, "sizeof(SaberSystem) = %u", static_cast<unsigned>(sizeof(SaberSystem)));
@@ -65,6 +70,8 @@ esp_err_t SaberSystem::internalStart() {
     }
     ESP_LOGI(TAG, "Button ready (GPIO %d)", static_cast<int>(Board::kPins.mainButton));
 
+    if ((err = m_profileStore.start()) != ESP_OK) return err;
+
     ESP_LOGI(TAG, "Loading Profiles...");
     if ((err = m_profiles.init()) != ESP_OK) {
         ESP_LOGE(TAG, "No usable profile: action bus not started, ignition disabled");
@@ -77,6 +84,13 @@ esp_err_t SaberSystem::internalStart() {
         ESP_LOGE(TAG, "Bus start failed");
         return err;
     }
+
+    SABER_METRIC_RECORD_BOOT();
+#if CONFIG_SABER_METRICS
+    if (const esp_err_t metricsErr = m_metricsReporter.start(); metricsErr != ESP_OK) {
+        ESP_LOGW(TAG, "Metrics reporter unavailable: %s", esp_err_to_name(metricsErr));
+    }
+#endif
 
     ESP_LOGI(TAG, "InertialSaber OS active — all systems nominal");
     return ESP_OK;
@@ -94,8 +108,16 @@ esp_err_t SaberSystem::bringUpAudio() {
         ESP_LOGE(TAG, "AudioEngine start failed: %s", esp_err_to_name(err));
         return err;
     }
+    esp_log_level_set("AudioEngine", ESP_LOG_WARN);
+    esp_log_level_set("AudioChannel", ESP_LOG_WARN);
 
     m_audio.setGlobalVolume(Hardware::HardwareConfig::kAudioGlobalVolume);
+
+    err = m_audioControl.start();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Audio controller start failed: %s", esp_err_to_name(err));
+        return err;
+    }
 
     ESP_LOGI(TAG, "Audio Engine ready (9 channels, 44.1kHz)");
     return ESP_OK;
@@ -110,7 +132,8 @@ esp_err_t SaberSystem::bringUpBlade() {
 
     m_blade.setGlobalBrightness(Hardware::HardwareConfig::kBladeBrightness);
     m_blade.setTargetFps(Hardware::HardwareConfig::kBladeTargetFps);
-    m_blade.start();
+    m_blade.start(Hardware::TaskTable::kSmartLed.priority,
+                  Hardware::TaskTable::kSmartLed.stackSize);
 
     ESP_LOGI(TAG, "SmartLed Engine ready (%d LEDs on GPIO %d)", Hardware::HardwareConfig::kNumLeds,
              static_cast<int>(Board::kPins.bladeData));

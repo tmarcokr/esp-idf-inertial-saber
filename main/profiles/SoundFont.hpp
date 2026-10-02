@@ -1,7 +1,9 @@
 #pragma once
 
 #include "profiles/inertial/InertialDefinition.hpp"
+#include "system/audio/AudioPath.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -19,6 +21,9 @@ enum class FontCategory : uint8_t { Ignition, Retraction, Blaster, Clash, Drag, 
  */
 class SoundFont {
 public:
+    /** @brief Longest normalized root that keeps every font path within System::AudioPath. */
+    static constexpr size_t kMaxRootLength = 96;
+
     SoundFont(std::string_view rootPath, const Inertial::FontCounts& counts);
 
     /** @brief Returns the root without leading '/' and with exactly one trailing '/' ("" for an empty root). */
@@ -31,15 +36,15 @@ public:
     [[nodiscard]] uint8_t swingPairCount() const;
 
     /** @brief Absolute SD path of the file with the 1-based @p index in @p category. */
-    [[nodiscard]] std::string pathFor(FontCategory category, uint8_t index) const;
+    [[nodiscard]] System::AudioPath pathFor(FontCategory category, uint8_t index) const;
 
     /** @brief Absolute SD path of a uniformly random file in @p category (index 1 when the count is 0). */
-    [[nodiscard]] std::string randomPath(FontCategory category) const;
+    [[nodiscard]] System::AudioPath randomPath(FontCategory category) const;
 
-    [[nodiscard]] std::string humPath() const;
-    [[nodiscard]] std::string selectionPath() const;
-    [[nodiscard]] std::string swingLowPath(uint8_t pairIndex) const;
-    [[nodiscard]] std::string swingHighPath(uint8_t pairIndex) const;
+    [[nodiscard]] System::AudioPath humPath() const;
+    [[nodiscard]] System::AudioPath selectionPath() const;
+    [[nodiscard]] System::AudioPath swingLowPath(uint8_t pairIndex) const;
+    [[nodiscard]] System::AudioPath swingHighPath(uint8_t pairIndex) const;
 
 private:
     std::string m_root;

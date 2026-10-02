@@ -1,5 +1,6 @@
 #include "system/PsramAudioCache.hpp"
 #include "system/Raii.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include <algorithm>
@@ -16,23 +17,30 @@ namespace {
 using Espressif::Wrappers::MemoryFile;
 
 constexpr std::string_view kHumName = "hum.wav";
+constexpr std::string_view kSwingLowPrefix = "swingl";
+constexpr std::string_view kSwingHighPrefix = "swingh";
 
 std::string swingLowName(uint8_t pairIndex) {
-    return "swingl" + std::to_string(pairIndex) + ".wav";
+    return std::string(kSwingLowPrefix) + std::to_string(pairIndex) + ".wav";
 }
 
 std::string swingHighName(uint8_t pairIndex) {
-    return "swingh" + std::to_string(pairIndex) + ".wav";
+    return std::string(kSwingHighPrefix) + std::to_string(pairIndex) + ".wav";
 }
 
-std::string mountedPath(std::string_view name) {
-    return std::string(PsramAudioCache::kMountPoint).append("/").append(name);
+AudioPath mountedPath(std::string_view prefix, uint8_t pairIndex) {
+    return AudioPath(PsramAudioCache::kMountPoint)
+        .append("/")
+        .append(prefix)
+        .appendNumber(pairIndex)
+        .append(".wav");
 }
 
 } // namespace
 
-PsramAudioCache::PsramAudioCache(uint8_t maxFiles, uint8_t maxFds)
-    : m_vfs(kMountPoint, maxFiles, maxFds) {
+PsramAudioCache::PsramAudioCache(const Hardware::TaskSpec& task, uint8_t maxFiles, uint8_t maxFds)
+    : m_taskSpec(task)
+    , m_vfs(kMountPoint, maxFiles, maxFds) {
     m_registeredNames.reserve(maxFiles);
 }
 
@@ -47,12 +55,13 @@ esp_err_t PsramAudioCache::init() {
     esp_err_t err = m_vfs.init();
     if (err != ESP_OK) return err;
 
-    BaseType_t ret =
-        xTaskCreatePinnedToCore(&PsramAudioCache::loaderTaskFn, "psram_loader", kLoaderStackSize,
-                                this, kLoaderPriority, &m_loaderTask, kLoaderCore);
+    BaseType_t ret = xTaskCreatePinnedToCore(&PsramAudioCache::loaderTaskFn, m_taskSpec.name,
+                                             m_taskSpec.stackSize, this, m_taskSpec.priority,
+                                             &m_loaderTask, m_taskSpec.core);
     if (ret != pdPASS) {
         return ESP_ERR_NO_MEM;
     }
+    SABER_METRIC_REGISTER_TASK(Diagnostics::TaskId::PsramLoader, m_loaderTask);
 
     return ESP_OK;
 }
@@ -86,16 +95,16 @@ uint8_t PsramAudioCache::loadedSwingPairCount() const {
     return m_loadedSwingPairs.load(std::memory_order_acquire);
 }
 
-std::string PsramAudioCache::humPath() {
-    return mountedPath(kHumName);
+AudioPath PsramAudioCache::humPath() {
+    return AudioPath(kMountPoint).append("/").append(kHumName);
 }
 
-std::string PsramAudioCache::swingLowPath(uint8_t pairIndex) {
-    return mountedPath(swingLowName(pairIndex));
+AudioPath PsramAudioCache::swingLowPath(uint8_t pairIndex) {
+    return mountedPath(kSwingLowPrefix, pairIndex);
 }
 
-std::string PsramAudioCache::swingHighPath(uint8_t pairIndex) {
-    return mountedPath(swingHighName(pairIndex));
+AudioPath PsramAudioCache::swingHighPath(uint8_t pairIndex) {
+    return mountedPath(kSwingHighPrefix, pairIndex);
 }
 
 void PsramAudioCache::loaderTaskFn(void* pvParameters) {
@@ -198,8 +207,14 @@ void PsramAudioCache::runPreload(const PreloadJob& job) {
              heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
 }
 
-esp_err_t PsramAudioCache::loadFile(const std::string& sdPath, const std::string& vfsName) {
+esp_err_t PsramAudioCache::loadFile(const AudioPath& sdPath, const std::string& vfsName) {
     configASSERT(xTaskGetCurrentTaskHandle() == m_loaderTask);
+
+    if (!sdPath.ok()) {
+        ESP_LOGE(TAG, "Source path of '%s' exceeds %u characters", vfsName.c_str(),
+                 static_cast<unsigned>(AudioPath::kMaxLength));
+        return ESP_ERR_INVALID_SIZE;
+    }
 
     UniqueFile source = openFile(sdPath.c_str(), "rb");
     if (!source) {

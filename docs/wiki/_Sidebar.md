@@ -11,5 +11,7 @@
     *   [Inertial Overload Accumulator](InertialOverload)
     *   [Kinetic Effects](KineticEffects)
     *   [Kinetic Gestures](KineticGestures)
+*   **Diagnostics:**
+    *   [On-Device Metrics](Diagnostics)
 *   **Roadmap:**
     *   [InertialHaptics Engine (Future)](InertialHaptics)

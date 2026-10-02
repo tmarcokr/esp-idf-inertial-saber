@@ -7,6 +7,8 @@
 #include "freertos/task.h"
 #include "esp_err.h"
 
+#include <optional>
+
 namespace InertialSaber::System::Adapters {
 
 class ImuAdapter {
@@ -30,6 +32,7 @@ private:
     static void IRAM_ATTR imuIsrHandler(void* arg);
     static void imuAdapterTask(void* arg);
     void imuLoop();
+    std::optional<Espressif::Wrappers::Sensors::MotionData> readMotion();
 };
 
 } // namespace InertialSaber::System::Adapters

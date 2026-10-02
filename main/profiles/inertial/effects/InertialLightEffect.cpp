@@ -1,4 +1,5 @@
 #include "InertialLightEffect.hpp"
+#include "diagnostics/Metrics.hpp"
 
 #include "SmartLedTypes.hpp"
 #include "effects/Flash.hpp"
@@ -70,6 +71,7 @@ bool InertialLightEffect::test(const Core::SaberDataPacket& packet) {
 }
 
 void InertialLightEffect::run() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::RunLight);
     if (!m_bladeEffect) return;
 
     updateBreathPhase();
@@ -133,6 +135,7 @@ void InertialLightEffect::triggerPlasmaRuptureOverlay() {
     Color burstColor = hsvToRgb(burstHue, 255, 255);
     if (!m_ledEngine.pushOverlay(
             std::make_unique<Flash>(burstColor, m_def.lightBurstDurationMs, 0, 1))) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::OverlaysDropped);
         ESP_LOGW(TAG, "Plasma Rupture overlay dropped: no free overlay slot");
     }
 }

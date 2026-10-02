@@ -23,7 +23,7 @@ The visual core. Working in HSB (Hue, Saturation, Brightness) space, it simulate
 The "Inertia Tank". A physics-driven accumulator that tracks sustained movement intensity. Once fully charged, it triggers high-priority **Inertial Bursts**, creating a bridge between continuous motion and explosive climax events.
 
 ### 4. [SaberAction System (The Action Bus)](./docs/wiki/SaberAction.md)
-The asynchronous event dispatcher. It processes sensor data at high frequency (~800Hz) and evaluates active `InertialEffects` (impacts, thrusts, etc.) based on prioritized physical triggers.
+The asynchronous event dispatcher. It wakes on every IMU sample (100 Hz) and on a 10 ms timeout fallback — about 155 Hz on average, measured on the reference board (debug build) — and evaluates active `InertialEffects` (impacts, thrusts, etc.) based on prioritized physical triggers.
 
 ### 5. [InertialHaptics Engine](./docs/wiki/InertialHaptics.md)
 The tactile core. It uses real-time low-frequency synthesis to simulate plasma mass, friction, and recoil.
@@ -33,7 +33,7 @@ A high-performance configuration model. Profiles are compiled C++ classes that e
 
 ## 📂 Project Structure
 
-- `main/`: Core application logic — action bus (`core/`), profiles and effects (`profiles/`), adapters and hardware layer (`system/`).
+- `main/`: Core application logic — action bus (`core/`), profiles and effects (`profiles/`), adapters, audio control and hardware layer (`system/`), on-device real-time metrics (`diagnostics/`).
 - `components/`: Hardware wrappers and peripheral drivers.
 - `docs/wiki/`: Official functional and technical specifications (The Source of Truth).
 - `.claude/` + `CLAUDE.md`: Claude Code configuration — an orchestrator protocol plus specialised subagents (architecture, implementation, audit, hardware review, documentation), procedure skills and guardrail hooks.
@@ -51,6 +51,7 @@ Explore the technical depth of InertialSaber OS:
 8. [**Kinetic Gestures**](./docs/wiki/KineticGestures.md) - Touchless operation and IMU patterns.
 9. [**Profiles & Configuration**](./docs/wiki/Profiles.md) - How to define saber identities.
 10. [**Action Bus & Effects**](./docs/wiki/SaberAction.md) - Event processing and trigger logic.
+11. [**Diagnostics**](./docs/wiki/Diagnostics.md) - On-device real-time metrics and the CSV format.
 
 
 ---

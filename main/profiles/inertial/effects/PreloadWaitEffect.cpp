@@ -1,13 +1,12 @@
 #include "PreloadWaitEffect.hpp"
+#include "diagnostics/Metrics.hpp"
 #include "profiles/PowerStateMachine.hpp"
 #include "profiles/SoundFont.hpp"
 #include "AudioLevels.hpp"
 #include "system/PsramAudioCache.hpp"
 #include "system/status/StatusIndicator.hpp"
-#include "AudioEngine.hpp"
+#include "system/audio/AudioController.hpp"
 #include "esp_log.h"
-
-#include <string>
 
 namespace InertialSaber::Effects {
 
@@ -16,7 +15,7 @@ static constexpr const char* TAG = "PreloadWait";
 using System::Status::SystemStatus;
 
 PreloadWaitEffect::PreloadWaitEffect(Profiles::PowerStateMachine& power,
-                                     Espressif::Wrappers::Audio::AudioEngine& audio,
+                                     System::AudioController& audio,
                                      const System::PsramAudioCache& audioCache,
                                      System::Status::StatusIndicator& status,
                                      const Profiles::SoundFont& font)
@@ -32,6 +31,7 @@ bool PreloadWaitEffect::test(const Core::SaberDataPacket&) {
 }
 
 void PreloadWaitEffect::run() {
+    SABER_METRIC_SCOPE(Diagnostics::Metric::RunPreloadWait);
     using PreloadStatus = System::PsramAudioCache::PreloadStatus;
     switch (m_audioCache.preloadStatus()) {
     case PreloadStatus::Pending:
@@ -53,9 +53,9 @@ void PreloadWaitEffect::run() {
 
     m_status.show(SystemStatus::Ready);
 
-    const std::string fontPath = m_font.selectionPath();
+    const System::AudioPath fontPath = m_font.selectionPath();
     ESP_LOGD(TAG, "Preload complete. Playing selection sound: %s", fontPath.c_str());
-    m_audio.play(fontPath, false, kFullVolume);
+    m_audio.playOneShot(fontPath, kFullVolume);
 }
 
 } // namespace InertialSaber::Effects

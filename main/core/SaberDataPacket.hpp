@@ -59,8 +59,11 @@ struct SaberDataPacket {
     /// Array of input peripheral states (buttons, switches).
     std::array<InputDescriptor, kMaxInputs> inputs{};
 
-    /// FreeRTOS system time in milliseconds at the start of this bus cycle.
+    /// esp_timer time in milliseconds at the start of this bus cycle.
     uint32_t timestampMs = 0;
+
+    /// esp_timer time in microseconds of the IMU sample in this packet; 0 before the first sample.
+    int64_t motionTimestampUs = 0;
 };
 
 } // namespace InertialSaber::Core

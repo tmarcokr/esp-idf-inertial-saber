@@ -11,13 +11,10 @@ class PowerStateMachine;
 class SoundFont;
 } // namespace InertialSaber::Profiles
 
-namespace Espressif::Wrappers::Audio {
-class AudioEngine;
-}
-
 namespace InertialSaber::System {
+class AudioController;
 class PsramAudioCache;
-}
+} // namespace InertialSaber::System
 
 namespace InertialSaber::System::Status {
 class StatusIndicator;
@@ -28,8 +25,7 @@ namespace InertialSaber::Effects {
 /** @brief Effect that blocks input, waits for the PSRAM preload, then unlocks the saber and plays the selection sound, or faults it on failure. */
 class PreloadWaitEffect final : public Core::InertialEffect {
 public:
-    PreloadWaitEffect(Profiles::PowerStateMachine& power,
-                      Espressif::Wrappers::Audio::AudioEngine& audio,
+    PreloadWaitEffect(Profiles::PowerStateMachine& power, System::AudioController& audio,
                       const System::PsramAudioCache& audioCache,
                       System::Status::StatusIndicator& status, const Profiles::SoundFont& font);
 
@@ -38,7 +34,7 @@ public:
 
 private:
     Profiles::PowerStateMachine& m_power;
-    Espressif::Wrappers::Audio::AudioEngine& m_audio;
+    System::AudioController& m_audio;
     const System::PsramAudioCache& m_audioCache;
     System::Status::StatusIndicator& m_status;
     const Profiles::SoundFont& m_font;

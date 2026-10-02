@@ -26,6 +26,14 @@ The bus distributes a unified data packet in each update cycle. This packet cont
 | `InertialOverload` | `float` | Accumulator charge level (0.0 to 1.0) based on sustained movement. |
 | `InertialBurst` | `bool` | True for a single cycle when InertialOverload hits 1.0. |
 
+### 2.1.1. Timing Fields
+Both timestamps come from `esp_timer` (microsecond clock since boot), not from the FreeRTOS tick.
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `timestampMs` | `uint32_t` | `esp_timer` time in milliseconds at the start of this bus cycle. |
+| `motionTimestampUs` | `int64_t` | `esp_timer` time in microseconds at which the IMU sample in this packet was read; `0` before the first sample. Several bus cycles can carry the same sample (timeout or input wakes); effects that must process each IMU sample once (e.g. clash detection) compare this value with the last one they saw. |
+
 ### 2.2. Interface Descriptors (Input Data)
 The packet carries an **array of `InputDescriptor`** structs, indexed by input ID (Button 0...N). This allows multiple physical buttons to be evaluated simultaneously by any effect. The initial deployment uses a single button; the array is sized for future expansion (2-3 buttons).
 
@@ -38,7 +46,7 @@ Each `InputDescriptor` contains a full state-machine snapshot, providing effects
 | `previous` | `State` enum | State in the previous evaluation cycle. Enables transition detection (e.g., `PRESSED → HELD`). |
 | `holdDuration_ms` | `uint32_t` | Continuous hold time in milliseconds. Resets to 0 when state returns to `IDLE`. |
 | `pressCount` | `uint8_t` | Rapid press counter within a configurable time window (e.g., 400ms). Resets to 0 after the window expires with no new press. |
-| `lastTransition_ms` | `uint32_t` | Timestamp (system tick) of the last state change. Used by Pattern Detector effects. |
+| `lastTransition_ms` | `uint32_t` | Timestamp (`esp_timer`, ms) of the last state change. Used by Pattern Detector effects. |
 
 #### Example Trigger Patterns
 | User Action | Effect Evaluation Logic |
@@ -85,8 +93,33 @@ To manage the interaction between multiple actions operating simultaneously on t
 | **2** | **Override** | High priority events (Kinetic Impact). Cause forced attenuation in lower levels. |
 | **3** | **System** | Critical hardware events (Power On/Off). Total control over the bus. |
 
-### 4.1. Ducking Ownership
+> [!NOTE]
+> The category names (Background, Standard, Override, System) are **labels only**. The bus does not preempt, suspend or skip an effect because of its priority, and the attenuation described in the *Behavior* column is not implemented yet (see §4.2).
+
+### 4.1. Evaluation Order
+The only runtime meaning of the priority is the **evaluation order within a bus cycle**:
+- Effects are evaluated in ascending priority order: priority `0` first.
+- Effects with the same priority are evaluated in **registration order**, i.e. the order of the `registerEffect()` calls in `ConfigurableProfile::load()`. The bus inserts each new effect after all effects with a lower or equal priority, so this order is guaranteed.
+- If an effect's `run()` replaces the registered effects (a profile swap), the rest of the cycle is skipped.
+
+Resulting order for the current profile:
+
+| # | Effect | Priority |
+| :--- | :--- | :--- |
+| 1 | `PreloadWaitEffect` | 0 |
+| 2 | `InertialSwingEffect` | 0 |
+| 3 | `InertialLightEffect` | 0 |
+| 4 | `PowerToggleEffect` | 1 |
+| 5 | `DragEffect` | 1 |
+| 6 | `ProfileCycleEffect` | 1 |
+| 7 | `BlasterEffect` | 2 |
+| 8 | `KineticImpactEffect` (Clash) | 2 |
+
+### 4.2. Ducking Ownership
 Priority-based attenuation (ducking) is **not managed by the bus**. Each consumer engine (InertialSwing, InertialLight) is responsible for implementing its own ducking logic when it receives commands from effects of different priority levels. The bus only provides the priority metadata; rendering decisions are decentralized.
+
+> [!NOTE]
+> Priority-based ducking is **not implemented yet** in either engine. (The hum ducking of InertialSwing depends on the swing intensity, not on effect priority.)
 
 ---
 
@@ -102,7 +135,7 @@ The bus task uses a **hybrid event-driven model** with timeout fallback to balan
 │  ┌──────────────┐   ┌───────────────┐   ┌──────────────────┐   │
 │  │ Block on      │──►│ Drain IMU     │──►│ Drain Input      │   │
 │  │ Notification  │   │ (MotionData)  │   │ Queue            │   │
-│  │ (timeout ~2ms)│   │               │   │ (InputDescriptor)│   │
+│  │ (timeout 10ms)│   │               │   │ (InputDescriptor)│   │
 │  └──────────────┘   └───────────────┘   └──────────────────┘   │
 │                                                │                │
 │                          ┌─────────────────────▼──────────┐     │
@@ -122,18 +155,36 @@ The bus task uses a **hybrid event-driven model** with timeout fallback to balan
 ### 5.2. Wake Sources
 | Source | Mechanism | Purpose |
 | :--- | :--- | :--- |
-| **IMU DMP** | Task notification from ISR/reader task | New motion data available (~200Hz) |
+| **IMU DMP** | Task notification from ISR/reader task | New motion data available (100 Hz, measured on the reference board) |
 | **InputAdapter** | Queue push + task notification | Button state transition detected |
-| **Timeout (~2ms)** | FreeRTOS notification timeout | Ensures continuous evaluation for Flow Modulators during calm periods |
+| **Timeout (10 ms)** | FreeRTOS notification timeout (fallback) | Ensures continuous evaluation for Flow Modulators during calm periods |
 
-### 5.3. Core Affinity
+> [!NOTE]
+> **Measured on the reference board (debug build, 2026-10-02):** IMU sample rate 100 Hz (99–101 Hz per 1 s window); bus rate about 155 Hz on average (151–171 Hz per session, 128–185 Hz per 1 s window), with about 35–40 % of the cycles woken by the timeout; bus cycle 70–240 µs on average, max 1.47 ms while ignited (budget 2 ms); motion age about 3.3–3.9 ms on average, max about 10.9 ms; one-shot audio latency 12–18 ms on average, max 25.5 ms. At 100 Hz the 15 ms clash window spans 1–2 IMU samples. See [Diagnostics](Diagnostics.md).
 
-| Platform | Bus Task Core | Engine Tasks Core |
-| :--- | :--- | :--- |
-| **ESP32-C6** | Core 0 (only core) | Core 0 (shared) |
-| **ESP32-S3** | Core 0 (PRO) | Core 1 (APP) |
+### 5.3. Core Affinity and Task Map
+Stack size, priority and core of every task are defined in one table, `TaskTable` in `main/system/hardware/HardwareConfig.hpp`. Tasks owned by `main/` are created from it with `xTaskCreatePinnedToCore`. Tasks created by components or by ESP-IDF with fixed parameters are listed as **reference only**: the table documents them and feeds the metrics report ([Diagnostics](Diagnostics.md)), but does not apply them.
 
-Task creation uses `xTaskCreatePinnedToCore` with platform-configurable core ID constants from `PlatformConfig.hpp`.
+| Task | Owner | Stack (B) | Priority | Core | Applied from the table |
+| :--- | :--- | ---: | ---: | :---: | :--- |
+| `esp_timer` | ESP-IDF | `CONFIG_ESP_TIMER_TASK_STACK_SIZE` + 512 | 22 | 0 | No (sdkconfig) |
+| `imu_adapter` | `ImuAdapter` | 4096 | 9 | 0 | Yes |
+| `saber_bus` | `SaberActionBus` | 8192 | 8 | 0 | Yes |
+| `main` | ESP-IDF (boot only) | `CONFIG_ESP_MAIN_TASK_STACK_SIZE` + 512 | 1 | 0 | No (sdkconfig) |
+| `audio_mixer` | `AudioEngine` | 4096 | 10 | 1 | No (component) |
+| `audio_mem_reade` | `AudioEngine` (created as `audio_mem_reader`; FreeRTOS truncates the name) | 4096 | 9 | 1 | No (component) |
+| `audio_ctrl` | `AudioController` | 4096 | 7 | 1 | Yes |
+| `audio_sd_reader` | `AudioEngine` | 8192 | 6 | 1 | No (component) |
+| `psram_loader` | `PsramAudioCache` | 4096 | 2 | 1 | Yes |
+| `profile_store` | `ActiveProfileStore` | 3072 | 1 | 1 | Yes |
+| `metrics` | `MetricsReporter` (metrics builds only) | 4096 | 1 | 1 | Yes |
+| `SmartLedTask` | `SmartLed::Engine` | 4096 | 5 | any | Stack and priority only (the component API takes no core) |
+| `gpio_btn_tsk` | `GpioButton` | 4096 | 5 | any | No (component) |
+
+Core and priority policy:
+- **Core 0 — motion and decision path:** IMU adapter (9) > bus (8). The IMU adapter must stay above the bus on the same core (enforced by a `static_assert`). The `esp_timer` task (22) runs the input adapter's click and hold timers.
+- **Core 1 — audio pipeline and background I/O:** mixer (10) > PSRAM reader (9) > `audio_ctrl` (7) > SD reader (6) > PSRAM loader (2) > profile store (1) = metrics reporter (1). The effects on the bus never call the audio engine directly: they queue commands to `audio_ctrl`, which runs the blocking `play()`/`stop()` calls on core 1.
+- **Unpinned:** the LED render task and the button poll task run at priority 5 on either core. On core 0 they cannot preempt the bus or the IMU adapter; on core 1 they cannot preempt any audio task with priority ≥ 6. Pinning them needs a component change.
 
 ---
 
@@ -159,7 +210,7 @@ public:
 
 // Main processing loop (Hybrid Event-Driven)
 while (system_active) {
-    // Block until notification or timeout (~2ms)
+    // Block until notification or timeout (10 ms fallback)
     waitForEvent(timeout_ms);
 
     // Build unified snapshot

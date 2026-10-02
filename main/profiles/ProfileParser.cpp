@@ -9,6 +9,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <string>
 #include <type_traits>
 
 namespace InertialSaber::Profiles {
@@ -138,6 +139,15 @@ esp_err_t ProfileParser::parse(std::string_view json, Inertial::InertialDefiniti
         outDef.profileRoot = rootPathItem->valuestring;
     } else {
         outDef.profileRoot = "profiles/unnamed/";
+    }
+    if (const size_t rootLength = SoundFont::normalizeRoot(outDef.profileRoot).size();
+        rootLength > SoundFont::kMaxRootLength) {
+        if (diagnostics == Diagnostics::Log) {
+            ESP_LOGE(TAG, "'%s': root_path is %u characters long, the limit is %u",
+                     outDef.profileName.c_str(), static_cast<unsigned>(rootLength),
+                     static_cast<unsigned>(SoundFont::kMaxRootLength));
+        }
+        return ESP_ERR_INVALID_SIZE;
     }
 
     FieldReader reader(outDef.profileName.c_str(), diagnostics == Diagnostics::Log);
@@ -363,9 +373,29 @@ esp_err_t ProfileParser::runSelfTest() {
     }
     const SoundFont unslashedFont(unslashedDef.profileRoot, unslashedDef.fontCounts);
     if (unslashedFont.root() != "profiles/sith/") return ESP_FAIL;
-    if (unslashedFont.pathFor(FontCategory::Blaster, 1) != "/sdcard/profiles/sith/blst/blst1.wav")
+    if (unslashedFont.pathFor(FontCategory::Blaster, 1).view() !=
+        "/sdcard/profiles/sith/blst/blst1.wav")
         return ESP_FAIL;
-    if (unslashedFont.selectionPath() != "/sdcard/profiles/sith/font.wav") return ESP_FAIL;
+    if (unslashedFont.selectionPath().view() != "/sdcard/profiles/sith/font.wav") return ESP_FAIL;
+
+    const std::string longestRoot = std::string(SoundFont::kMaxRootLength - 1, 'r') + "/";
+    Inertial::InertialDefinition longestRootDef{};
+    if (parse(R"({"root_path": ")" + longestRoot + R"("})", longestRootDef, Diagnostics::Silent,
+              corrections) != ESP_OK) {
+        ESP_LOGE(testTag, "Longest root test parse failed");
+        return ESP_FAIL;
+    }
+    const SoundFont longestRootFont(longestRootDef.profileRoot, longestRootDef.fontCounts);
+    if (!longestRootFont.pathFor(FontCategory::DragEnd, kMaxFontCount).ok()) return ESP_FAIL;
+    if (!longestRootFont.swingHighPath(kMaxFontCount).ok()) return ESP_FAIL;
+
+    Inertial::InertialDefinition tooLongRootDef{};
+    const std::string tooLongRoot(SoundFont::kMaxRootLength, 'r');
+    if (parse(R"({"root_path": ")" + tooLongRoot + R"("})", tooLongRootDef, Diagnostics::Silent,
+              corrections) != ESP_ERR_INVALID_SIZE) {
+        ESP_LOGE(testTag, "Too-long root was not rejected");
+        return ESP_FAIL;
+    }
 
     if (SoundFont::normalizeRoot("a") != "a/" || SoundFont::normalizeRoot("a/") != "a/")
         return ESP_FAIL;
