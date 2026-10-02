@@ -166,6 +166,7 @@ Rows appear in this order.
 | `ke_quasi_static_settled` | duration | Kinetic energy in **mG** of every IMU sample taken while the saber is quasi-static (accelerometer magnitude within 0.08 g of 1 g and every gyro axis below 20 °/s) after the switch to the DMP values. `max` is the largest one: a high value means fake energy from an unsettled DMP. |
 | `audio_play_call_sd` | duration | The `AudioEngine::play()` call alone, for a path outside `/mem/` (streamed from the SD card). |
 | `audio_play_call_mem` | duration | The `AudioEngine::play()` call alone, for a path under `/mem/` (PSRAM cache). |
+| `preload_copy` | duration | Copy of one file from the SD card to PSRAM by the `psram_loader` task (chunked reads through the internal DMA buffer), from the first read to the last byte. Not recorded for a copy that failed or was superseded. |
 
 | Kind | Stats written |
 | :--- | :--- |
@@ -186,6 +187,7 @@ Rows appear in this order.
 | `worst,run,name` | — | The `run_*` metric with the highest `max` (`none` if no effect ran). |
 | `worst,run,max` | us | Its `max`. |
 | `derived,bus_loop_allocs,` | — | `bus_cycle.allocs` − the sum of all `run_*.allocs` (floored at 0): allocations made by the bus loop itself or by `test()` methods. |
+| `derived,preload_kBps,` | kB/s | SD → PSRAM copy rate: `preload_bytes` × 1000 / the sum of the `preload_copy` durations (1 kB = 1000 B). `missing` when the block has no `preload_copy` sample. |
 
 **Counters** — `count,<name>,`
 
@@ -204,6 +206,7 @@ Rows appear in this order.
 | `clash_detections` | Clashes detected (each one plays a clash sound and flash). |
 | `clash_retrigger_lt_1s` | Clash detections that followed the previous detection by less than 1000 ms. |
 | `imu_fallback_samples` | IMU samples delivered with the start-up fallback values (kinetic energy `\| \|a\| − 1 g \|` and roll from the accelerometer tilt) because the DMP had not settled yet. |
+| `preload_bytes` | Bytes copied from the SD card to PSRAM by the completed `preload_copy` samples. |
 
 **Heap** — sampled at ignition, every 100 ms while ignited, and at retraction. Dips shorter than 100 ms can be missed.
 

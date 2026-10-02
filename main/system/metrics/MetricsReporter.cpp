@@ -89,6 +89,7 @@ constexpr MetricInfo kMetricInfo[] = {
     {"ke_quasi_static_settled", MetricKind::Duration, "mG"},
     {"audio_play_call_sd", MetricKind::Duration},
     {"audio_play_call_mem", MetricKind::Duration},
+    {"preload_copy", MetricKind::Duration},
 };
 static_assert(std::size(kMetricInfo) == Diagnostics::kMetricCount);
 
@@ -96,7 +97,7 @@ constexpr const char* kCounterNames[] = {
     "bus_timeout_wakes",    "input_events_dropped", "imu_samples",      "imu_empty_reads",
     "imu_poll_timeouts",    "overlays_dropped",     "bus_cycles",       "audio_commands_dropped",
     "audio_play_failed",    "inertial_bursts",      "clash_detections", "clash_retrigger_lt_1s",
-    "imu_fallback_samples",
+    "imu_fallback_samples", "preload_bytes",
 };
 static_assert(std::size(kCounterNames) == Diagnostics::kCounterCount);
 
@@ -771,6 +772,16 @@ MetricsReporter::WriteOutcome MetricsReporter::writeSessionBlock(const BlockSnap
     const uint32_t busLoopAllocations =
         busCycleAllocations > runAllocations ? busCycleAllocations - runAllocations : 0;
     csv.number("derived", "bus_loop_allocs", "", busLoopAllocations, "");
+
+    if (const Diagnostics::Metrics::DurationStats& copy =
+            live.durations[index(Metric::PreloadCopy)];
+        copy.count > 0 && copy.sumUs > 0) {
+        const uint64_t bytes = live.counters[index(Counter::PreloadBytes)];
+        csv.number("derived", "preload_kBps", "", static_cast<uint32_t>(bytes * 1000U / copy.sumUs),
+                   "kB/s");
+    } else {
+        csv.text("derived", "preload_kBps", "", "missing", "kB/s");
+    }
 
     for (size_t i = 0; i < Diagnostics::kCounterCount; ++i) {
         csv.number("count", kCounterNames[i], "", live.counters[i], "");

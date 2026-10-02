@@ -8,7 +8,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -36,6 +39,11 @@ public:
     PsramAudioCache(const PsramAudioCache&) = delete;
     PsramAudioCache& operator=(const PsramAudioCache&) = delete;
 
+    /**
+     * @brief Mounts /mem, allocates the internal DMA-capable copy buffer and spawns the loader task.
+     * @return ESP_OK; the MemoryVfs::init() error; ESP_ERR_NO_MEM if the copy buffer or the task
+     *         cannot be created.
+     */
     [[nodiscard]] esp_err_t init();
 
     /** @brief Queues a preload of @p font; callable from any task, supersedes any pending request. */
@@ -59,8 +67,19 @@ private:
         Profiles::SoundFont font;
     };
 
+    enum class FileRole : uint8_t { Required, Optional };
+
+    struct JobContext {
+        uint32_t generation;
+        uint32_t fitWaitLeftMs;
+        size_t copiedBytes;
+        uint32_t copyUs;
+    };
+
     static constexpr uint32_t kNoGeneration = 0;
-    static constexpr uint32_t kCloseWaitMs = 200;
+    static constexpr size_t kBounceBytes = 32 * 1024;
+    static constexpr uint32_t kCloseWaitMs = 1000;
+    static constexpr uint32_t kFitWaitMs = 3000;
     static constexpr uint32_t kClosePollMs = 10;
     static constexpr size_t kPsramHeadroomBytes = 256 * 1024;
 
@@ -71,13 +90,18 @@ private:
     [[nodiscard]] bool isSuperseded(uint32_t generation) const;
     void waitForDescriptorsClosed();
 
-    [[nodiscard]] esp_err_t loadFile(const AudioPath& sdPath, const std::string& vfsName);
+    [[nodiscard]] esp_err_t loadFile(const AudioPath& sdPath, const std::string& vfsName,
+                                     FileRole role, JobContext& context);
+    [[nodiscard]] bool waitForFit(size_t bytes, JobContext& context);
+    [[nodiscard]] esp_err_t copyChunked(std::FILE* source, Espressif::Wrappers::MemoryFile& target,
+                                        uint32_t generation);
     void unloadFile(const std::string& vfsName);
     void releaseFile(const std::string& vfsName);
     void unloadAll();
 
     const Hardware::TaskSpec m_taskSpec;
     Espressif::Wrappers::MemoryVfs m_vfs;
+    std::unique_ptr<uint8_t[], Espressif::Wrappers::MemoryFile::HeapCapsDeleter> m_bounce;
     TaskHandle_t m_loaderTask = nullptr;
 
     std::mutex m_jobMutex;

@@ -1,6 +1,8 @@
 #include "system/audio/AudioController.hpp"
 #include "diagnostics/Metrics.hpp"
+#if CONFIG_SABER_METRICS
 #include "system/PsramAudioCache.hpp"
+#endif
 
 #include "AudioEngine.hpp"
 

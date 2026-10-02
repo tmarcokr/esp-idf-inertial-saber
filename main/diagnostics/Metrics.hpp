@@ -43,6 +43,7 @@ enum class Metric : uint8_t {
     KineticEnergyQuasiStaticSettled,
     AudioPlayCallSd,
     AudioPlayCallMem,
+    PreloadCopy,
     Count
 };
 
@@ -61,6 +62,7 @@ enum class Counter : uint8_t {
     ClashDetections,
     ClashRetriggerLt1s,
     ImuFallbackSamples,
+    PreloadBytes,
     Count
 };
 
