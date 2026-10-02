@@ -56,7 +56,7 @@ private:
     Espressif::Wrappers::GpioButton m_button{Board::kPins.mainButton, Board::kMainButtonActiveLow};
     Core::SaberActionBus m_bus{Hardware::HardwareConfig::kBusConfig};
     PsramAudioCache m_audioCache{Hardware::TaskTable::kPsramLoader};
-    ActiveProfileStore m_profileStore{Hardware::TaskTable::kProfileStore};
+    ActiveProfileStore m_profileStore{};
     Profiles::SaberServices m_services{m_bus, m_audioControl, m_blade, m_audioCache, m_status};
     Profiles::ProfileManager m_profiles{m_services, m_profileStore,
                                         Hardware::TaskTable::kProfileControl};

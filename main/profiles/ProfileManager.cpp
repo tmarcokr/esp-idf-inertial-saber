@@ -34,9 +34,11 @@ esp_err_t ProfileManager::init() {
     }
 
     m_activeIndex = 0;
+    m_savedIndex.reset();
     if (const std::optional<size_t> storedIndex = m_store.load(); storedIndex.has_value()) {
         if (*storedIndex < m_profiles.size()) {
             m_activeIndex = *storedIndex;
+            m_savedIndex = *storedIndex;
             ESP_LOGI(TAG, "Restored active profile index: %u",
                      static_cast<unsigned>(m_activeIndex));
         } else {
@@ -126,12 +128,12 @@ void ProfileManager::run() {
             performSwitch();
             continue;
         }
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        serviceSave(esp_timer_get_time());
+        ulTaskNotifyTake(pdTRUE, nextWakeTicks(esp_timer_get_time()));
     }
 }
 
 void ProfileManager::performSwitch() {
-    const size_t previousIndex = m_activeIndex;
     const size_t nextIndex = (m_activeIndex + 1) % m_profiles.size();
     const ConfigurableProfile& profile = *m_profiles[nextIndex];
 
@@ -156,9 +158,7 @@ void ProfileManager::performSwitch() {
     m_switchPending.store(false, std::memory_order_release);
 
     logActiveProfile();
-    if (m_activeIndex != previousIndex) {
-        m_store.saveAsync(m_activeIndex);
-    }
+    armSave(esp_timer_get_time());
 }
 
 std::unique_ptr<Core::EffectSet> ProfileManager::waitForRetiredEffects() {
@@ -176,6 +176,50 @@ std::unique_ptr<Core::EffectSet> ProfileManager::waitForRetiredEffects() {
         vTaskDelay(pdMS_TO_TICKS(kCommitPollMs));
     }
     return nullptr;
+}
+
+void ProfileManager::armSave(int64_t nowUs) {
+    m_saveWaitingForIdle = false;
+    if (m_savedIndex == m_activeIndex) {
+        m_saveArmed = false;
+        return;
+    }
+    m_saveArmed = true;
+    m_saveDueUs = nowUs + int64_t{kSaveDelayMs} * 1000;
+}
+
+void ProfileManager::serviceSave(int64_t nowUs) {
+    if (!m_saveArmed || nowUs < m_saveDueUs) return;
+
+    if (m_services.audioCache.preloadStatus() == System::PsramAudioCache::PreloadStatus::Pending) {
+        m_saveDueUs = nowUs + int64_t{kSavePollMs} * 1000;
+        return;
+    }
+    if (!m_activePower->isRetracted() && !m_activePower->isFaulted()) {
+        m_saveWaitingForIdle = true;
+        m_saveDueUs = nowUs + int64_t{kSavePollMs} * 1000;
+        return;
+    }
+    if (m_saveWaitingForIdle) {
+        m_saveWaitingForIdle = false;
+        m_saveDueUs = nowUs + int64_t{kSaveDelayMs} * 1000;
+        return;
+    }
+
+    m_saveArmed = false;
+    if (m_store.save(m_activeIndex) == ESP_OK) {
+        m_savedIndex = m_activeIndex;
+    }
+}
+
+TickType_t ProfileManager::nextWakeTicks(int64_t nowUs) const {
+    if (!m_saveArmed) return portMAX_DELAY;
+
+    const int64_t remainingUs = m_saveDueUs - nowUs;
+    if (remainingUs <= 0) return 1;
+    const auto remainingMs = static_cast<uint32_t>((remainingUs + 999) / 1000);
+    const TickType_t ticks = pdMS_TO_TICKS(remainingMs);
+    return ticks > 0 ? ticks : 1;
 }
 
 void ProfileManager::logActiveProfile() const {

@@ -104,7 +104,6 @@ constexpr TaskInfo kTaskInfo[] = {
     {"audio_sd_reader", TaskTable::kAudioSdReader, true},
     {"audio_mem_reader", TaskTable::kAudioMemReader, true},
     {"audio_ctrl", TaskTable::kAudioControl, false},
-    {"profile_store", TaskTable::kProfileStore, false},
     {"profile_ctrl", TaskTable::kProfileControl, false},
 };
 static_assert(std::size(kTaskInfo) == Diagnostics::kTaskCount);

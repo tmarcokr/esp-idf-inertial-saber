@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace InertialSaber::Profiles {
@@ -22,7 +23,9 @@ namespace InertialSaber::Profiles {
  * @brief Active object that owns the profiles and performs runtime profile switches off the bus.
  *
  * The bus only posts a request (requestNext()); the profile_ctrl task builds the next effect
- * set, requests its preload, stages it on the bus and destroys the set it replaces.
+ * set, requests its preload, stages it on the bus and destroys the set it replaces. The new
+ * active index is saved on profile_ctrl kSaveDelayMs after the last switch, never while the
+ * preload is pending, and only once the blade has stayed retracted or faulted for kSaveDelayMs.
  *
  * Thread safety:
  *   - init(), loadActive(), start() and stop(): main task only.
@@ -85,6 +88,8 @@ public:
     [[nodiscard]] bool switchPending() const;
 
 private:
+    static constexpr uint32_t kSaveDelayMs = 1500;
+    static constexpr uint32_t kSavePollMs = 100;
     static constexpr uint32_t kCommitPollMs = 2;
     static constexpr uint32_t kCommitWarnMs = 1000;
 
@@ -92,6 +97,9 @@ private:
     void run();
     void performSwitch();
     [[nodiscard]] std::unique_ptr<Core::EffectSet> waitForRetiredEffects();
+    void armSave(int64_t nowUs);
+    void serviceSave(int64_t nowUs);
+    [[nodiscard]] TickType_t nextWakeTicks(int64_t nowUs) const;
     void logActiveProfile() const;
 
     const SaberServices& m_services;
@@ -108,6 +116,11 @@ private:
     std::atomic<uint32_t> m_requestedAtUs{0};
     StaticSemaphore_t m_exitSemaphoreControl{};
     SemaphoreHandle_t m_exitSemaphore = nullptr;
+
+    std::optional<size_t> m_savedIndex;
+    bool m_saveArmed = false;
+    bool m_saveWaitingForIdle = false;
+    int64_t m_saveDueUs = 0;
 };
 
 } // namespace InertialSaber::Profiles

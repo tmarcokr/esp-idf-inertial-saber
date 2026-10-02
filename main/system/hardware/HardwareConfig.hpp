@@ -41,8 +41,6 @@ struct TaskTable {
         .name = "audio_ctrl", .stackSize = 4096, .priority = 7, .core = 1};
     static constexpr TaskSpec kPsramLoader{
         .name = "psram_loader", .stackSize = 4096, .priority = 2, .core = 1};
-    static constexpr TaskSpec kProfileStore{
-        .name = "profile_store", .stackSize = 3072, .priority = 1, .core = 1};
     static constexpr TaskSpec kProfileControl{
         .name = "profile_ctrl", .stackSize = 6144, .priority = 3, .core = 1};
     static constexpr TaskSpec kMetricsReporter{
