@@ -87,6 +87,8 @@ constexpr MetricInfo kMetricInfo[] = {
     {"profile_save", MetricKind::Scope},
     {"profile_switch", MetricKind::Duration},
     {"ke_quasi_static_settled", MetricKind::Duration, "mG"},
+    {"audio_play_call_sd", MetricKind::Duration},
+    {"audio_play_call_mem", MetricKind::Duration},
 };
 static_assert(std::size(kMetricInfo) == Diagnostics::kMetricCount);
 

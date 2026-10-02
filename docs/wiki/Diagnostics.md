@@ -164,6 +164,8 @@ Rows appear in this order.
 | `profile_save` | scope | Writing the active profile index to the SD card in the `profile_ctrl` task. |
 | `profile_switch` | duration | From the accepted profile-cycle request to the end of the new profile's preload, when the saber unlocks. Not recorded at boot or when the preload fails. |
 | `ke_quasi_static_settled` | duration | Kinetic energy in **mG** of every IMU sample taken while the saber is quasi-static (accelerometer magnitude within 0.08 g of 1 g and every gyro axis below 20 °/s) after the switch to the DMP values. `max` is the largest one: a high value means fake energy from an unsettled DMP. |
+| `audio_play_call_sd` | duration | The `AudioEngine::play()` call alone, for a path outside `/mem/` (streamed from the SD card). |
+| `audio_play_call_mem` | duration | The `AudioEngine::play()` call alone, for a path under `/mem/` (PSRAM cache). |
 
 | Kind | Stats written |
 | :--- | :--- |

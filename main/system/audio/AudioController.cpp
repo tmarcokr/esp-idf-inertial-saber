@@ -1,5 +1,6 @@
 #include "system/audio/AudioController.hpp"
 #include "diagnostics/Metrics.hpp"
+#include "system/PsramAudioCache.hpp"
 
 #include "AudioEngine.hpp"
 
@@ -7,6 +8,7 @@
 #include "esp_timer.h"
 
 #include <cinttypes>
+#include <string_view>
 #include <utility>
 
 namespace InertialSaber::System {
@@ -29,6 +31,16 @@ static_assert(std::atomic<int32_t>::is_always_lock_free);
 uint32_t nowUs() {
     return static_cast<uint32_t>(esp_timer_get_time());
 }
+
+#if CONFIG_SABER_METRICS
+Diagnostics::Metric playSourceMetric(std::string_view path) {
+    constexpr std::string_view kMount = PsramAudioCache::kMountPoint;
+    const bool fromMemory =
+        path.starts_with(kMount) && path.size() > kMount.size() && path[kMount.size()] == '/';
+    return fromMemory ? Diagnostics::Metric::AudioPlayCallMem
+                      : Diagnostics::Metric::AudioPlayCallSd;
+}
+#endif
 
 } // namespace
 
@@ -232,7 +244,11 @@ int32_t AudioController::playTimed(const Command& command) {
     ChannelId channel = INVALID_CHANNEL;
     {
         SABER_METRIC_SCOPE(Diagnostics::Metric::AudioPlayCall);
+#if CONFIG_SABER_METRICS
+        const uint32_t playStartUs = nowUs();
+#endif
         channel = m_engine.play(command.path.view(), command.loop, command.volume);
+        SABER_METRIC_DURATION(playSourceMetric(command.path.view()), nowUs() - playStartUs);
     }
     SABER_METRIC_DURATION(Diagnostics::Metric::AudioLatency, nowUs() - command.enqueuedUs);
     if (channel == INVALID_CHANNEL) {

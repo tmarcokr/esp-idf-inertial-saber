@@ -41,6 +41,8 @@ enum class Metric : uint8_t {
     ProfileSave,
     ProfileSwitch,
     KineticEnergyQuasiStaticSettled,
+    AudioPlayCallSd,
+    AudioPlayCallMem,
     Count
 };
 
