@@ -54,7 +54,7 @@ Each file is a sequence of blocks. Every row starts with its block number.
 
 | Block | Content | Captured |
 | :--- | :--- | :--- |
-| **0** | Build metadata and boot data (`meta`, `boot`, main task stack). | At the end of the boot sequence. Written at the first idle opportunity, even if the saber is never ignited. |
+| **0** | Build metadata and boot data (`meta`, `boot`, main task stack). | At the end of the boot sequence, except `boot,imu_settle_ms`, which is known only when the IMU settles. Written at the first idle opportunity once `imu_settle_ms` is known (or 50 s after power-up), even if the saber is never ignited. Session blocks are written after it. |
 | **k ≥ 1** | Everything recorded in the **window since the previous retraction** (for block 1: since the reporter started at the end of boot). | When a retraction completes (`Retracting → Retracted`). |
 
 A block window therefore includes the retracted time before the ignition, so profile cycles and PSRAM preloads are measured too. Two rows separate the two times:
@@ -68,6 +68,7 @@ A block window therefore includes the retracted time before the ignition, so pro
 Blocks are captured in RAM (a ring of 4 pending blocks in PSRAM) and written later, when all of these hold:
 1. The saber is retracted (no active session).
 2. At least **2 s** have passed since the last retraction (for block 0: since the reporter started).
+   Block 0 also waits until the IMU has switched to the DMP values, at most until 50 s after power-up. The 50 s cover the 40 s settling backstop (counted from the first IMU sample) plus the boot time.
 3. The audio output has been idle (output level ≤ 140) for at least **500 ms**. The threshold sits above the small residual the mixer keeps outputting in silence: it is twice the residual bound of the configured DC-blocker cutoff, so it follows the cutoff preset.
 4. No PSRAM preload is in progress (at boot and after every profile change), no profile change is pending and no active-profile save is pending or being written, so the metrics never compete with them for the SD card.
 
@@ -101,7 +102,7 @@ block,section,name,stat,value,unit
 | `name` | Metric, counter, task or check name. |
 | `stat` | Statistic (`count`, `avg`, `max`, `min`, …); empty when the row has a single value. |
 | `value` | Integer, one-decimal number, text, `PASS`/`FAIL` or `missing`. |
-| `unit` | `us`, `ms`, `Hz`, `MHz`, `B` or empty. |
+| `unit` | `us`, `ms`, `Hz`, `MHz`, `B`, `mG` or empty. |
 
 The header line is written with block 0, once per file.
 
@@ -122,6 +123,7 @@ The header line is written with block 0, once per file.
 | `boot,reset_reason,` | — | Cause of the current boot (`esp_reset_reason()`): `POWERON`, `EXT`, `SW`, `PANIC`, `INT_WDT`, `TASK_WDT`, `WDT`, `DEEPSLEEP`, `BROWNOUT`, `SDIO`, `USB`, `JTAG`, `EFUSE`, `PWR_GLITCH`, `CPU_LOCKUP`, `UNKNOWN`, or the numeric value for a reason not in this list. In a battery test, anything other than `POWERON` (or `USB`/`JTAG` right after flashing) means an unexpected reboot. |
 | `boot,heap_internal_free,` | B | Free internal heap at the end of boot. |
 | `boot,heap_psram_free,` | B | Free PSRAM heap at the end of boot. |
+| `boot,imu_settle_ms,` | ms | Time from power-up to the IMU sample where the motion values switched from the start-up fallback to the DMP (see `imu_fallback_samples`). `-1`: the DMP gravity did not match the accelerometer within 4° for 20 consecutive quasi-static samples during the first 20 s of IMU samples; the ceiling then forced the switch at the next quasi-static sample. `-2`: no quasi-static sample arrived between the 20 s ceiling and the 40 s backstop, so the switch was forced at the next sample, moving or not (for example, a gyro zero-rate offset above 20 °/s). `missing`: no switch within 50 s of power-up (no IMU samples, or a very slow boot). |
 | `task,main,stack_free_min` | B | Minimum free stack of the main task over the whole boot sequence. |
 
 ### 4.3. Session block rows (k ≥ 1)
@@ -144,7 +146,7 @@ Rows appear in this order.
 
 `bus` counts bus cycles; `imu` counts IMU samples delivered to the bus.
 
-**Timings** — `time,<metric>,<stat>`, in microseconds, one group per metric in this order:
+**Timings** — `time,<metric>,<stat>`, in microseconds (except `ke_quasi_static_settled`, in milli-g), one group per metric in this order:
 
 | Metric | Kind | What it measures |
 | :--- | :--- | :--- |
@@ -161,6 +163,7 @@ Rows appear in this order.
 | `profile_build` | scope | Building the next profile's effect set in the `profile_ctrl` task (allocations expected, on core 1). |
 | `profile_save` | scope | Writing the active profile index to the SD card in the `profile_ctrl` task. |
 | `profile_switch` | duration | From the accepted profile-cycle request to the end of the new profile's preload, when the saber unlocks. Not recorded at boot or when the preload fails. |
+| `ke_quasi_static_settled` | duration | Kinetic energy in **mG** of every IMU sample taken while the saber is quasi-static (accelerometer magnitude within 0.08 g of 1 g and every gyro axis below 20 °/s) after the switch to the DMP values. `max` is the largest one: a high value means fake energy from an unsettled DMP. |
 
 | Kind | Stats written |
 | :--- | :--- |
@@ -198,6 +201,7 @@ Rows appear in this order.
 | `inertial_bursts` | Inertial Bursts fired by the Overload accumulator. |
 | `clash_detections` | Clashes detected (each one plays a clash sound and flash). |
 | `clash_retrigger_lt_1s` | Clash detections that followed the previous detection by less than 1000 ms. |
+| `imu_fallback_samples` | IMU samples delivered with the start-up fallback values (kinetic energy `\| \|a\| − 1 g \|` and roll from the accelerometer tilt) because the DMP had not settled yet. |
 
 **Heap** — sampled at ignition, every 100 ms while ignited, and at retraction. Dips shorter than 100 ms can be missed.
 

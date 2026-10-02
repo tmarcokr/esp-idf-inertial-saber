@@ -37,6 +37,7 @@ constexpr uint32_t kSchemaVersion = 1;
 constexpr uint32_t kStackMarginBytes = 1024;
 constexpr uint32_t kBusCycleBudgetUs = 2000;
 constexpr int64_t kUsPerMs = 1000;
+constexpr int64_t kImuSettleWaitUs = 50'000 * kUsPerMs;
 constexpr uint64_t kTenthsPerSecondUs = 10'000'000ULL;
 constexpr std::string_view kFilePrefix = "session_";
 constexpr std::string_view kFileSuffix = ".csv";
@@ -61,26 +62,39 @@ enum class MetricKind : uint8_t { Scope, Duration, Interval };
 struct MetricInfo {
     const char* name;
     MetricKind kind;
+    const char* unit = "us";
 };
 
 constexpr MetricInfo kMetricInfo[] = {
-    {"bus_cycle", MetricKind::Scope},        {"bus_interval", MetricKind::Interval},
-    {"run_preload_wait", MetricKind::Scope}, {"run_swing", MetricKind::Scope},
-    {"run_light", MetricKind::Scope},        {"run_power_toggle", MetricKind::Scope},
-    {"run_blaster", MetricKind::Scope},      {"run_clash", MetricKind::Scope},
-    {"run_drag", MetricKind::Scope},         {"run_profile_cycle", MetricKind::Scope},
-    {"swing_activate", MetricKind::Scope},   {"swing_swap", MetricKind::Scope},
-    {"imu_read", MetricKind::Scope},         {"audio_play_call", MetricKind::Scope},
-    {"audio_latency", MetricKind::Duration}, {"motion_age", MetricKind::Duration},
-    {"profile_commit", MetricKind::Scope},   {"profile_build", MetricKind::Scope},
-    {"profile_save", MetricKind::Scope},     {"profile_switch", MetricKind::Duration},
+    {"bus_cycle", MetricKind::Scope},
+    {"bus_interval", MetricKind::Interval},
+    {"run_preload_wait", MetricKind::Scope},
+    {"run_swing", MetricKind::Scope},
+    {"run_light", MetricKind::Scope},
+    {"run_power_toggle", MetricKind::Scope},
+    {"run_blaster", MetricKind::Scope},
+    {"run_clash", MetricKind::Scope},
+    {"run_drag", MetricKind::Scope},
+    {"run_profile_cycle", MetricKind::Scope},
+    {"swing_activate", MetricKind::Scope},
+    {"swing_swap", MetricKind::Scope},
+    {"imu_read", MetricKind::Scope},
+    {"audio_play_call", MetricKind::Scope},
+    {"audio_latency", MetricKind::Duration},
+    {"motion_age", MetricKind::Duration},
+    {"profile_commit", MetricKind::Scope},
+    {"profile_build", MetricKind::Scope},
+    {"profile_save", MetricKind::Scope},
+    {"profile_switch", MetricKind::Duration},
+    {"ke_quasi_static_settled", MetricKind::Duration, "mG"},
 };
 static_assert(std::size(kMetricInfo) == Diagnostics::kMetricCount);
 
 constexpr const char* kCounterNames[] = {
-    "bus_timeout_wakes", "input_events_dropped", "imu_samples",      "imu_empty_reads",
-    "imu_poll_timeouts", "overlays_dropped",     "bus_cycles",       "audio_commands_dropped",
-    "audio_play_failed", "inertial_bursts",      "clash_detections", "clash_retrigger_lt_1s",
+    "bus_timeout_wakes",    "input_events_dropped", "imu_samples",      "imu_empty_reads",
+    "imu_poll_timeouts",    "overlays_dropped",     "bus_cycles",       "audio_commands_dropped",
+    "audio_play_failed",    "inertial_bursts",      "clash_detections", "clash_retrigger_lt_1s",
+    "imu_fallback_samples",
 };
 static_assert(std::size(kCounterNames) == Diagnostics::kCounterCount);
 
@@ -231,6 +245,11 @@ public:
     void number(const char* section, const char* name, const char* stat, uint32_t value,
                 const char* unit) {
         append("%" PRIu32 ",%s,%s,%s,%" PRIu32 ",%s\n", m_block, section, name, stat, value, unit);
+    }
+
+    void signedNumber(const char* section, const char* name, const char* stat, int32_t value,
+                      const char* unit) {
+        append("%" PRIu32 ",%s,%s,%s,%" PRId32 ",%s\n", m_block, section, name, stat, value, unit);
     }
 
     void tenths(const char* section, const char* name, const char* stat, uint32_t value,
@@ -519,6 +538,9 @@ bool MetricsReporter::sdQuiet() const {
 bool MetricsReporter::flushDue(int64_t nowUs) const {
     if (m_sessionActive || Diagnostics::Metrics::sessionActive()) return false;
     if (m_pendingCount == 0 && m_bootBlockWritten) return false;
+    if (!m_bootBlockWritten && !Diagnostics::Metrics::imuSettleMs() && nowUs < kImuSettleWaitUs) {
+        return false;
+    }
     if (nowUs < m_nextFlushAttemptUs) return false;
     if (!sdQuiet()) return false;
     if (nowUs - m_lastEndUs < static_cast<int64_t>(kFlushSettleMs) * kUsPerMs) return false;
@@ -670,6 +692,11 @@ MetricsReporter::WriteOutcome MetricsReporter::writeBootBlock() {
     }
     csv.number("boot", "heap_internal_free", "", boot.heapInternalFree, "B");
     csv.number("boot", "heap_psram_free", "", boot.heapPsramFree, "B");
+    if (const std::optional<int32_t> settleMs = Diagnostics::Metrics::imuSettleMs(); settleMs) {
+        csv.signedNumber("boot", "imu_settle_ms", "", *settleMs, "ms");
+    } else {
+        csv.text("boot", "imu_settle_ms", "", "missing", "ms");
+    }
     csv.number("task", kTaskInfo[static_cast<size_t>(TaskId::Main)].name, "stack_free_min",
                boot.mainStackFreeMin, "B");
 
@@ -713,8 +740,8 @@ MetricsReporter::WriteOutcome MetricsReporter::writeSessionBlock(const BlockSnap
         if (info.kind != MetricKind::Interval) {
             csv.number("time", info.name, "count", stats.count, "");
         }
-        csv.number("time", info.name, "avg", average, "us");
-        csv.number("time", info.name, "max", stats.maxUs, "us");
+        csv.number("time", info.name, "avg", average, info.unit);
+        csv.number("time", info.name, "max", stats.maxUs, info.unit);
         if (info.kind == MetricKind::Scope) {
             csv.number("time", info.name, "allocs", stats.allocations, "");
             csv.number("time", info.name, "scopes_with_alloc", stats.scopesWithAllocations, "");

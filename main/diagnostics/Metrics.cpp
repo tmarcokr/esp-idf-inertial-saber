@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <limits>
 
 namespace InertialSaber::Diagnostics {
 
@@ -23,6 +24,7 @@ static_assert(sizeof(std::atomic<TaskHandle_t>) == sizeof(uint32_t));
 #else
 static_assert(Counter32::is_always_lock_free);
 static_assert(std::atomic<bool>::is_always_lock_free);
+static_assert(std::atomic<int32_t>::is_always_lock_free);
 static_assert(std::atomic<TaskHandle_t>::is_always_lock_free);
 #endif
 
@@ -44,6 +46,7 @@ struct LiveBoot {
 };
 
 constexpr uint32_t kNoMark = 0;
+constexpr int32_t kImuSettleUnknown = std::numeric_limits<int32_t>::min();
 
 struct LiveStore {
     std::array<LiveDuration, kMetricCount> durations{};
@@ -53,6 +56,7 @@ struct LiveStore {
     std::array<Counter32, kCoreCount> coreAllocations{};
     std::array<std::atomic<TaskHandle_t>, kTaskCount> taskHandles{};
     LiveBoot boot{};
+    std::atomic<int32_t> imuSettleMs{kImuSettleUnknown};
     std::atomic<bool> sessionActive{false};
 };
 
@@ -161,6 +165,16 @@ Metrics::BootRecord Metrics::bootRecord() {
         .heapInternalFree = s_live.boot.heapInternalFree.load(std::memory_order_relaxed),
         .heapPsramFree = s_live.boot.heapPsramFree.load(std::memory_order_relaxed),
     };
+}
+
+void Metrics::recordImuSettle(int32_t settleMs) {
+    s_live.imuSettleMs.store(settleMs, std::memory_order_relaxed);
+}
+
+std::optional<int32_t> Metrics::imuSettleMs() {
+    const int32_t settleMs = s_live.imuSettleMs.load(std::memory_order_relaxed);
+    if (settleMs == kImuSettleUnknown) return std::nullopt;
+    return settleMs;
 }
 
 void Metrics::beginSession() {

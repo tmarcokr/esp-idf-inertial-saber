@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 #if CONFIG_SABER_METRICS
 #include "freertos/FreeRTOS.h"
@@ -14,7 +15,10 @@
 
 namespace InertialSaber::Diagnostics {
 
-/** @brief Timed quantities, recorded in microseconds. Reports list them in declaration order. */
+/**
+ * @brief Recorded quantities, in microseconds except KineticEnergyQuasiStaticSettled (milli-g).
+ * Reports list them in declaration order.
+ */
 enum class Metric : uint8_t {
     BusCycle,
     BusInterval,
@@ -36,6 +40,7 @@ enum class Metric : uint8_t {
     ProfileBuild,
     ProfileSave,
     ProfileSwitch,
+    KineticEnergyQuasiStaticSettled,
     Count
 };
 
@@ -53,6 +58,7 @@ enum class Counter : uint8_t {
     InertialBursts,
     ClashDetections,
     ClashRetriggerLt1s,
+    ImuFallbackSamples,
     Count
 };
 
@@ -99,6 +105,10 @@ public:
     static constexpr uint32_t kSessionBeginBit = 1U << 0;
     /** @brief Notification bit sent to the reporter task when a retraction completes. */
     static constexpr uint32_t kSessionEndBit = 1U << 1;
+    /** @brief recordImuSettle() value when the settling ceiling, not the DMP, ended the fallback. */
+    static constexpr int32_t kImuSettleForcedByCeiling = -1;
+    /** @brief recordImuSettle() value when no quasi-static sample arrived before the backstop. */
+    static constexpr int32_t kImuSettleForcedByBackstop = -2;
 
     /** @brief Accumulated statistics of one Metric. */
     struct DurationStats {
@@ -148,6 +158,16 @@ public:
     static void recordBoot();
 
     [[nodiscard]] static BootRecord bootRecord();
+
+    /**
+     * @brief Records when the IMU switched to the DMP motion values, once per boot.
+     * @param settleMs Milliseconds since power-up, kImuSettleForcedByCeiling or
+     *                 kImuSettleForcedByBackstop.
+     */
+    static void recordImuSettle(int32_t settleMs);
+
+    /** @brief Value given to recordImuSettle(), or std::nullopt until it is called. */
+    [[nodiscard]] static std::optional<int32_t> imuSettleMs();
 
     /** @brief Marks an ignition; notifies the reporter task without blocking. */
     static void beginSession();
@@ -208,6 +228,7 @@ private:
 #define SABER_METRIC_REGISTER_TASK(taskId, handle)                                                 \
     ::InertialSaber::Diagnostics::Metrics::registerTask((taskId), (handle))
 #define SABER_METRIC_RECORD_BOOT() ::InertialSaber::Diagnostics::Metrics::recordBoot()
+#define SABER_METRIC_IMU_SETTLE(ms) ::InertialSaber::Diagnostics::Metrics::recordImuSettle(ms)
 #define SABER_METRIC_SESSION_BEGIN() ::InertialSaber::Diagnostics::Metrics::beginSession()
 #define SABER_METRIC_SESSION_END() ::InertialSaber::Diagnostics::Metrics::endSession()
 #else
@@ -218,6 +239,7 @@ private:
 #define SABER_METRIC_ADD(counter, n) static_cast<void>(0)
 #define SABER_METRIC_REGISTER_TASK(taskId, handle) static_cast<void>(0)
 #define SABER_METRIC_RECORD_BOOT() static_cast<void>(0)
+#define SABER_METRIC_IMU_SETTLE(ms) static_cast<void>(0)
 #define SABER_METRIC_SESSION_BEGIN() static_cast<void>(0)
 #define SABER_METRIC_SESSION_END() static_cast<void>(0)
 #endif

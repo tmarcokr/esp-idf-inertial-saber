@@ -87,7 +87,7 @@ struct HardwareConfig {
                  .stackSize = TaskTable::kBus.stackSize,
                  .priority = TaskTable::kBus.priority,
                  .core = TaskTable::kBus.core},
-        .motion = {.warmUpPeriodMs = 3000, .orientationOffsetDeg = 0.0f},
+        .motion = {.warmUpPeriodMs = 300, .orientationOffsetDeg = 0.0f},
     };
 
     static constexpr uint32_t kClickWindowMs = 400;
