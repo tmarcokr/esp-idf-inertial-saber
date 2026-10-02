@@ -62,7 +62,7 @@ A block window therefore includes the retracted time before the ignition, so pro
 Blocks are captured in RAM (a ring of 4 pending blocks in PSRAM) and written later, when all of these hold:
 1. The saber is retracted (no active session).
 2. At least **2 s** have passed since the last retraction (for block 0: since the reporter started).
-3. The audio output has been idle (output level ≤ 8) for at least **500 ms**.
+3. The audio output has been idle (output level ≤ 140) for at least **500 ms**. The threshold sits above the small residual the mixer keeps outputting in silence: it is twice the residual bound of the configured DC-blocker cutoff, so it follows the cutoff preset.
 
 Right before each block is written, the reporter re-checks that no ignition has started; if one has, the write is postponed. Each block is written with its own open → append → close, so the data already written survives a power cut. After each write attempt the next one waits another 2 s.
 

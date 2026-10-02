@@ -40,6 +40,21 @@ constexpr uint64_t kTenthsPerSecondUs = 10'000'000ULL;
 constexpr std::string_view kFilePrefix = "session_";
 constexpr std::string_view kFileSuffix = ".csv";
 
+constexpr int32_t kQ15One = 1 << 15;
+constexpr int32_t kMixerFullScaleSample = 32767;
+constexpr int32_t kMixerFullScaleLevel = 16384;
+constexpr uint16_t kAudioIdleLevelCeiling = 256;
+
+constexpr uint16_t
+dcBlockerSilentResidualLevel(Espressif::Wrappers::Audio::DcBlocker::CutoffPreset cutoff) {
+    const int32_t maxStuckSample = (kQ15One - 1) / (kQ15One - static_cast<int32_t>(cutoff));
+    return static_cast<uint16_t>(maxStuckSample * kMixerFullScaleLevel / kMixerFullScaleSample);
+}
+
+constexpr uint16_t kAudioIdleLevel =
+    2 * dcBlockerSilentResidualLevel(Hardware::HardwareConfig::kAudioDcCutoff);
+static_assert(kAudioIdleLevel <= kAudioIdleLevelCeiling);
+
 enum class MetricKind : uint8_t { Scope, Duration, Interval };
 
 struct MetricInfo {

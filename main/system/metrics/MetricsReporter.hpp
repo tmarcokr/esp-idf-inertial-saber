@@ -104,7 +104,6 @@ private:
     static constexpr uint32_t kRateWindowMs = 1000;
     static constexpr uint32_t kFlushSettleMs = 2000;
     static constexpr uint32_t kAudioIdleHoldMs = 500;
-    static constexpr uint16_t kAudioIdleLevel = 8;
     static constexpr size_t kMaxPendingBlocks = 4;
     static constexpr size_t kTextBufferBytes = 8192;
     static constexpr uint32_t kMaxFileIndex = 999;
