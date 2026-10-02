@@ -20,16 +20,6 @@ namespace {
 using Espressif::Wrappers::MemoryFile;
 
 constexpr std::string_view kHumName = "hum.wav";
-constexpr std::string_view kSwingLowPrefix = "swingl";
-constexpr std::string_view kSwingHighPrefix = "swingh";
-
-std::string swingLowName(uint8_t pairIndex) {
-    return std::string(kSwingLowPrefix) + std::to_string(pairIndex) + ".wav";
-}
-
-std::string swingHighName(uint8_t pairIndex) {
-    return std::string(kSwingHighPrefix) + std::to_string(pairIndex) + ".wav";
-}
 
 size_t largestPsramBlock() {
     return heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
@@ -43,21 +33,11 @@ uint32_t elapsedUs(int64_t sinceUs) {
     return static_cast<uint32_t>(esp_timer_get_time() - sinceUs);
 }
 
-AudioPath mountedPath(std::string_view prefix, uint8_t pairIndex) {
-    return AudioPath(PsramAudioCache::kMountPoint)
-        .append("/")
-        .append(prefix)
-        .appendNumber(pairIndex)
-        .append(".wav");
-}
-
 } // namespace
 
-PsramAudioCache::PsramAudioCache(const Hardware::TaskSpec& task, uint8_t maxFiles, uint8_t maxFds)
+PsramAudioCache::PsramAudioCache(const Hardware::TaskSpec& task)
     : m_taskSpec(task)
-    , m_vfs(kMountPoint, maxFiles, maxFds) {
-    m_registeredNames.reserve(maxFiles);
-}
+    , m_vfs(kMountPoint, kMaxFiles, kMaxFds) {}
 
 PsramAudioCache::~PsramAudioCache() {
     if (m_loaderTask) {
@@ -115,20 +95,8 @@ PsramAudioCache::PreloadStatus PsramAudioCache::preloadStatus() const {
                                                                            : PreloadStatus::Ready;
 }
 
-uint8_t PsramAudioCache::loadedSwingPairCount() const {
-    return m_loadedSwingPairs.load(std::memory_order_acquire);
-}
-
 AudioPath PsramAudioCache::humPath() {
     return AudioPath(kMountPoint).append("/").append(kHumName);
-}
-
-AudioPath PsramAudioCache::swingLowPath(uint8_t pairIndex) {
-    return mountedPath(kSwingLowPrefix, pairIndex);
-}
-
-AudioPath PsramAudioCache::swingHighPath(uint8_t pairIndex) {
-    return mountedPath(kSwingHighPrefix, pairIndex);
 }
 
 void PsramAudioCache::loaderTaskFn(void* pvParameters) {
@@ -213,8 +181,7 @@ void PsramAudioCache::runPreload(const PreloadJob& job) {
              job.font.root().c_str());
     const int64_t jobStartUs = esp_timer_get_time();
 
-    m_loadedSwingPairs.store(0, std::memory_order_release);
-    unloadAll();
+    unloadHum();
     waitForDescriptorsClosed();
 
     if (isSuperseded(job.generation)) {
@@ -223,9 +190,7 @@ void PsramAudioCache::runPreload(const PreloadJob& job) {
     }
 
     JobContext context{job.generation, kFitWaitMs, 0, 0};
-    if (const esp_err_t err =
-            loadFile(job.font.humPath(), std::string(kHumName), FileRole::Required, context);
-        err != ESP_OK) {
+    if (const esp_err_t err = loadFile(job.font.humPath(), kHumName, context); err != ESP_OK) {
         if (isSuperseded(job.generation)) {
             ESP_LOGD(TAG, "Preload gen %lu superseded while loading hum.wav", generation);
             return;
@@ -236,33 +201,6 @@ void PsramAudioCache::runPreload(const PreloadJob& job) {
         m_failedGeneration.store(job.generation, std::memory_order_release);
         m_completedGeneration.store(job.generation, std::memory_order_release);
         return;
-    }
-    ESP_LOGD(TAG, "Loaded to PSRAM: hum.wav");
-
-    const uint8_t totalPairs = job.font.swingPairCount();
-    for (uint8_t i = 1; i <= totalPairs; ++i) {
-        if (isSuperseded(job.generation)) {
-            ESP_LOGD(TAG, "Preload gen %lu superseded at pair %u", generation, i);
-            return;
-        }
-
-        const std::string lowName = swingLowName(i);
-        esp_err_t err = loadFile(job.font.swingLowPath(i), lowName, FileRole::Optional, context);
-        if (err == ESP_OK) {
-            err =
-                loadFile(job.font.swingHighPath(i), swingHighName(i), FileRole::Optional, context);
-            if (err != ESP_OK) {
-                unloadFile(lowName);
-            }
-        }
-        if (err != ESP_OK) {
-            if (!isSuperseded(job.generation)) {
-                ESP_LOGW(TAG, "Preload stopped at pair %u (err=%s)", i, esp_err_to_name(err));
-            }
-            break;
-        }
-        m_loadedSwingPairs.store(i, std::memory_order_release);
-        ESP_LOGD(TAG, "Loaded to PSRAM: swing pair %u", i);
     }
 
     if (isSuperseded(job.generation)) {
@@ -276,20 +214,19 @@ void PsramAudioCache::runPreload(const PreloadJob& job) {
                                                    1000U / context.copyUs)
                            : 0;
     ESP_LOGI(TAG,
-             "Preload gen %lu complete: '%s' hum + %u/%u pair(s), %zu B in %" PRIu32 " ms (%" PRIu32
+             "Preload gen %lu complete: '%s' hum %zu B in %" PRIu32 " ms (%" PRIu32
              " kB/s), job %" PRIu32 " ms, free PSRAM %zu B, largest %zu B",
-             generation, job.font.root().c_str(),
-             static_cast<unsigned>(m_loadedSwingPairs.load(std::memory_order_relaxed)),
-             static_cast<unsigned>(totalPairs), context.copiedBytes, context.copyUs / 1000U,
+             generation, job.font.root().c_str(), context.copiedBytes, context.copyUs / 1000U,
              copyRateKBps, elapsedUs(jobStartUs) / 1000U, freePsram(), largestPsramBlock());
 }
 
-esp_err_t PsramAudioCache::loadFile(const AudioPath& sdPath, const std::string& vfsName,
-                                    FileRole role, JobContext& context) {
+esp_err_t PsramAudioCache::loadFile(const AudioPath& sdPath, std::string_view vfsName,
+                                    JobContext& context) {
     configASSERT(xTaskGetCurrentTaskHandle() == m_loaderTask);
 
     if (!sdPath.ok()) {
-        ESP_LOGE(TAG, "Source path of '%s' exceeds %u characters", vfsName.c_str(),
+        ESP_LOGE(TAG, "Source path of '%.*s' exceeds %u characters",
+                 static_cast<int>(vfsName.size()), vfsName.data(),
                  static_cast<unsigned>(AudioPath::kMaxLength));
         return ESP_ERR_INVALID_SIZE;
     }
@@ -322,18 +259,17 @@ esp_err_t PsramAudioCache::loadFile(const AudioPath& sdPath, const std::string& 
 
     if (!waitForFit(size, context)) {
         if (isSuperseded(context.generation)) return ESP_ERR_INVALID_STATE;
-        const esp_log_level_t level = role == FileRole::Required ? ESP_LOG_ERROR : ESP_LOG_WARN;
-        ESP_LOG_LEVEL_LOCAL(level, TAG,
-                            "Not enough PSRAM for '%s': %zu B + %zu B headroom, largest block "
-                            "%zu B, free %zu B, %u /mem descriptor(s) open",
-                            vfsName.c_str(), size, kPsramHeadroomBytes, largestPsramBlock(),
-                            freePsram(), static_cast<unsigned>(m_vfs.openDescriptorCount()));
+        ESP_LOGE(TAG,
+                 "Not enough PSRAM for '%s': %zu B + %zu B headroom, largest block %zu B, free "
+                 "%zu B, %u /mem descriptor(s) open",
+                 sdPath.c_str(), size, kPsramHeadroomBytes, largestPsramBlock(), freePsram(),
+                 static_cast<unsigned>(m_vfs.openDescriptorCount()));
         return ESP_ERR_NO_MEM;
     }
 
     MemoryFile file = MemoryFile::allocate(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!file.bytes) {
-        ESP_LOGE(TAG, "Failed to allocate %zu bytes in PSRAM for file '%s'", size, vfsName.c_str());
+        ESP_LOGE(TAG, "Failed to allocate %zu bytes in PSRAM for file '%s'", size, sdPath.c_str());
         return ESP_ERR_NO_MEM;
     }
 
@@ -356,37 +292,24 @@ esp_err_t PsramAudioCache::loadFile(const AudioPath& sdPath, const std::string& 
     esp_err_t err =
         m_vfs.registerFile(vfsName, std::make_shared<const MemoryFile>(std::move(file)));
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register '%s' (err=%s)", vfsName.c_str(), esp_err_to_name(err));
+        ESP_LOGE(TAG, "Failed to register '%s' (err=%s)", sdPath.c_str(), esp_err_to_name(err));
         return err;
     }
-    m_registeredNames.push_back(vfsName);
+    m_humRegistered = true;
 
     ESP_LOGD(TAG, "Preloaded '%s' to PSRAM (%zu B in %" PRIu32 " us). Free PSRAM: %zu B",
-             vfsName.c_str(), size, copyUs, freePsram());
+             sdPath.c_str(), size, copyUs, freePsram());
     return ESP_OK;
 }
 
-void PsramAudioCache::unloadFile(const std::string& vfsName) {
+void PsramAudioCache::unloadHum() {
     configASSERT(xTaskGetCurrentTaskHandle() == m_loaderTask);
-    auto it = std::find(m_registeredNames.begin(), m_registeredNames.end(), vfsName);
-    if (it == m_registeredNames.end()) return;
-    releaseFile(vfsName);
-    m_registeredNames.erase(it);
-}
-
-void PsramAudioCache::releaseFile(const std::string& vfsName) {
-    const esp_err_t err = m_vfs.unregisterFile(vfsName);
-    if (err != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to unregister '%s' (err=%s)", vfsName.c_str(), esp_err_to_name(err));
+    if (!m_humRegistered) return;
+    m_humRegistered = false;
+    if (const esp_err_t err = m_vfs.unregisterFile(kHumName); err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to unregister '%.*s' (err=%s)", static_cast<int>(kHumName.size()),
+                 kHumName.data(), esp_err_to_name(err));
     }
-}
-
-void PsramAudioCache::unloadAll() {
-    configASSERT(xTaskGetCurrentTaskHandle() == m_loaderTask);
-    for (const auto& name : m_registeredNames) {
-        releaseFile(name);
-    }
-    m_registeredNames.clear();
 }
 
 } // namespace InertialSaber::System

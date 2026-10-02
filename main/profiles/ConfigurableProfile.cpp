@@ -64,8 +64,8 @@ ProfileEffects ConfigurableProfile::buildEffects(const SaberServices& services,
     PowerStateMachine& power = context->power;
     auto set = std::make_unique<Core::EffectSet>(m_def, std::move(context));
 
-    auto swingFx = std::make_unique<Effects::InertialSwingEffect>(services.audioControl, m_def,
-                                                                  m_font, services.audioCache);
+    auto swingFx =
+        std::make_unique<Effects::InertialSwingEffect>(services.audioControl, m_def, m_font);
     auto lightFx = std::make_unique<Effects::InertialLightEffect>(services.blade, m_def);
     auto powerFx = std::make_unique<Effects::PowerToggleEffect>(
         power, *swingFx, *lightFx, services.audioControl, services.blade, m_def, m_font,

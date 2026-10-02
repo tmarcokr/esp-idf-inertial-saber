@@ -2,7 +2,6 @@
 #include "profiles/SoundFont.hpp"
 #include "profiles/inertial/effects/AudioLevels.hpp"
 #include "InertialLightEffect.hpp"
-#include "system/PsramAudioCache.hpp"
 #include "cJSON.h"
 #include "esp_log.h"
 #include <algorithm>
@@ -189,8 +188,8 @@ esp_err_t ProfileParser::parse(std::string_view json, Inertial::InertialDefiniti
         reader.read(swing, "clash_threshold_g", 2.0f, kMinClashThresholdG, kMaxG);
 
     const Section fontCounts = section(root, "font_counts");
-    outDef.fontCounts.swingPair = reader.read<uint8_t>(fontCounts, "swing_pair", 3, 0,
-                                                       System::PsramAudioCache::kMaxSwingPairs);
+    outDef.fontCounts.swingPair =
+        reader.read<uint8_t>(fontCounts, "swing_pair", 3, 0, SoundFont::kMaxSwingPairs);
     outDef.fontCounts.burst = reader.read<uint8_t>(fontCounts, "burst", 16, 0, kMaxFontCount);
     outDef.fontCounts.in = reader.read<uint8_t>(fontCounts, "in", 2, 0, kMaxFontCount);
     outDef.fontCounts.out = reader.read<uint8_t>(fontCounts, "out", 4, 0, kMaxFontCount);
@@ -355,7 +354,7 @@ esp_err_t ProfileParser::runSelfTest() {
     if (invalidDef.humBaseVolume != Effects::kFullVolume ||
         invalidDef.clashThresholdG != kMinClashThresholdG)
         return ESP_FAIL;
-    if (invalidDef.fontCounts.swingPair != System::PsramAudioCache::kMaxSwingPairs ||
+    if (invalidDef.fontCounts.swingPair != SoundFont::kMaxSwingPairs ||
         invalidDef.fontCounts.blaster != 255)
         return ESP_FAIL;
     if (invalidDef.ignitionDurationMs != kMinDurationMs ||

@@ -23,6 +23,8 @@ class SoundFont {
 public:
     /** @brief Longest normalized root that keeps every font path within System::AudioPath. */
     static constexpr size_t kMaxRootLength = 96;
+    /** @brief Highest swing pair count accepted from a profile. */
+    static constexpr uint8_t kMaxSwingPairs = 19;
 
     SoundFont(std::string_view rootPath, const Inertial::FontCounts& counts);
 
