@@ -94,7 +94,7 @@ struct HardwareConfig {
     // Compressor threshold and DC cutoff are tuned for the MAX98357A on this hardware.
     static constexpr uint32_t kAudioSampleRate = 44100;
     static constexpr uint8_t kAudioMaxChannels = 9;
-    static constexpr uint16_t kAudioCompressorThreshold = 1000;
+    static constexpr uint16_t kAudioCompressorThreshold = CONFIG_SABER_AUDIO_COMPRESSOR_THRESHOLD;
     static constexpr auto kAudioDcCutoff =
         Espressif::Wrappers::Audio::DcBlocker::CutoffPreset::Hz50;
     static constexpr uint16_t kAudioGlobalVolume = 16384;
