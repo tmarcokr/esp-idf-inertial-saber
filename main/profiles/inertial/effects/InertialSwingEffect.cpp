@@ -1,6 +1,7 @@
 #include "InertialSwingEffect.hpp"
 #include "diagnostics/Metrics.hpp"
 #include "AudioLevels.hpp"
+#include "EffectMath.hpp"
 #include "profiles/SoundFont.hpp"
 #include "system/PsramAudioCache.hpp"
 
@@ -8,7 +9,6 @@
 #include "esp_random.h"
 #include <algorithm>
 #include <cmath>
-#include <numbers>
 
 namespace InertialSaber::Effects {
 
@@ -96,7 +96,7 @@ float InertialSwingEffect::computeFinalMix() const {
     float baseMix = (m_kineticEnergy - m_def.swingCrossfadeLowG) / crossfadeRange;
     baseMix = std::clamp(baseMix, 0.0f, 1.0f);
 
-    float bladeAngleRad = m_orientation * (std::numbers::pi_v<float> / 2.0f);
+    float bladeAngleRad = m_orientation * kHalfPi;
     float gravityMod = std::sin(bladeAngleRad) * m_def.gravityInfluence;
     return std::clamp(baseMix + gravityMod, 0.0f, 1.0f);
 }
