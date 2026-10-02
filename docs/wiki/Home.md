@@ -4,7 +4,7 @@ InertialSaber OS is designed as a **Physical Simulation** rather than a state ma
 
 ## 1. High-Level Data Flow
 
-The system operates in a continuous loop at approximately **800Hz** to ensure zero-latency response.
+The system runs an event-driven loop: the SaberAction bus wakes on every IMU sample (**100 Hz**, DMP) and on a 10 ms timeout fallback. Measured on the reference board (debug build), the bus runs at about **155 Hz** on average (128–185 Hz per 1 s window), and a bus cycle takes 70–240 µs on average (max 1.47 ms while ignited, against a 2 ms budget).
 
 ```text
 [ HARDWARE ]          [ PROCESSING ]          [ RENDERING ]

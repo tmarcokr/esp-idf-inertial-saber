@@ -155,9 +155,12 @@ The bus task uses a **hybrid event-driven model** with timeout fallback to balan
 ### 5.2. Wake Sources
 | Source | Mechanism | Purpose |
 | :--- | :--- | :--- |
-| **IMU DMP** | Task notification from ISR/reader task | New motion data available (~200Hz) |
+| **IMU DMP** | Task notification from ISR/reader task | New motion data available (100 Hz, measured on the reference board) |
 | **InputAdapter** | Queue push + task notification | Button state transition detected |
 | **Timeout (10 ms)** | FreeRTOS notification timeout (fallback) | Ensures continuous evaluation for Flow Modulators during calm periods |
+
+> [!NOTE]
+> **Measured on the reference board (debug build, 2026-10-02):** IMU sample rate 100 Hz (99–101 Hz per 1 s window); bus rate about 155 Hz on average (151–171 Hz per session, 128–185 Hz per 1 s window), with about 35–40 % of the cycles woken by the timeout; bus cycle 70–240 µs on average, max 1.47 ms while ignited (budget 2 ms); motion age about 3.3–3.9 ms on average, max about 10.9 ms; one-shot audio latency 12–18 ms on average, max 25.5 ms. At 100 Hz the 15 ms clash window spans 1–2 IMU samples. See [Diagnostics](Diagnostics.md).
 
 ### 5.3. Core Affinity and Task Map
 Stack size, priority and core of every task are defined in one table, `TaskTable` in `main/system/hardware/HardwareConfig.hpp`. Tasks owned by `main/` are created from it with `xTaskCreatePinnedToCore`. Tasks created by components or by ESP-IDF with fixed parameters are listed as **reference only**: the table documents them and feeds the metrics report ([Diagnostics](Diagnostics.md)), but does not apply them.

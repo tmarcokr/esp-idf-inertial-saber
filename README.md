@@ -23,7 +23,7 @@ The visual core. Working in HSB (Hue, Saturation, Brightness) space, it simulate
 The "Inertia Tank". A physics-driven accumulator that tracks sustained movement intensity. Once fully charged, it triggers high-priority **Inertial Bursts**, creating a bridge between continuous motion and explosive climax events.
 
 ### 4. [SaberAction System (The Action Bus)](./docs/wiki/SaberAction.md)
-The asynchronous event dispatcher. It processes sensor data at high frequency (~800Hz) and evaluates active `InertialEffects` (impacts, thrusts, etc.) based on prioritized physical triggers.
+The asynchronous event dispatcher. It wakes on every IMU sample (100 Hz) and on a 10 ms timeout fallback — about 155 Hz on average, measured on the reference board (debug build) — and evaluates active `InertialEffects` (impacts, thrusts, etc.) based on prioritized physical triggers.
 
 ### 5. [InertialHaptics Engine](./docs/wiki/InertialHaptics.md)
 The tactile core. It uses real-time low-frequency synthesis to simulate plasma mass, friction, and recoil.

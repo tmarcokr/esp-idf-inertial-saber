@@ -36,7 +36,7 @@ The system relies on an effects interface that allows the `SaberAction System` t
 ### `InertialEffect` Interface
 Each effect (clash, blast, etc.) is a class that implements two fundamental methods:
 
-*   **Test(SaberDataPacket):** Evaluation method that receives the sensor stream at high frequency (~800Hz) and returns a boolean if conditions (G-Force, rotation, or button input) are met to trigger the effect.
+*   **Test(SaberDataPacket):** Evaluation method that receives the sensor stream on every bus cycle (about 155 Hz on average, measured on the reference board, debug build) and returns a boolean if conditions (G-Force, rotation, or button input) are met to trigger the effect.
 *   **Run():** Execution method that coordinates the audio output (WAV) and the associated light response (LED) at the moment of the trigger.
 
 ```cpp
