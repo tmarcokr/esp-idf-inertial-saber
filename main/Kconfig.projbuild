@@ -15,12 +15,20 @@ menu "InertialSaber"
         help
             Records bus cycle and effect run() timings, loop and IMU rates, event
             counters, heap allocations per CPU core, free heap and task stack
-            high-water marks in under 0.5 KB of internal RAM, without heap use or
+            high-water marks in about 0.8 KB of internal RAM (.bss), without heap use or
             locks on the real-time path. A priority-1 task (4 KB stack, about 10 KB of
             PSRAM buffers) appends one CSV block per ignition session to
             /sdcard/metrics/session_NNN.csv, only while the saber is retracted
             and the audio is idle. Enables the heap allocation hooks.
             When disabled, the instrumentation compiles to nothing.
-            Disable it in release builds.
+
+    config SABER_AUDIO_COMPRESSOR_THRESHOLD
+        int "Audio compressor gain threshold"
+        default 1000
+        range 600 2000
+        help
+            Baseline threshold of the dynamic range compressor in the audio mixer
+            (AudioEngine::Config::compressor_gain_threshold). The default is tuned
+            for the MAX98357A on this hardware.
 
 endmenu

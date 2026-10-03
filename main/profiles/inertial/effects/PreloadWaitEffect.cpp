@@ -7,6 +7,7 @@
 #include "system/status/StatusIndicator.hpp"
 #include "system/audio/AudioController.hpp"
 #include "esp_log.h"
+#include "esp_timer.h"
 
 namespace InertialSaber::Effects {
 
@@ -18,13 +19,15 @@ PreloadWaitEffect::PreloadWaitEffect(Profiles::PowerStateMachine& power,
                                      System::AudioController& audio,
                                      const System::PsramAudioCache& audioCache,
                                      System::Status::StatusIndicator& status,
-                                     const Profiles::SoundFont& font)
+                                     const Profiles::SoundFont& font,
+                                     std::optional<uint32_t> switchRequestedUs)
     : InertialEffect(0)
     , m_power(power)
     , m_audio(audio)
     , m_audioCache(audioCache)
     , m_status(status)
-    , m_font(font) {}
+    , m_font(font)
+    , m_switchRequestedUs(switchRequestedUs) {}
 
 bool PreloadWaitEffect::test(const Core::SaberDataPacket&) {
     return m_power.state() == Profiles::PowerStateMachine::State::Locked;
@@ -50,6 +53,10 @@ void PreloadWaitEffect::run() {
     }
 
     m_power.handle(Profiles::PowerStateMachine::Event::PreloadDone);
+    if (m_switchRequestedUs) {
+        SABER_METRIC_DURATION(Diagnostics::Metric::ProfileSwitch,
+                              static_cast<uint32_t>(esp_timer_get_time()) - *m_switchRequestedUs);
+    }
 
     m_status.show(SystemStatus::Ready);
 

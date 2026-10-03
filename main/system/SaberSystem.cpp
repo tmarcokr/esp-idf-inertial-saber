@@ -12,6 +12,7 @@ using Status::SystemStatus;
 
 SaberSystem::~SaberSystem() {
     m_bus.stop();
+    m_profiles.stop();
 }
 
 esp_err_t SaberSystem::start() {
@@ -70,8 +71,6 @@ esp_err_t SaberSystem::internalStart() {
     }
     ESP_LOGI(TAG, "Button ready (GPIO %d)", static_cast<int>(Board::kPins.mainButton));
 
-    if ((err = m_profileStore.start()) != ESP_OK) return err;
-
     ESP_LOGI(TAG, "Loading Profiles...");
     if ((err = m_profiles.init()) != ESP_OK) {
         ESP_LOGE(TAG, "No usable profile: action bus not started, ignition disabled");
@@ -84,6 +83,7 @@ esp_err_t SaberSystem::internalStart() {
         ESP_LOGE(TAG, "Bus start failed");
         return err;
     }
+    if ((err = m_profiles.start()) != ESP_OK) return err;
 
     SABER_METRIC_RECORD_BOOT();
 #if CONFIG_SABER_METRICS

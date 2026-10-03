@@ -1,4 +1,5 @@
 #include "InertialLightEffect.hpp"
+#include "EffectMath.hpp"
 #include "diagnostics/Metrics.hpp"
 
 #include "SmartLedTypes.hpp"
@@ -18,7 +19,6 @@ using namespace Espressif::Wrappers::SmartLed;
 namespace {
 
 constexpr const char* TAG = "InertialLight";
-constexpr float kHalfPi = std::numbers::pi_v<float> / 2.0f;
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 constexpr float kExcitationThresholdG = 0.5f;
 constexpr float kFlickerFullScaleG = 4.0f;

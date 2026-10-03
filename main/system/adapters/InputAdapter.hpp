@@ -39,6 +39,7 @@ private:
     void onFirstHoldTick();
     void resolveClickGesture();
     void resolveHoldTick();
+    uint8_t emitClickLocked();
     uint8_t emitHoldTickLocked();
 
     static void clickTimerCallback(void* arg);
@@ -53,6 +54,7 @@ private:
     Core::InputDescriptor m_btnState{};
     uint8_t m_pendingClicks = 0;
     uint8_t m_holdLevel = 0;
+    bool m_clickResolveOnRelease = false;
 
     esp_timer_handle_t m_clickTimer = nullptr;
     esp_timer_handle_t m_holdTimer = nullptr;

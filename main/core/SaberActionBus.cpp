@@ -5,8 +5,8 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 
-#include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace InertialSaber::Core {
 
@@ -14,13 +14,12 @@ static constexpr const char* TAG = "SaberActionBus";
 
 SaberActionBus::SaberActionBus(const BusConfig& config)
     : m_config(config)
-    , m_exitSemaphore(xSemaphoreCreateBinaryStatic(&m_exitSemaphoreControl)) {
-    m_effects.reserve(kMaxEffects);
-    m_effectsPendingDestruction.reserve(kMaxEffects);
-}
+    , m_exitSemaphore(xSemaphoreCreateBinaryStatic(&m_exitSemaphoreControl)) {}
 
 SaberActionBus::~SaberActionBus() {
     stop();
+    const std::unique_ptr<EffectSet> staged(m_stagedEffects.exchange(nullptr));
+    const std::unique_ptr<EffectSet> retired(m_retiredEffects.exchange(nullptr));
     vSemaphoreDelete(m_exitSemaphore);
 }
 
@@ -77,37 +76,54 @@ void SaberActionBus::stop() {
     ESP_LOGI(TAG, "Bus stopped");
 }
 
-void SaberActionBus::setPhysicsConfig(const Core::PhysicsConfig& def) {
-    m_kineticEnergyDeadbandG = def.kineticEnergyDeadbandG;
-    m_rotationDeadbandDps = def.rotationDeadbandDps;
-    m_overloadThresholdG = def.overloadThresholdG;
-    m_overloadChargeRate = def.overloadChargeRate;
-    m_overloadDrainRate = def.overloadDrainRate;
-    m_burstCooldownMs = def.burstCooldownMs;
+void SaberActionBus::installEffects(std::unique_ptr<EffectSet> set) {
+    configASSERT(m_taskHandle.load() == nullptr);
+    configASSERT(set != nullptr);
+    m_activeEffects = std::move(set);
+    applyPhysics(m_activeEffects->physics());
 }
 
-void SaberActionBus::registerEffect(std::unique_ptr<InertialEffect> effect) {
-    if (!effect) {
-        return;
+bool SaberActionBus::stageEffects(std::unique_ptr<EffectSet> set) {
+    if (!set) {
+        return false;
     }
-    if (m_effects.size() >= kMaxEffects) {
-        ESP_LOGE(TAG, "Effect rejected: the bus holds at most %u effects",
-                 static_cast<unsigned>(kMaxEffects));
-        return;
+    EffectSet* expected = nullptr;
+    if (!m_stagedEffects.compare_exchange_strong(expected, set.get(), std::memory_order_acq_rel,
+                                                 std::memory_order_relaxed)) {
+        return false;
     }
-    const auto position = std::upper_bound(
-        m_effects.begin(), m_effects.end(), effect->priority(),
-        [](uint8_t priority, const auto& fx) { return priority < fx->priority(); });
-    m_effects.insert(position, std::move(effect));
-    m_effectsChanged = true;
+    static_cast<void>(set.release());
+    return true;
 }
 
-void SaberActionBus::clearEffects() {
-    for (auto& fx : m_effects) {
-        m_effectsPendingDestruction.push_back(std::move(fx));
+std::unique_ptr<EffectSet> SaberActionBus::takeRetiredEffects() {
+    return std::unique_ptr<EffectSet>(
+        m_retiredEffects.exchange(nullptr, std::memory_order_acq_rel));
+}
+
+void SaberActionBus::commitStagedEffects() {
+    if (m_stagedEffects.load(std::memory_order_relaxed) == nullptr) {
+        return;
     }
-    m_effects.clear();
-    m_effectsChanged = true;
+    if (m_retiredEffects.load(std::memory_order_acquire) != nullptr) {
+        return;
+    }
+    SABER_METRIC_SCOPE(Diagnostics::Metric::ProfileCommit);
+    EffectSet* const staged = m_stagedEffects.exchange(nullptr, std::memory_order_acq_rel);
+    EffectSet* const previous = m_activeEffects.release();
+    configASSERT(previous != nullptr);
+    m_activeEffects.reset(staged);
+    applyPhysics(m_activeEffects->physics());
+    m_retiredEffects.store(previous, std::memory_order_release);
+}
+
+void SaberActionBus::applyPhysics(const PhysicsConfig& physics) {
+    m_kineticEnergyDeadbandG = physics.kineticEnergyDeadbandG;
+    m_rotationDeadbandDps = physics.rotationDeadbandDps;
+    m_overloadThresholdG = physics.overloadThresholdG;
+    m_overloadChargeRate = physics.overloadChargeRate;
+    m_overloadDrainRate = physics.overloadDrainRate;
+    m_burstCooldownMs = physics.burstCooldownMs;
 }
 
 void SaberActionBus::updateMotion(const MotionSample& sample) {
@@ -158,6 +174,8 @@ void SaberActionBus::busLoop() {
         {
             SABER_METRIC_SCOPE(Diagnostics::Metric::BusCycle);
 
+            commitStagedEffects();
+
             m_packet.timestampMs = static_cast<uint32_t>(esp_timer_get_time() / 1000);
 
             applyStagedMotion();
@@ -169,16 +187,14 @@ void SaberActionBus::busLoop() {
             computeInertialOverload();
             drainInputQueue();
 
-            m_effectsChanged = false;
-            // Warning: run() may replace the effects; check m_effectsChanged before indexing again.
-            for (size_t i = 0; i < m_effects.size() && !m_effectsChanged; ++i) {
-                InertialEffect* effect = m_effects[i].get();
-                if (effect->test(m_packet)) {
-                    effect->run();
+            if (m_activeEffects) {
+                for (const auto& effect : m_activeEffects->effects()) {
+                    if (effect->test(m_packet)) {
+                        effect->run();
+                    }
                 }
             }
 
-            m_effectsPendingDestruction.clear();
             m_packet.inputs = {};
         }
     }

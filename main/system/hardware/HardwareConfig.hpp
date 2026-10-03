@@ -41,8 +41,8 @@ struct TaskTable {
         .name = "audio_ctrl", .stackSize = 4096, .priority = 7, .core = 1};
     static constexpr TaskSpec kPsramLoader{
         .name = "psram_loader", .stackSize = 4096, .priority = 2, .core = 1};
-    static constexpr TaskSpec kProfileStore{
-        .name = "profile_store", .stackSize = 3072, .priority = 1, .core = 1};
+    static constexpr TaskSpec kProfileControl{
+        .name = "profile_ctrl", .stackSize = 6144, .priority = 3, .core = 1};
     static constexpr TaskSpec kMetricsReporter{
         .name = "metrics", .stackSize = 4096, .priority = 1, .core = 1};
 
@@ -76,6 +76,10 @@ struct TaskTable {
 
 static_assert(TaskTable::kImuAdapter.priority > TaskTable::kBus.priority &&
               TaskTable::kImuAdapter.core == TaskTable::kBus.core);
+static_assert(TaskTable::kProfileControl.core != TaskTable::kBus.core,
+              "profile_ctrl allocations must never be attributed to the bus core");
+static_assert(TaskTable::kProfileControl.priority < TaskTable::kAudioControl.priority &&
+              TaskTable::kProfileControl.priority > TaskTable::kPsramLoader.priority);
 
 struct HardwareConfig {
     static constexpr Core::BusConfig kBusConfig{
@@ -83,7 +87,7 @@ struct HardwareConfig {
                  .stackSize = TaskTable::kBus.stackSize,
                  .priority = TaskTable::kBus.priority,
                  .core = TaskTable::kBus.core},
-        .motion = {.warmUpPeriodMs = 3000, .orientationOffsetDeg = 0.0f},
+        .motion = {.warmUpPeriodMs = 300, .orientationOffsetDeg = 0.0f},
     };
 
     static constexpr uint32_t kClickWindowMs = 400;
@@ -94,7 +98,7 @@ struct HardwareConfig {
     // Compressor threshold and DC cutoff are tuned for the MAX98357A on this hardware.
     static constexpr uint32_t kAudioSampleRate = 44100;
     static constexpr uint8_t kAudioMaxChannels = 9;
-    static constexpr uint16_t kAudioCompressorThreshold = 1000;
+    static constexpr uint16_t kAudioCompressorThreshold = CONFIG_SABER_AUDIO_COMPRESSOR_THRESHOLD;
     static constexpr auto kAudioDcCutoff =
         Espressif::Wrappers::Audio::DcBlocker::CutoffPreset::Hz50;
     static constexpr uint16_t kAudioGlobalVolume = 16384;

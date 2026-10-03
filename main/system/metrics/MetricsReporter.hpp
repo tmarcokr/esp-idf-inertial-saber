@@ -19,22 +19,28 @@
 #include <cstdint>
 #include <memory>
 
+namespace InertialSaber::Profiles {
+class ProfileManager;
+}
+
 namespace InertialSaber::System::Monitoring {
 
 /**
  * @brief Low-priority task that aggregates the live metrics per ignition session and appends them
  * as CSV blocks to /sdcard/metrics/session_NNN.csv while the saber is retracted, the audio idle and
- * no PSRAM preload is reading the SD card.
+ * no PSRAM preload, profile switch or profile save is using the SD card.
  */
 class MetricsReporter {
 public:
     /**
      * @param audio Engine whose lock-free output level gates the SD writes.
      * @param audioCache Cache whose preload status gates the SD writes.
+     * @param profiles Profile manager whose pending switch or save gates the SD writes.
      * @param status Indicator that signals every write attempt and its outcome.
      */
     MetricsReporter(const Espressif::Wrappers::Audio::AudioEngine& audio,
-                    const PsramAudioCache& audioCache, Status::StatusIndicator& status);
+                    const PsramAudioCache& audioCache, const Profiles::ProfileManager& profiles,
+                    Status::StatusIndicator& status);
     ~MetricsReporter();
 
     MetricsReporter(const MetricsReporter&) = delete;
@@ -127,6 +133,7 @@ private:
     void resetBlockAccumulators(int64_t nowUs, uint32_t busCyclesBaseline,
                                 uint32_t imuSamplesBaseline);
     void captureBlock(BlockSnapshot& block, int64_t nowUs);
+    [[nodiscard]] bool sdQuiet() const;
     [[nodiscard]] bool flushDue(int64_t nowUs) const;
     void flush(int64_t nowUs);
     [[nodiscard]] FlushOutcome writePending();
@@ -139,6 +146,7 @@ private:
 
     const Espressif::Wrappers::Audio::AudioEngine& m_audio;
     const PsramAudioCache& m_audioCache;
+    const Profiles::ProfileManager& m_profiles;
     Status::StatusIndicator& m_status;
     TaskHandle_t m_task = nullptr;
 

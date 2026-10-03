@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BusConfig.hpp"
-#include "InertialEffect.hpp"
+#include "EffectSet.hpp"
 #include "SaberDataPacket.hpp"
 #include "PhysicsConfig.hpp"
 
@@ -15,7 +15,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 namespace InertialSaber::Core {
 
@@ -30,15 +29,18 @@ struct InputEvent {
 /**
  * @brief Asynchronous event dispatcher for the InertialSaber OS.
  *
- * Maintains the active InertialEffect list, builds a SaberDataPacket each
- * cycle from externally injected motion and input data, and evaluates all
- * registered effects. Uses a hybrid event-driven model: the task blocks on
- * a FreeRTOS notification with a short timeout fallback to ensure continuous
- * evaluation for Flow Modulator effects.
+ * Runs the active EffectSet: builds a SaberDataPacket each cycle from externally
+ * injected motion and input data, and evaluates every effect of the set. Uses a
+ * hybrid event-driven model: the task blocks on a FreeRTOS notification with a
+ * short timeout fallback to ensure continuous evaluation for Flow Modulator effects.
  *
  * Thread safety:
- *   - registerEffect() / clearEffects(): call only when the bus is stopped
- *     or from the bus task context (profile loading).
+ *   - The active set is touched only by the bus task.
+ *   - installEffects(): only while the bus is stopped.
+ *   - stageEffects() / takeRetiredEffects(): the only cross-task hand-off; one stager
+ *     task at a time. A staged set becomes active at the top of a later cycle and the
+ *     set it replaces is published for the stager to take.
+ *   - Sets are never destroyed on the bus task.
  *   - updateMotion(): safe from any task (spinlock-guarded sample copy).
  *   - pushInputEvent(): safe from any task (FreeRTOS queue).
  */
@@ -51,7 +53,8 @@ public:
     explicit SaberActionBus(const BusConfig& config);
 
     /**
-     * @brief Stop the bus (see stop()), then release the exit semaphore.
+     * @brief Stop the bus (see stop()), destroy any staged or retired set, then release the exit
+     * semaphore.
      */
     ~SaberActionBus();
 
@@ -73,24 +76,25 @@ public:
     void stop();
 
     /**
-     * @brief Inject per-profile physics parameters from the active profile.
-     * @param def The InertialDefinition of the profile being loaded.
+     * @brief Installs the initial set and applies its physics. Bus stopped only; used at boot.
+     * @param set The set to run; any previously installed set is destroyed in the caller's task.
      */
-    void setPhysicsConfig(const Core::PhysicsConfig& def);
+    void installEffects(std::unique_ptr<EffectSet> set);
 
     /**
-     * @brief Register an InertialEffect on the bus. Ownership is transferred.
+     * @brief Hands @p set to the bus; it becomes active at the top of a later cycle.
      *
-     * The effect is inserted in priority order, after any effect of equal priority. Rejected with
-     * an error log once kMaxEffects effects are registered.
-     * @param effect The effect to register. Must not be null.
+     * Any task except the bus.
+     * @return false if @p set is null or a set is already staged; @p set is then destroyed in the
+     *         caller's task.
      */
-    void registerEffect(std::unique_ptr<InertialEffect> effect);
+    [[nodiscard]] bool stageEffects(std::unique_ptr<EffectSet> set);
 
     /**
-     * @brief Remove and destroy all registered effects.
+     * @brief Takes the set replaced by the last commit. Stager task only.
+     * @return The retired set, or null if none is waiting.
      */
-    void clearEffects();
+    [[nodiscard]] std::unique_ptr<EffectSet> takeRetiredEffects();
 
     /**
      * @brief Inject updated motion data from an external IMU adapter.
@@ -114,7 +118,6 @@ public:
 
 private:
     static constexpr uint32_t kBusTimeoutMs = 10;
-    static constexpr size_t kMaxEffects = 16;
     static constexpr uint8_t kInputQueueDepth = 8;
 
     const BusConfig m_config;
@@ -127,9 +130,9 @@ private:
     std::atomic<bool> m_running{false};
     std::atomic<uint32_t> m_droppedInputEvents{0};
 
-    std::vector<std::unique_ptr<InertialEffect>> m_effects;
-    std::vector<std::unique_ptr<InertialEffect>> m_effectsPendingDestruction;
-    bool m_effectsChanged = false;
+    std::unique_ptr<EffectSet> m_activeEffects;
+    std::atomic<EffectSet*> m_stagedEffects{nullptr};
+    std::atomic<EffectSet*> m_retiredEffects{nullptr};
     SaberDataPacket m_packet{};
 
     float m_overloadLevel = 0.0f;
@@ -149,6 +152,8 @@ private:
 
     static void busTaskEntry(void* arg);
     void busLoop();
+    void commitStagedEffects();
+    void applyPhysics(const PhysicsConfig& physics);
     void drainInputQueue();
     void applyStagedMotion();
     void loadStagedMotionToPacket();

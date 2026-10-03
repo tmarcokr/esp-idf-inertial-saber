@@ -9,6 +9,7 @@ idf_component_register(
          "system/audio/AudioController.cpp"
          "system/persistence/ActiveProfileStore.cpp"
          "core/SaberActionBus.cpp"
+         "core/EffectSet.cpp"
          "profiles/inertial/effects/InertialSwingEffect.cpp"
          "profiles/inertial/effects/InertialLightEffect.cpp"
          "profiles/ConfigurableProfile.cpp"

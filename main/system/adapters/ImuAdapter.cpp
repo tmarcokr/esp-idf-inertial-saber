@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "driver/gpio.h"
+#include <algorithm>
 #include <cmath>
 #include <numbers>
 
@@ -14,6 +15,60 @@ static constexpr float kRadToDeg = 180.0f / std::numbers::pi_v<float>;
 static constexpr const Hardware::TaskSpec& kTask = Hardware::TaskTable::kImuAdapter;
 static constexpr uint32_t kStartupDelayMs = 100;
 static constexpr uint32_t kPollTimeoutMs = 20;
+static constexpr int64_t kUsPerMs = 1000;
+static constexpr float kMilliGPerG = 1000.0f;
+static constexpr float kGravityG = 1.0f;
+
+// MPU-6000/MPU-6050 Product Specification rev 3.4, sections 6.1 and 6.2: sensitivities at the full
+// scales selected by the Mpu6050 component (FS_SEL = 3, AFS_SEL = 0).
+static constexpr float kGyroLsbPerDps = 16.4f;
+static constexpr float kAccelLsbPerG = 16384.0f;
+
+static constexpr float kQuasiStaticMaxAccelDeviationG = 0.08f;
+static constexpr float kQuasiStaticMaxRateDps = 20.0f;
+static constexpr float kSettledMaxGravityAngleDeg = 4.0f;
+static constexpr uint32_t kSettledMinAlignedSamples = 20;
+static constexpr int64_t kSettleCeilingMs = 20'000;
+static constexpr int64_t kSettleBackstopMs = 2 * kSettleCeilingMs;
+
+namespace {
+
+using Espressif::Wrappers::Sensors::MotionData;
+
+float magnitude(const MotionData::Vector3D& v) {
+    return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
+MotionData::Vector3D rawAccelerationG(const MotionData& data) {
+    return {.x = static_cast<float>(data.accel_x) / kAccelLsbPerG,
+            .y = static_cast<float>(data.accel_y) / kAccelLsbPerG,
+            .z = static_cast<float>(data.accel_z) / kAccelLsbPerG};
+}
+
+bool isQuasiStatic(const MotionData& data, float accelMagnitudeG) {
+    const auto rateBelowLimit = [](int16_t rawRate) {
+        return std::fabs(static_cast<float>(rawRate)) / kGyroLsbPerDps < kQuasiStaticMaxRateDps;
+    };
+    return std::fabs(accelMagnitudeG - kGravityG) < kQuasiStaticMaxAccelDeviationG &&
+           rateBelowLimit(data.gyro_x) && rateBelowLimit(data.gyro_y) &&
+           rateBelowLimit(data.gyro_z);
+}
+
+bool isAlignedWithDmpGravity(const MotionData& data, const MotionData::Vector3D& accelG,
+                             float accelMagnitudeG) {
+    const MotionData::Vector3D gravity = data.getGravityVector();
+    const float norms = magnitude(gravity) * accelMagnitudeG;
+    if (norms <= 0.0f) return false;
+    const float cosine =
+        (gravity.x * accelG.x + gravity.y * accelG.y + gravity.z * accelG.z) / norms;
+    return std::acos(std::clamp(cosine, -1.0f, 1.0f)) * kRadToDeg < kSettledMaxGravityAngleDeg;
+}
+
+float tiltRollDeg(const MotionData::Vector3D& accelG) {
+    return std::atan2(accelG.y, std::sqrt(accelG.x * accelG.x + accelG.z * accelG.z)) * kRadToDeg;
+}
+
+} // namespace
 
 ImuAdapter::ImuAdapter(Core::SaberActionBus& bus, Espressif::Wrappers::Sensors::Mpu6050& imu,
                        gpio_num_t interruptPin)
@@ -102,19 +157,14 @@ void ImuAdapter::imuLoop() {
         } else {
             const int64_t sampleTimeUs = esp_timer_get_time();
             SABER_METRIC_COUNT(Diagnostics::Counter::ImuSamples);
-            auto linAccel = data->getLinearAcceleration();
-            float energy = std::sqrt(linAccel.x * linAccel.x + linAccel.y * linAccel.y +
-                                     linAccel.z * linAccel.z);
-
-            auto angles = data->getEulerAngles();
-            float orientation = angles.roll * kRadToDeg;
+            const MotionEstimate estimate = estimateMotion(*data, sampleTimeUs);
 
             const Core::MotionSample sample{
-                .kineticEnergyG = energy,
+                .kineticEnergyG = estimate.kineticEnergyG,
                 .axisRotationDps = {static_cast<float>(data->gyro_x),
                                     static_cast<float>(data->gyro_y),
                                     static_cast<float>(data->gyro_z)},
-                .orientationDeg = orientation,
+                .orientationDeg = estimate.orientationDeg,
                 .timestampUs = sampleTimeUs,
             };
 
@@ -123,9 +173,71 @@ void ImuAdapter::imuLoop() {
     }
 }
 
-std::optional<Espressif::Wrappers::Sensors::MotionData> ImuAdapter::readMotion() {
+std::optional<MotionData> ImuAdapter::readMotion() {
     SABER_METRIC_SCOPE(Diagnostics::Metric::ImuRead);
     return m_imu.readData();
+}
+
+ImuAdapter::MotionEstimate ImuAdapter::estimateMotion(const MotionData& data,
+                                                      int64_t sampleTimeUs) {
+    const MotionData::Vector3D accelG = rawAccelerationG(data);
+    const float accelMagnitudeG = magnitude(accelG);
+    const bool quasiStatic = isQuasiStatic(data, accelMagnitudeG);
+
+    if (!m_dmpSettled &&
+        !updateDmpSettling(data, accelG, accelMagnitudeG, quasiStatic, sampleTimeUs)) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::ImuFallbackSamples);
+        return {.kineticEnergyG = std::fabs(accelMagnitudeG - kGravityG),
+                .orientationDeg = tiltRollDeg(accelG)};
+    }
+
+    const float kineticEnergyG = magnitude(data.getLinearAcceleration());
+    if (quasiStatic) {
+        SABER_METRIC_DURATION(Diagnostics::Metric::KineticEnergyQuasiStaticSettled,
+                              static_cast<uint32_t>(kineticEnergyG * kMilliGPerG));
+    }
+    return {.kineticEnergyG = kineticEnergyG,
+            .orientationDeg = data.getEulerAngles().roll * kRadToDeg};
+}
+
+bool ImuAdapter::updateDmpSettling(const MotionData& data, const MotionData::Vector3D& accelG,
+                                   float accelMagnitudeG, bool quasiStatic, int64_t sampleTimeUs) {
+    if (!m_firstSampleUs) {
+        m_firstSampleUs = sampleTimeUs;
+    }
+    const int64_t elapsedUs = sampleTimeUs - *m_firstSampleUs;
+    const auto settleMs = static_cast<int32_t>(sampleTimeUs / kUsPerMs);
+    if (!quasiStatic) {
+        m_alignedQuasiStaticSamples = 0;
+        if (elapsedUs < kSettleBackstopMs * kUsPerMs) return false;
+
+        m_dmpSettled = true;
+        SABER_METRIC_IMU_SETTLE(Diagnostics::Metrics::kImuSettleForcedByBackstop);
+        ESP_LOGI(TAG,
+                 "No quasi-static IMU sample before the backstop; DMP motion values from %ld ms",
+                 static_cast<long>(settleMs));
+        return true;
+    }
+
+    if (isAlignedWithDmpGravity(data, accelG, accelMagnitudeG)) {
+        ++m_alignedQuasiStaticSamples;
+    } else {
+        m_alignedQuasiStaticSamples = 0;
+    }
+    const bool aligned = m_alignedQuasiStaticSamples >= kSettledMinAlignedSamples;
+    const bool ceilingReached = elapsedUs >= kSettleCeilingMs * kUsPerMs;
+    if (!aligned && !ceilingReached) return false;
+
+    m_dmpSettled = true;
+    if (aligned) {
+        SABER_METRIC_IMU_SETTLE(settleMs);
+        ESP_LOGI(TAG, "DMP settled %ld ms after power-up", static_cast<long>(settleMs));
+    } else {
+        SABER_METRIC_IMU_SETTLE(Diagnostics::Metrics::kImuSettleForcedByCeiling);
+        ESP_LOGI(TAG, "DMP settling ceiling reached; DMP motion values from %ld ms",
+                 static_cast<long>(settleMs));
+    }
+    return true;
 }
 
 } // namespace InertialSaber::System::Adapters

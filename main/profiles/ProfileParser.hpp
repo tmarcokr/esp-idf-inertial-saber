@@ -15,21 +15,22 @@ namespace InertialSaber::Profiles {
 class ProfileParser {
 public:
     /**
-   * @brief Parses a profile.json document into a definition, applying defaults for missing keys.
-   *
-   * Out-of-range or non-numeric values are replaced (clamped or defaulted) with a warning per field.
-   * @param json Raw JSON configuration text (no null terminator required).
-   * @param outDef Definition structure to populate.
-   * @return ESP_OK on success, ESP_ERR_INVALID_ARG for empty input, ESP_FAIL on malformed JSON,
-   *         ESP_ERR_INVALID_SIZE if the normalized root_path exceeds SoundFont::kMaxRootLength.
-   */
+     * @brief Parses a profile.json document into a definition, applying defaults for missing keys.
+     *
+     * Out-of-range or non-numeric values are replaced (clamped or defaulted) with a warning per
+     * field.
+     * @param json Raw JSON configuration text (no null terminator required).
+     * @param outDef Definition structure to populate.
+     * @return ESP_OK on success, ESP_ERR_INVALID_ARG for empty input, ESP_FAIL on malformed JSON,
+     *         ESP_ERR_INVALID_SIZE if the normalized root_path exceeds SoundFont::kMaxRootLength.
+     */
     static esp_err_t parse(std::string_view json, Inertial::InertialDefinition& outDef);
 
 #if CONFIG_SABER_PARSER_SELF_TEST
     /**
-   * @brief Executes a comprehensive parser self-test checking values and fallbacks.
-   * @return ESP_OK on success, or ESP_FAIL if any validation fails.
-   */
+     * @brief Executes a comprehensive parser self-test checking values and fallbacks.
+     * @return ESP_OK on success, or ESP_FAIL if any validation fails.
+     */
     static esp_err_t runSelfTest();
 #endif
 

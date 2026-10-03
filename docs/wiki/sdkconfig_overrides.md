@@ -6,7 +6,7 @@ This document tracks all non-default `sdkconfig` modifications required by Inert
 > After any `idf.py set-target` or `idf.py fullclean`, verify that all overrides listed here are present in the active `sdkconfig`. If using `sdkconfig.defaults`, they will be applied automatically.
 
 > [!NOTE]
-> **Existing local `sdkconfig` files (ESP-IDF 6.1).** ESP-IDF 6.1 marks every option that still holds its Kconfig default with a `# default:` line in `sdkconfig`. On the next build, options marked this way pick up the new value from `sdkconfig.defaults`. Options without the marker (set by hand or through `menuconfig`) keep their local value. This is how `CONFIG_FREERTOS_HZ` (§8) and `CONFIG_ESP_MAIN_TASK_STACK_SIZE` (§9) reached existing local `sdkconfig` files without a manual edit. If a local `sdkconfig` has a customised value for one of these keys, set the value listed here by hand (or with `idf.py menuconfig`).
+> **Existing local `sdkconfig` files (ESP-IDF 6.1).** ESP-IDF 6.1 marks every option that still holds its Kconfig default with a `# default:` line in `sdkconfig`. On the next build, options marked this way pick up the new value from `sdkconfig.defaults`. Options without the marker (set by hand or through `menuconfig`) keep their local value. This is how `CONFIG_FREERTOS_HZ` (§8) and the 2026-09-27 value of `CONFIG_ESP_MAIN_TASK_STACK_SIZE` (§9) reached existing local `sdkconfig` files without a manual edit; the 2026-10-02 value does not (see §9). If a local `sdkconfig` has a customised value for one of these keys, set the value listed here by hand (or with `idf.py menuconfig`).
 
 ---
 
@@ -181,15 +181,43 @@ This entry also closes the earlier gap where the tick rate had no entry in this 
 | Key | Default | Override | Since |
 |---|---|---|---|
 | `CONFIG_ESP_MAIN_TASK_STACK_SIZE` | `3584` | `6144` | 2026-09-27 |
+| `CONFIG_ESP_MAIN_TASK_STACK_SIZE` | `6144` | `4096` | 2026-10-02 |
 
-**Reason**: The main task runs the whole boot sequence: the profile parser self-test (§5), the SD profile scan, cJSON parsing, `std::string` work and the first profile load. A `-fstack-usage` estimate puts this path at about 3.6–4.3 KB against the 4 KB it had (3584 + 512). With the new value the real stack is 6656 B, because ESP-IDF adds `TASK_EXTRA_STACK_SIZE` (512 B) to the configured size.
+**Reason**: The main task runs the whole boot sequence: the profile parser self-test (§5), the SD profile scan, cJSON parsing, `std::string` work and the first profile load. A `-fstack-usage` estimate puts this path at about 3.6–4.3 KB against the 4 KB it had (3584 + 512), so the value was raised to 6144 on 2026-09-27. ESP-IDF adds `TASK_EXTRA_STACK_SIZE` (512 B) to the configured size, so the real stack was 6656 B. After the board measurement below, the value was lowered to 4096 on 2026-10-02: the real stack is now 4608 B.
 
 **Cost**: boot only. `app_main` returns after start-up and the main task is deleted, which frees its stack.
 
 > [!NOTE]
-> **Confirmed on the board (2026-10-02).** The metrics boot block records the minimum free stack of the main task as `0,task,main,stack_free_min`. The board test measured 3356 B on each of 3 boots, against a 6656 B task stack: about 3.3 KB of headroom. The value stays at 6144 for now. A reduction to about 4.6 KB is possible and is tracked separately.
+> **Measured on the board (2026-10-02).** The metrics boot block records the minimum free stack of the main task as `0,task,main,stack_free_min`. The board test measured 3356 B free on each of 3 boots against the 6656 B task stack (6144 + 512), so the boot sequence uses about 3.3 KB. With 4096 + 512 = 4608 B the expected headroom is about 1.3 KB, above the 1 KB `stack_margin_ge_1k` check in [Diagnostics](Diagnostics.md). Confirm it with `0,task,main,stack_free_min` at the next metrics board test.
+
+> [!IMPORTANT]
+> **Existing local `sdkconfig` keeps 6144.** The `CONFIG_ESP_MAIN_TASK_STACK_SIZE` line in a local `sdkconfig` created with the previous value has no `# default:` marker (it counts as user-set), so the new value from `sdkconfig.defaults` is not applied on the next build. Change it with `idf.py menuconfig` → *Component config* → *ESP System Settings* → *Main task stack size*, or edit the line to `CONFIG_ESP_MAIN_TASK_STACK_SIZE=4096`.
 
 > [!NOTE]
 > Placed in `sdkconfig.defaults` (all targets).
+
+---
+
+### 10. Project Kconfig: Audio Compressor Threshold
+
+| Key | Default | Override | Since |
+|---|---|---|---|
+| `CONFIG_SABER_AUDIO_COMPRESSOR_THRESHOLD` | _(new option)_ | `1000` (Kconfig `default 1000`, range 600–2000) | 2026-10-02 |
+
+**Reason**: `CONFIG_SABER_AUDIO_COMPRESSOR_THRESHOLD` (menu "InertialSaber" in `main/Kconfig.projbuild`) sets the baseline threshold of the dynamic range compressor in the audio mixer. It is read into `HardwareConfig::kAudioCompressorThreshold` (`main/system/hardware/HardwareConfig.hpp`) and passed to the audio engine as `AudioEngine::Config::compressor_gain_threshold`. The default keeps the previous hard-coded value (1000), so the default build sounds the same. The option allows loudness tuning by ear without code edits (planned trial: 1000 → 1100 → 1200) and tuning for other amplifiers than the MAX98357A.
+
+**Semantics**: the compressor tracks the mean absolute level of the mixed signal (time constant about 256 samples, ≈5.8 ms) and applies gain = threshold / (√envelope + 100), capped at 1, where the envelope is a leaky sum of about 256 × the mean |sample|. Compression therefore starts when the mean |sample| exceeds (threshold − 100)² / 256:
+
+| Threshold | Compression starts at mean \|sample\| | Approx. mean level |
+|---|---|---|
+| 1000 (default) | ≈3160 | ≈−20 dBFS |
+| 1200 | ≈4730 | ≈−17 dBFS |
+
+A higher value gives a louder output and starts compression later, at the cost of more risk of hard clipping at the int16 output clamp. The threshold is scaled by the mixer global volume; at the project's full global volume (`kAudioGlobalVolume = 16384`) it applies as configured.
+
+To change it: `idf.py menuconfig` → *InertialSaber* → *Audio compressor gain threshold*, then rebuild and flash.
+
+> [!NOTE]
+> This is a project-defined option. As a new symbol, its default applies to an existing local `sdkconfig` on the next build without a manual edit. No `sdkconfig.defaults*` entry is needed while the default is used.
 
 ---

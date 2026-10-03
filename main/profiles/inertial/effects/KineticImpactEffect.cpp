@@ -75,6 +75,7 @@ bool KineticImpactEffect::detectClash(const Core::SaberDataPacket& packet) {
 
     if (decelerationG > m_def.clashThresholdG &&
         (packet.timestampMs - m_lastClashTimeMs) > kClashDebounceMs) {
+        m_previousClashTimeMs = m_lastClashTimeMs;
         m_lastClashTimeMs = packet.timestampMs;
         return true;
     }
@@ -84,6 +85,12 @@ bool KineticImpactEffect::detectClash(const Core::SaberDataPacket& packet) {
 
 void KineticImpactEffect::run() {
     SABER_METRIC_SCOPE(Diagnostics::Metric::RunClash);
+    SABER_METRIC_COUNT(Diagnostics::Counter::ClashDetections);
+    if (m_previousClashTimeMs != 0 &&
+        (m_lastClashTimeMs - m_previousClashTimeMs) < kClashRetriggerWindowMs) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::ClashRetriggerLt1s);
+    }
+
     const System::AudioPath path = m_font.randomPath(Profiles::FontCategory::Clash);
 
     m_audio.playOneShot(path, kFullVolume);
