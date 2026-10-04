@@ -8,9 +8,6 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace InertialSaber::System {
-class PsramAudioCache;
-}
 namespace InertialSaber::Profiles {
 class SoundFont;
 }
@@ -31,11 +28,11 @@ public:
 
     InertialSwingEffect(InertialSaber::System::AudioController& audio,
                         const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
-                        const InertialSaber::Profiles::SoundFont& font,
-                        const InertialSaber::System::PsramAudioCache& audioCache);
+                        const InertialSaber::Profiles::SoundFont& font);
 
     /**
-     * @brief Start audio playback: hum loop + initial random swing pair at volume 0.
+     * @brief Start audio playback: hum loop + initial random swing pair, linked and at volume 0
+     * (no swing voices when the font has no swing pairs).
      */
     void activate();
 
@@ -54,7 +51,6 @@ private:
     InertialSaber::System::AudioController& m_audio;
     const InertialSaber::Profiles::Inertial::InertialDefinition& m_def;
     const InertialSaber::Profiles::SoundFont& m_font;
-    const InertialSaber::System::PsramAudioCache& m_audioCache;
 
     std::atomic<bool> m_active{false};
 
@@ -89,6 +85,7 @@ private:
     void handleInertialBurst();
 
     SwingPathPair provideSwingPaths();
+    bool playSwingPair();
     bool evaluateSwap(float masterVolume);
     void executeSwap();
 };

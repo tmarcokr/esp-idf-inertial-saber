@@ -42,21 +42,6 @@ constexpr uint64_t kTenthsPerSecondUs = 10'000'000ULL;
 constexpr std::string_view kFilePrefix = "session_";
 constexpr std::string_view kFileSuffix = ".csv";
 
-constexpr int32_t kQ15One = 1 << 15;
-constexpr int32_t kMixerFullScaleSample = 32767;
-constexpr int32_t kMixerFullScaleLevel = 16384;
-constexpr uint16_t kAudioIdleLevelCeiling = 256;
-
-constexpr uint16_t
-dcBlockerSilentResidualLevel(Espressif::Wrappers::Audio::DcBlocker::CutoffPreset cutoff) {
-    const int32_t maxStuckSample = (kQ15One - 1) / (kQ15One - static_cast<int32_t>(cutoff));
-    return static_cast<uint16_t>(maxStuckSample * kMixerFullScaleLevel / kMixerFullScaleSample);
-}
-
-constexpr uint16_t kAudioIdleLevel =
-    2 * dcBlockerSilentResidualLevel(Hardware::HardwareConfig::kAudioDcCutoff);
-static_assert(kAudioIdleLevel <= kAudioIdleLevelCeiling);
-
 enum class MetricKind : uint8_t { Scope, Duration, Interval };
 
 struct MetricInfo {
@@ -87,14 +72,35 @@ constexpr MetricInfo kMetricInfo[] = {
     {"profile_save", MetricKind::Scope},
     {"profile_switch", MetricKind::Duration},
     {"ke_quasi_static_settled", MetricKind::Duration, "mG"},
+    {"audio_play_call_sd", MetricKind::Duration},
+    {"audio_play_call_mem", MetricKind::Duration},
+    {"preload_copy", MetricKind::Duration},
+    {"audio_play_linked", MetricKind::Scope},
 };
 static_assert(std::size(kMetricInfo) == Diagnostics::kMetricCount);
 
 constexpr const char* kCounterNames[] = {
-    "bus_timeout_wakes",    "input_events_dropped", "imu_samples",      "imu_empty_reads",
-    "imu_poll_timeouts",    "overlays_dropped",     "bus_cycles",       "audio_commands_dropped",
-    "audio_play_failed",    "inertial_bursts",      "clash_detections", "clash_retrigger_lt_1s",
+    "bus_timeout_wakes",
+    "input_events_dropped",
+    "imu_samples",
+    "imu_empty_reads",
+    "imu_poll_timeouts",
+    "overlays_dropped",
+    "bus_cycles",
+    "audio_commands_dropped",
+    "audio_play_failed",
+    "inertial_bursts",
+    "clash_detections",
+    "clash_retrigger_lt_1s",
     "imu_fallback_samples",
+    "preload_bytes",
+    "audio_underrun_samples",
+    "audio_group_holds",
+    "audio_load_failures",
+    "audio_read_failures",
+    "audio_no_free_channels",
+    "audio_i2s_write_errors",
+    "audio_clipped_samples",
 };
 static_assert(std::size(kCounterNames) == Diagnostics::kCounterCount);
 
@@ -298,7 +304,7 @@ private:
     bool m_ok = true;
 };
 
-MetricsReporter::MetricsReporter(const Espressif::Wrappers::Audio::AudioEngine& audio,
+MetricsReporter::MetricsReporter(Espressif::Wrappers::Audio::AudioEngine& audio,
                                  const PsramAudioCache& audioCache,
                                  const Profiles::ProfileManager& profiles,
                                  Status::StatusIndicator& status)
@@ -376,6 +382,7 @@ void MetricsReporter::run() {
             sampleHeap();
         }
         updateRates(nowUs);
+        sampleAudioStats();
         updateAudioIdle(nowUs);
         updateSignal(nowUs);
 
@@ -427,6 +434,7 @@ void MetricsReporter::endSession(int64_t nowUs) {
     m_lastEndUs = nowUs;
 
     if (m_pendingCount < kMaxPendingBlocks) {
+        sampleAudioStats();
         captureBlock(m_pending[(m_pendingHead + m_pendingCount) % kMaxPendingBlocks], nowUs);
         ++m_pendingCount;
         resetBlockAccumulators(nowUs, 0, 0);
@@ -459,8 +467,22 @@ void MetricsReporter::updateRates(int64_t nowUs) {
     m_rateWindowStartUs = nowUs;
 }
 
+void MetricsReporter::sampleAudioStats() {
+    const Espressif::Wrappers::Audio::AudioEngine::Stats stats = m_audio.getStats();
+    const Espressif::Wrappers::Audio::AudioEngine::Stats& last = m_lastAudioStats;
+    SABER_METRIC_ADD(Counter::AudioUnderrunSamples, stats.underruns - last.underruns);
+    SABER_METRIC_ADD(Counter::AudioGroupHolds, stats.group_holds - last.group_holds);
+    SABER_METRIC_ADD(Counter::AudioLoadFailures, stats.load_failures - last.load_failures);
+    SABER_METRIC_ADD(Counter::AudioReadFailures, stats.read_failures - last.read_failures);
+    SABER_METRIC_ADD(Counter::AudioNoFreeChannels, stats.no_free_channels - last.no_free_channels);
+    SABER_METRIC_ADD(Counter::AudioI2sWriteErrors, stats.i2s_write_errors - last.i2s_write_errors);
+    SABER_METRIC_ADD(Counter::AudioClippedSamples, stats.clipped_samples);
+    m_lastAudioStats = stats;
+    m_audioFilesOpen = stats.open_files;
+}
+
 void MetricsReporter::updateAudioIdle(int64_t nowUs) {
-    if (m_audio.getOutputLevel() <= kAudioIdleLevel) {
+    if (m_audioFilesOpen == 0) {
         if (!m_audioIdle) {
             m_audioIdle = true;
             m_audioIdleSinceUs = nowUs;
@@ -769,6 +791,16 @@ MetricsReporter::WriteOutcome MetricsReporter::writeSessionBlock(const BlockSnap
     const uint32_t busLoopAllocations =
         busCycleAllocations > runAllocations ? busCycleAllocations - runAllocations : 0;
     csv.number("derived", "bus_loop_allocs", "", busLoopAllocations, "");
+
+    if (const Diagnostics::Metrics::DurationStats& copy =
+            live.durations[index(Metric::PreloadCopy)];
+        copy.count > 0 && copy.sumUs > 0) {
+        const uint64_t bytes = live.counters[index(Counter::PreloadBytes)];
+        csv.number("derived", "preload_kBps", "", static_cast<uint32_t>(bytes * 1000U / copy.sumUs),
+                   "kB/s");
+    } else {
+        csv.text("derived", "preload_kBps", "", "missing", "kB/s");
+    }
 
     for (size_t i = 0; i < Diagnostics::kCounterCount; ++i) {
         csv.number("count", kCounterNames[i], "", live.counters[i], "");

@@ -27,18 +27,19 @@ namespace InertialSaber::System::Monitoring {
 
 /**
  * @brief Low-priority task that aggregates the live metrics per ignition session and appends them
- * as CSV blocks to /sdcard/metrics/session_NNN.csv while the saber is retracted, the audio idle and
- * no PSRAM preload, profile switch or profile save is using the SD card.
+ * as CSV blocks to /sdcard/metrics/session_NNN.csv while the saber is retracted, no audio channel
+ * holds an open file and no PSRAM preload, profile switch or profile save is using the SD card.
  */
 class MetricsReporter {
 public:
     /**
-     * @param audio Engine whose lock-free output level gates the SD writes.
+     * @param audio Engine whose open audio files gate the SD writes and whose statistics feed the
+     *              audio counters; the reporter is the only caller of its getStats().
      * @param audioCache Cache whose preload status gates the SD writes.
      * @param profiles Profile manager whose pending switch or save gates the SD writes.
      * @param status Indicator that signals every write attempt and its outcome.
      */
-    MetricsReporter(const Espressif::Wrappers::Audio::AudioEngine& audio,
+    MetricsReporter(Espressif::Wrappers::Audio::AudioEngine& audio,
                     const PsramAudioCache& audioCache, const Profiles::ProfileManager& profiles,
                     Status::StatusIndicator& status);
     ~MetricsReporter();
@@ -129,6 +130,7 @@ private:
     void endSession(int64_t nowUs);
     void sampleHeap();
     void updateRates(int64_t nowUs);
+    void sampleAudioStats();
     void updateAudioIdle(int64_t nowUs);
     void resetBlockAccumulators(int64_t nowUs, uint32_t busCyclesBaseline,
                                 uint32_t imuSamplesBaseline);
@@ -144,7 +146,7 @@ private:
     [[nodiscard]] WriteOutcome writeBootBlock();
     [[nodiscard]] WriteOutcome writeSessionBlock(const BlockSnapshot& block);
 
-    const Espressif::Wrappers::Audio::AudioEngine& m_audio;
+    Espressif::Wrappers::Audio::AudioEngine& m_audio;
     const PsramAudioCache& m_audioCache;
     const Profiles::ProfileManager& m_profiles;
     Status::StatusIndicator& m_status;
@@ -173,6 +175,8 @@ private:
     int64_t m_nextFlushAttemptUs = 0;
     int64_t m_audioIdleSinceUs = 0;
     bool m_audioIdle = false;
+    Espressif::Wrappers::Audio::AudioEngine::Stats m_lastAudioStats{};
+    uint8_t m_audioFilesOpen = 0;
 
     bool m_heapStartCaptured = false;
     HeapStats m_heap{};

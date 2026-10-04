@@ -4,11 +4,11 @@
 InertialSaber OS can measure its own real-time behaviour on the board and write the results to the SD card as CSV files. The metrics cover:
 - bus cycle and effect `run()` timings, plus a bus cycle histogram;
 - bus loop and IMU sample rates;
-- event counters (dropped inputs, dropped audio commands, IMU poll timeouts, bursts, etc.);
+- event counters (dropped inputs, dropped audio commands, IMU poll timeouts, bursts, etc.) and audio engine counters (underruns, linked-pair holds, load/read failures, clipping);
 - heap allocations counted per CPU core, free heap and the largest free block;
 - stack high-water mark, priority and core of every task.
 
-Recording uses 32-bit atomics in internal RAM (under 1 KB). It never allocates heap, takes a lock or blocks, so it is safe on the bus task and the audio tasks. A low-priority reporter task (`metrics`, priority 1, core 1) aggregates the data and writes it to the SD card only while the saber is retracted and the audio is idle.
+Recording uses 32-bit atomics in internal RAM (under 1 KB). It never allocates heap, takes a lock or blocks, so it is safe on the bus task and the audio tasks. A low-priority reporter task (`metrics`, priority 1, core 1) aggregates the data and writes it to the SD card only while the saber is retracted and no audio file is open.
 
 | Part | Location | Role |
 | :--- | :--- | :--- |
@@ -69,7 +69,7 @@ Blocks are captured in RAM (a ring of 4 pending blocks in PSRAM) and written lat
 1. The saber is retracted (no active session).
 2. At least **2 s** have passed since the last retraction (for block 0: since the reporter started).
    Block 0 also waits until the IMU has switched to the DMP values, at most until 50 s after power-up. The 50 s cover the 40 s settling backstop (counted from the first IMU sample) plus the boot time.
-3. The audio output has been idle (output level ≤ 140) for at least **500 ms**. The threshold sits above the small residual the mixer keeps outputting in silence: it is twice the residual bound of the configured DC-blocker cutoff, so it follows the cutoff preset.
+3. No audio channel has held an open file (SD card or `/mem/`) for at least **500 ms**: `AudioEngine::getStats().open_files == 0`, sampled by the reporter about every 100 ms. A file-backed sound counts from just after its file is opened until it is closed: a one-shot closes its file as soon as its last chunk is buffered, a stopped or finished channel when its reader releases it. A one-shot whose file is already closed can still be heard for up to one ring buffer (16384 samples, about 371 ms), which is shorter than the 500 ms hold. A loop left open while retracted (for example after a dropped stop command, see `audio_commands_dropped`) keeps every write on hold.
 4. No PSRAM preload is in progress (at boot and after every profile change), no profile change is pending and no active-profile save is pending or being written, so the metrics never compete with them for the SD card.
 
 Right before each block is written, the reporter re-checks that no ignition has started and that condition 4 still holds; if not, the remaining blocks stay pending and are written at a later opportunity. Each block is written with its own open → append → close, so the data already written survives a power cut. After each write attempt ends, the next one waits another 2 s.
@@ -156,14 +156,18 @@ Rows appear in this order.
 | `swing_activate` | scope | `InertialSwingEffect::activate()` (queues the hum and swing voices on ignition). |
 | `swing_swap` | scope | The zero-volume swing pair swap. |
 | `imu_read` | scope | One IMU FIFO read in the IMU task. |
-| `audio_play_call` | scope | One `AudioEngine::play()` call in the `audio_ctrl` task. |
-| `audio_latency` | duration | From the moment an effect queues a play command to the end of the `play()` call. |
+| `audio_play_call` | scope | One `AudioEngine::play()` call in the `audio_ctrl` task: the one-shots and the hum. Swing pairs are measured by `audio_play_linked`. |
+| `audio_latency` | duration | From the moment an effect queues a play command to the end of the `play()` call. A linked swing pair adds one sample, from the enqueue to the end of the `playLinked()` call. |
 | `motion_age` | duration | Age of the IMU sample when the bus cycle uses it (bus cycle time − `motionTimestampUs`). |
 | `profile_commit` | scope | The bus taking over a staged profile effect set at the top of a cycle (pointer swap and physics update). Must not allocate; counted in `bus_loop_allocs`. |
 | `profile_build` | scope | Building the next profile's effect set in the `profile_ctrl` task (allocations expected, on core 1). |
 | `profile_save` | scope | Writing the active profile index to the SD card in the `profile_ctrl` task. |
 | `profile_switch` | duration | From the accepted profile-cycle request to the end of the new profile's preload, when the saber unlocks. Not recorded at boot or when the preload fails. |
 | `ke_quasi_static_settled` | duration | Kinetic energy in **mG** of every IMU sample taken while the saber is quasi-static (accelerometer magnitude within 0.08 g of 1 g and every gyro axis below 20 °/s) after the switch to the DMP values. `max` is the largest one: a high value means fake energy from an unsettled DMP. |
+| `audio_play_call_sd` | duration | The `AudioEngine::play()` call alone, for a path outside `/mem/`: every one-shot, streamed from the SD card. The swing pairs, also streamed from the SD card, are measured by `audio_play_linked`; use it to compare the SD swing-pair start time between builds. |
+| `audio_play_call_mem` | duration | The `AudioEngine::play()` call alone, for a path under `/mem/`: the hum, cached in PSRAM. |
+| `preload_copy` | duration | Copy of the profile's `hum.wav` from the SD card to PSRAM by the `psram_loader` task (chunked reads through the internal DMA buffer), from the first read to the last byte. Not recorded for a copy that failed or was superseded. |
+| `audio_play_linked` | scope | One `AudioEngine::playLinked()` call in the `audio_ctrl` task: both swing files (low and high) prepared from the SD card and started together in the same mixer cycle, linked so they stay sample-aligned. One sample on ignition and one per swing pair swap. |
 
 | Kind | Stats written |
 | :--- | :--- |
@@ -184,6 +188,7 @@ Rows appear in this order.
 | `worst,run,name` | — | The `run_*` metric with the highest `max` (`none` if no effect ran). |
 | `worst,run,max` | us | Its `max`. |
 | `derived,bus_loop_allocs,` | — | `bus_cycle.allocs` − the sum of all `run_*.allocs` (floored at 0): allocations made by the bus loop itself or by `test()` methods. |
+| `derived,preload_kBps,` | kB/s | SD → PSRAM copy rate: `preload_bytes` × 1000 / the sum of the `preload_copy` durations (1 kB = 1000 B). `missing` when the block has no `preload_copy` sample. |
 
 **Counters** — `count,<name>,`
 
@@ -197,11 +202,21 @@ Rows appear in this order.
 | `overlays_dropped` | LED overlays rejected because no overlay slot was free. |
 | `bus_cycles` | Bus cycles executed. |
 | `audio_commands_dropped` | Audio commands lost because the `audio_ctrl` queue was full. |
-| `audio_play_failed` | Play requests with an invalid or truncated path, or that the audio engine rejected (no channel). |
+| `audio_play_failed` | Play requests with an invalid or truncated path, or that the audio engine rejected (no channel). A linked swing pair with an invalid path, or that the engine failed to prepare or start, counts once per pair. |
 | `inertial_bursts` | Inertial Bursts fired by the Overload accumulator. |
 | `clash_detections` | Clashes detected (each one plays a clash sound and flash). |
 | `clash_retrigger_lt_1s` | Clash detections that followed the previous detection by less than 1000 ms. |
 | `imu_fallback_samples` | IMU samples delivered with the start-up fallback values (kinetic energy `\| \|a\| − 1 g \|` and roll from the accelerometer tilt) because the DMP had not settled yet. |
+| `preload_bytes` | Bytes copied from the SD card to PSRAM by the completed `preload_copy` samples. |
+| `audio_underrun_samples` | Silent samples output because a channel had no buffered data before its end, over all channels. Includes the tail of a fading channel whose ring ran dry. |
+| `audio_group_holds` | Mixer cycles in which a linked pair was held (not advanced) so its members stay sample-aligned, because one of them ran short of buffered samples. |
+| `audio_load_failures` | Channel prepares whose file could not be loaded, or whose load a stop cancelled. |
+| `audio_read_failures` | File reads that returned no data before the end of the file. |
+| `audio_no_free_channels` | Channel prepares that found every audio channel busy. |
+| `audio_i2s_write_errors` | Failed I2S writes to the amplifier. |
+| `audio_clipped_samples` | Output samples at full scale (32767 or −32768) after the mixer DSP (DC blocker and compressor). |
+
+The `audio_*` rows from `audio_underrun_samples` on are engine counters read with `AudioEngine::getStats()` by the reporter task (about every 100 ms and when a block is captured); each reading adds the increase since the previous one. Events after a block is captured (while retracted) go into the next block. Block 1 also contains the events since the engine started at boot.
 
 **Heap** — sampled at ignition, every 100 ms while ignited, and at retraction. Dips shorter than 100 ms can be missed.
 

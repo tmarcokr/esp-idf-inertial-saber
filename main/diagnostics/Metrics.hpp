@@ -41,6 +41,10 @@ enum class Metric : uint8_t {
     ProfileSave,
     ProfileSwitch,
     KineticEnergyQuasiStaticSettled,
+    AudioPlayCallSd,
+    AudioPlayCallMem,
+    PreloadCopy,
+    AudioPlayLinked,
     Count
 };
 
@@ -59,6 +63,14 @@ enum class Counter : uint8_t {
     ClashDetections,
     ClashRetriggerLt1s,
     ImuFallbackSamples,
+    PreloadBytes,
+    AudioUnderrunSamples,
+    AudioGroupHolds,
+    AudioLoadFailures,
+    AudioReadFailures,
+    AudioNoFreeChannels,
+    AudioI2sWriteErrors,
+    AudioClippedSamples,
     Count
 };
 

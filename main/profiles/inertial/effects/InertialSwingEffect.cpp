@@ -15,13 +15,11 @@ namespace InertialSaber::Effects {
 InertialSwingEffect::InertialSwingEffect(
     InertialSaber::System::AudioController& audio,
     const InertialSaber::Profiles::Inertial::InertialDefinition& definition,
-    const InertialSaber::Profiles::SoundFont& font,
-    const InertialSaber::System::PsramAudioCache& audioCache)
+    const InertialSaber::Profiles::SoundFont& font)
     : InertialEffect(0)
     , m_audio(audio)
     , m_def(definition)
     , m_font(font)
-    , m_audioCache(audioCache)
     , m_hum(audio.acquireVoice())
     , m_swingLow(audio.acquireVoice())
     , m_swingHigh(audio.acquireVoice()) {
@@ -37,9 +35,9 @@ void InertialSwingEffect::activate() {
 
     m_hum.play(InertialSaber::System::PsramAudioCache::humPath(), true, m_def.humBaseVolume);
 
-    const SwingPathPair paths = provideSwingPaths();
-    m_swingLow.play(paths.low, true, 0);
-    m_swingHigh.play(paths.high, true, 0);
+    if (m_font.swingPairCount() > 0) {
+        playSwingPair();
+    }
 
     m_needsSwap = false;
     m_wasMoving = false;
@@ -135,7 +133,7 @@ void InertialSwingEffect::handleInertialBurst() {
 }
 
 InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
-    uint8_t availablePairs = m_audioCache.loadedSwingPairCount();
+    const uint8_t availablePairs = m_font.swingPairCount();
     if (availablePairs > 1) {
         uint8_t newPair;
         do {
@@ -146,8 +144,17 @@ InertialSwingEffect::SwingPathPair InertialSwingEffect::provideSwingPaths() {
         m_currentPairIndex = 0;
     }
     const auto pairNumber = static_cast<uint8_t>(m_currentPairIndex + 1);
-    return {InertialSaber::System::PsramAudioCache::swingLowPath(pairNumber),
-            InertialSaber::System::PsramAudioCache::swingHighPath(pairNumber)};
+    return {m_font.swingLowPath(pairNumber), m_font.swingHighPath(pairNumber)};
+}
+
+bool InertialSwingEffect::playSwingPair() {
+    const uint8_t previousPair = m_currentPairIndex;
+    const SwingPathPair paths = provideSwingPaths();
+    if (m_audio.playLinked(m_swingLow, paths.low, m_swingHigh, paths.high, true, 0, 0)) {
+        return true;
+    }
+    m_currentPairIndex = previousPair;
+    return false;
 }
 
 bool InertialSwingEffect::evaluateSwap(float masterVolume) {
@@ -176,19 +183,12 @@ bool InertialSwingEffect::evaluateSwap(float masterVolume) {
 }
 
 void InertialSwingEffect::executeSwap() {
-    uint8_t availablePairs = m_audioCache.loadedSwingPairCount();
-    if (availablePairs <= 1) return;
+    if (m_font.swingPairCount() <= 1) return;
     SABER_METRIC_SCOPE(Diagnostics::Metric::SwingSwap);
 
-    m_swingLow.stop();
-    m_swingHigh.stop();
-
-    const SwingPathPair paths = provideSwingPaths();
-
-    m_swingLow.play(paths.low, true, 0);
-    m_swingHigh.play(paths.high, true, 0);
-
-    ESP_LOGD(TAG, "Pair swapped → %u", m_currentPairIndex);
+    if (playSwingPair()) {
+        ESP_LOGD(TAG, "Pair swapped → %u", m_currentPairIndex);
+    }
 }
 
 } // namespace InertialSaber::Effects
