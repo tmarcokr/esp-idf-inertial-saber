@@ -176,14 +176,14 @@ Stack size, priority and core of every task are defined in one table, `TaskTable
 | `audio_ctrl` | `AudioController` | 4096 | 7 | 1 | Yes |
 | `audio_sd_reader` | `AudioEngine` | 8192 | 6 | 1 | No (component) |
 | `psram_loader` | `PsramAudioCache` | 4096 | 2 | 1 | Yes |
-| `profile_store` | `ActiveProfileStore` | 3072 | 1 | 1 | Yes |
+| `profile_ctrl` | `ProfileManager` (builds the next profile, writes the active index) | 6144 | 3 | 1 | Yes |
 | `metrics` | `MetricsReporter` (metrics builds only) | 4096 | 1 | 1 | Yes |
 | `SmartLedTask` | `SmartLed::Engine` | 4096 | 5 | any | Stack and priority only (the component API takes no core) |
 | `gpio_btn_tsk` | `GpioButton` | 4096 | 5 | any | No (component) |
 
 Core and priority policy:
 - **Core 0 — motion and decision path:** IMU adapter (9) > bus (8). The IMU adapter must stay above the bus on the same core (enforced by a `static_assert`). The `esp_timer` task (22) runs the input adapter's click and hold timers.
-- **Core 1 — audio pipeline and background I/O:** mixer (10) > PSRAM reader (9) > `audio_ctrl` (7) > SD reader (6) > PSRAM loader (2) > profile store (1) = metrics reporter (1). The effects on the bus never call the audio engine directly: they queue commands to `audio_ctrl`, which runs the blocking `play()`/`stop()` calls on core 1.
+- **Core 1 — audio pipeline and background I/O:** mixer (10) > PSRAM reader (9) > `audio_ctrl` (7) > SD reader (6) > `profile_ctrl` (3) > PSRAM loader (2) > metrics reporter (1). The effects on the bus never call the audio engine directly: they queue commands to `audio_ctrl`, which runs the blocking `play()`/`playLinked()`/`stop()` calls on core 1.
 - **Unpinned:** the LED render task and the button poll task run at priority 5 on either core. On core 0 they cannot preempt the bus or the IMU adapter; on core 1 they cannot preempt any audio task with priority ≥ 6. Pinning them needs a component change.
 
 ---
