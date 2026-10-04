@@ -31,8 +31,8 @@ public:
                         const InertialSaber::Profiles::SoundFont& font);
 
     /**
-     * @brief Start audio playback: hum loop + initial random swing pair at volume 0 (no swing
-     * voices when the font has no swing pairs).
+     * @brief Start audio playback: hum loop + initial random swing pair, linked and at volume 0
+     * (no swing voices when the font has no swing pairs).
      */
     void activate();
 
@@ -85,6 +85,7 @@ private:
     void handleInertialBurst();
 
     SwingPathPair provideSwingPaths();
+    bool playSwingPair();
     bool evaluateSwap(float masterVolume);
     void executeSwap();
 };

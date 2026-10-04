@@ -106,6 +106,19 @@ public:
     bool playOneShot(const AudioPath& path, uint16_t volume);
 
     /**
+     * @brief Queues a sample-aligned start of @p firstPath on @p first and @p secondPath on
+     * @p second, replacing whatever both voices were playing; never blocks.
+     *
+     * Both channels start in the same mixer cycle and stay linked, or neither starts. With one
+     * invalid voice the other plays alone, unlinked.
+     * @return false if both voices are the same or belong to another controller, a path
+     *         overflowed or is empty, or the command queue is full.
+     */
+    bool playLinked(AudioVoice& first, const AudioPath& firstPath, AudioVoice& second,
+                    const AudioPath& secondPath, bool loop, uint16_t firstVolume,
+                    uint16_t secondVolume);
+
+    /**
      * @brief Reserves a persistent voice; call outside the real-time path (effect construction).
      * @return A valid voice, or an invalid one if all kMaxVoices slots are in use.
      */
@@ -114,16 +127,27 @@ public:
 private:
     friend class AudioVoice;
 
-    enum class CommandType : uint8_t { PlayOneShot, PlayVoice, StopVoice, ReleaseVoice, Shutdown };
+    enum class CommandType : uint8_t {
+        PlayOneShot,
+        PlayVoice,
+        PlayLinkedVoices,
+        StopVoice,
+        ReleaseVoice,
+        Shutdown
+    };
 
     struct Command {
         CommandType type;
         uint8_t voice;
+        uint8_t linkedVoice;
         bool loop;
         uint16_t volume;
+        uint16_t linkedVolume;
         uint32_t generation;
+        uint32_t linkedGeneration;
         uint32_t enqueuedUs;
         AudioPath path;
+        AudioPath linkedPath;
     };
 
     static constexpr int32_t kNoChannel = -1;
@@ -136,7 +160,7 @@ private:
         std::atomic<uint32_t> volume{0};
     };
 
-    bool enqueue(const Command& command);
+    bool enqueue(Command& command);
     bool enqueueVoicePlay(uint8_t voice, uint32_t generation, const AudioPath& path, bool loop,
                           uint16_t volume);
     void enqueueVoiceStop(uint8_t voice, uint32_t generation);
@@ -148,6 +172,8 @@ private:
     void execute(const Command& command);
     int32_t playTimed(const Command& command);
     void playVoice(const Command& command);
+    void playLinkedVoices(const Command& command);
+    void bindChannel(VoiceSlot& slot, int32_t channel);
     void stopVoiceChannel(VoiceSlot& slot);
     void sweepReleasedVoices();
     void reportDroppedCommands();

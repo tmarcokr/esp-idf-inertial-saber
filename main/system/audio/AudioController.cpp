@@ -19,6 +19,7 @@ namespace {
 
 constexpr const char* TAG = "AudioController";
 
+using Espressif::Wrappers::Audio::AudioEngine;
 using Espressif::Wrappers::Audio::ChannelId;
 using Espressif::Wrappers::Audio::INVALID_CHANNEL;
 
@@ -134,6 +135,39 @@ bool AudioController::playOneShot(const AudioPath& path, uint16_t volume) {
     return enqueue(command);
 }
 
+bool AudioController::playLinked(AudioVoice& first, const AudioPath& firstPath, AudioVoice& second,
+                                 const AudioPath& secondPath, bool loop, uint16_t firstVolume,
+                                 uint16_t secondVolume) {
+    if (!first.valid() || !second.valid()) {
+        const bool firstQueued = first.play(firstPath, loop, firstVolume);
+        const bool secondQueued = second.play(secondPath, loop, secondVolume);
+        return firstQueued || secondQueued;
+    }
+    if (first.m_controller != this || second.m_controller != this ||
+        first.m_slot == second.m_slot) {
+        return false;
+    }
+    if (!firstPath.ok() || firstPath.empty() || !secondPath.ok() || secondPath.empty()) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::AudioPlayFailed);
+        return false;
+    }
+    m_voices[first.m_slot].volume.store(firstVolume, std::memory_order_seq_cst);
+    m_voices[second.m_slot].volume.store(secondVolume, std::memory_order_seq_cst);
+
+    Command command{};
+    command.type = CommandType::PlayLinkedVoices;
+    command.voice = first.m_slot;
+    command.linkedVoice = second.m_slot;
+    command.loop = loop;
+    command.volume = firstVolume;
+    command.linkedVolume = secondVolume;
+    command.generation = first.m_generation;
+    command.linkedGeneration = second.m_generation;
+    command.path = firstPath;
+    command.linkedPath = secondPath;
+    return enqueue(command);
+}
+
 AudioVoice AudioController::acquireVoice() {
     for (size_t i = 0; i < m_voices.size(); ++i) {
         VoiceSlot& slot = m_voices[i];
@@ -148,10 +182,9 @@ AudioVoice AudioController::acquireVoice() {
     return {};
 }
 
-bool AudioController::enqueue(const Command& command) {
-    Command stamped = command;
-    stamped.enqueuedUs = nowUs();
-    if (xQueueSend(m_queue, &stamped, 0) == pdTRUE) return true;
+bool AudioController::enqueue(Command& command) {
+    command.enqueuedUs = nowUs();
+    if (xQueueSend(m_queue, &command, 0) == pdTRUE) return true;
 
     SABER_METRIC_COUNT(Diagnostics::Counter::AudioCommandsDropped);
     m_droppedCommands.fetch_add(1, std::memory_order_relaxed);
@@ -186,7 +219,7 @@ void AudioController::enqueueVoiceStop(uint8_t voice, uint32_t generation) {
 
 void AudioController::setVoiceVolume(uint8_t voice, uint16_t volume) {
     VoiceSlot& slot = m_voices[voice];
-    // Warning: seq_cst Dekker pair with playVoice(); weaker orders can lose the latest volume.
+    // Warning: seq_cst Dekker pair with bindChannel(); weaker orders can lose the latest volume.
     slot.volume.store(volume, std::memory_order_seq_cst);
     if (const int32_t channel = slot.channel.load(std::memory_order_seq_cst);
         channel != kNoChannel) {
@@ -230,6 +263,9 @@ void AudioController::execute(const Command& command) {
     case CommandType::PlayVoice:
         playVoice(command);
         break;
+    case CommandType::PlayLinkedVoices:
+        playLinkedVoices(command);
+        break;
     case CommandType::StopVoice:
         if (VoiceSlot& slot = m_voices[command.voice]; ownsSlot(slot, command.generation)) {
             stopVoiceChannel(slot);
@@ -265,9 +301,38 @@ void AudioController::playVoice(const Command& command) {
     if (!ownsSlot(slot, command.generation)) return;
 
     stopVoiceChannel(slot);
-    const int32_t channel = playTimed(command);
-    if (channel == kNoChannel) return;
+    if (const int32_t channel = playTimed(command); channel != kNoChannel) {
+        bindChannel(slot, channel);
+    }
+}
 
+void AudioController::playLinkedVoices(const Command& command) {
+    if (command.linkedVoice >= m_voices.size()) return;
+    VoiceSlot& first = m_voices[command.voice];
+    VoiceSlot& second = m_voices[command.linkedVoice];
+    if (!ownsSlot(first, command.generation) || !ownsSlot(second, command.linkedGeneration)) {
+        return;
+    }
+
+    stopVoiceChannel(first);
+    stopVoiceChannel(second);
+
+    AudioEngine::LinkedChannels channels;
+    {
+        SABER_METRIC_SCOPE(Diagnostics::Metric::AudioPlayLinked);
+        channels = m_engine.playLinked(command.path.view(), command.linkedPath.view(), command.loop,
+                                       command.volume, command.linkedVolume);
+    }
+    SABER_METRIC_DURATION(Diagnostics::Metric::AudioLatency, nowUs() - command.enqueuedUs);
+    if (channels.first == INVALID_CHANNEL || channels.second == INVALID_CHANNEL) {
+        SABER_METRIC_COUNT(Diagnostics::Counter::AudioPlayFailed);
+        return;
+    }
+    bindChannel(first, channels.first);
+    bindChannel(second, channels.second);
+}
+
+void AudioController::bindChannel(VoiceSlot& slot, int32_t channel) {
     // Warning: seq_cst Dekker pair with setVoiceVolume(); re-check so a stale volume never wins.
     slot.channel.store(channel, std::memory_order_seq_cst);
     uint32_t applied = slot.volume.load(std::memory_order_seq_cst);

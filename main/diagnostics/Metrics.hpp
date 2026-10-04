@@ -44,6 +44,7 @@ enum class Metric : uint8_t {
     AudioPlayCallSd,
     AudioPlayCallMem,
     PreloadCopy,
+    AudioPlayLinked,
     Count
 };
 
@@ -63,6 +64,13 @@ enum class Counter : uint8_t {
     ClashRetriggerLt1s,
     ImuFallbackSamples,
     PreloadBytes,
+    AudioUnderrunSamples,
+    AudioGroupHolds,
+    AudioLoadFailures,
+    AudioReadFailures,
+    AudioNoFreeChannels,
+    AudioI2sWriteErrors,
+    AudioClippedSamples,
     Count
 };
 
