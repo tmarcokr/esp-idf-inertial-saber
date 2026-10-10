@@ -18,7 +18,7 @@ namespace InertialSaber::Effects {
  */
 class InertialBladeEffect final : public Espressif::Wrappers::SmartLed::IEffect {
 public:
-    // Pack: [hue:16 | sat:8 | val:8] = 32 bits → lock-free on all ESP32 targets
+    // Pack: [hue:16 | sat:8 | val:8] = 32 bits → lock-free on the ESP32-S3
     void setHsb(uint16_t hue, uint8_t sat, uint8_t val) {
         uint32_t packed = (uint32_t(hue) << 16) | (uint32_t(sat) << 8) | uint32_t(val);
         m_packedHsb.store(packed, std::memory_order_relaxed);

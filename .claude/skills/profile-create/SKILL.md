@@ -39,16 +39,16 @@ InertialSaber OS's C++ audio channel engine plays uncompressed PCM files directl
 1.  **Format**: RIFF WAVE PCM (uncompressed).
 2.  **Channels**: Exactly **1 (Mono)**. Stereo files are not supported by the hardware channels.
 3.  **Bit Depth**: Exactly **16-bit**.
-4.  **Sample Rate**: **44100 Hz** is strongly recommended to avoid speed mismatches.
+4.  **Sample Rate**: Exactly **44100 Hz**. Other rates are rejected by the script with an error.
 
 ---
 
 ## 3. Automation Process
 
-Run the automated validation and creation script using `python3` from the root of the project:
+Run the project script `tools/create_profile.py` (this skill is a thin wrapper around it) using `python3` from the root of the project:
 
 ```bash
-python3 .claude/skills/profile-create/scripts/create_profile.py <src_dir> <dest_root> <profile_name> <blade_hue>
+python3 tools/create_profile.py <src_dir> <dest_root> <profile_name> <blade_hue>
 ```
 
 ### Parameters:
@@ -59,7 +59,7 @@ python3 .claude/skills/profile-create/scripts/create_profile.py <src_dir> <dest_
     *   *Examples*: Red = `0`, Green = `120`, Blue = `240`, Purple = `280`, Cyan = `180`.
 
 ### What the script does automatically:
-1.  **WAV Header Validation**: Reads headers using the Python standard `wave` library to verify exact Mono + 16-bit PCM properties, protecting the microcontroller from runtime crashes.
+1.  **WAV Header Validation**: Reads headers using the Python standard `wave` library to verify exact Mono + 16-bit + 44.1 kHz PCM properties, protecting the microcontroller from runtime crashes.
 2.  **Duration Calculations**: Reads the exact duration of `in*.wav` and `out*.wav` files, and automatically configures `ignition_duration_ms` and `retraction_duration_ms` using their average lengths.
 3.  **Count Detections**: Counts valid assets per category to auto-generate the `font_counts` properties.
 4.  **Directory Mapping**: Copies, sorts, and renames files to match the exact OS subdirectory layout (e.g., `/swingl/swingl1.wav`, `/swng/swng1.wav`).

@@ -28,7 +28,7 @@ The plan must cover every touch point of the pattern:
 | 8 | Sources added to `main/CMakeLists.txt` `SRCS` | existing entries |
 | 9 | Physics thresholds that are not per-profile go to `main/core/PhysicsConfig.hpp` | — |
 
-If the effect needs a new audio category, note that `.claude/skills/profile-create/scripts/create_profile.py` naming patterns must be extended (separate change, user-invoked tooling).
+If the effect needs a new audio category, note that `tools/create_profile.py` naming patterns must be extended (separate change, user-invoked tooling).
 
 ## 3. Implement (`firmware-developer`)
 - Implement the plan, register the effect and build.

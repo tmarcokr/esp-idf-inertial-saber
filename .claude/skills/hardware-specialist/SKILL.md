@@ -1,6 +1,6 @@
 ---
 name: hardware-specialist
-description: Expert in electronics and hardware-software interfacing for the ESP32 family (ESP32, ESP32-S3, ESP32-C6). Specializes in pinout validation (strapping, JTAG), power stability, and signal integrity. Use before defining GPIO constants for a new peripheral, when a peripheral fails intermittently, or to audit constexpr GPIO mappings against the chip datasheet.
+description: Expert in electronics and hardware-software interfacing for the ESP32-S3 (the only target of this project). Specializes in pinout validation (strapping, JTAG), power stability, and signal integrity. Use before defining GPIO constants for a new peripheral, when a peripheral fails intermittently, or to audit constexpr GPIO mappings against the chip datasheet.
 ---
 
 # Skill: Hardware Technical Specialist
@@ -10,8 +10,9 @@ This skill provides expertise in the physical layer of the project to prevent co
 ## Hardware Validation Rules (Generic ESP32 Family)
 
 1. **Pinout Conflict Prevention**:
-   - **Strapping Pins**: Always check the specific datasheet for the target chip. (e.g., GPIO 0, 2, 5, 12, 15 for ESP32; GPIO 0, 45, 46 for S3; GPIO 8, 9 for C6). Avoid pulling these pins to incorrect levels during boot.
-   - **Internal JTAG & USB**: Be aware of dedicated pins for JTAG and native USB (e.g., GPIO 18/19 on S3, GPIO 12/13 on C6). Reusing them can break debugging/flashing unless explicitly disabled or reconfigured.
+   - **Strapping Pins**: Always check the ESP32-S3 datasheet. The strapping pins are GPIO 0, 3, 45 and 46. Avoid pulling these pins to incorrect levels during boot.
+   - **Internal JTAG & USB**: Be aware of dedicated pins for JTAG and native USB on the ESP32-S3 (USB D−/D+ on GPIO 19/20, JTAG on GPIO 39–42). Reusing them can break debugging/flashing unless explicitly disabled or reconfigured.
+   - **Flash/PSRAM Pins**: On octal-PSRAM modules (e.g. WROOM-1 N16R8), GPIO 26–37 are used by the flash and the PSRAM.
    - **Input-Only Pins**: Remember that certain pins (like GPIO 34-39 on the classic ESP32) are input-only and do not have internal pull-ups.
 
 2. **Power Delivery Guidelines**:

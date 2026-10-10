@@ -96,8 +96,8 @@ float InertialSwingEffect::computeFinalMix() const {
     float baseMix = (m_kineticEnergy - m_def.swingCrossfadeLowG) / crossfadeRange;
     baseMix = std::clamp(baseMix, 0.0f, 1.0f);
 
-    float bladeAngleRad = m_orientation * kHalfPi;
-    float gravityMod = std::sin(bladeAngleRad) * m_def.gravityInfluence;
+    float orientationRad = m_orientation * kHalfPi;
+    float gravityMod = std::sin(orientationRad) * m_def.gravityInfluence;
     return std::clamp(baseMix + gravityMod, 0.0f, 1.0f);
 }
 
