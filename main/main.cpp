@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "system/SaberSystem.hpp"
 
 #include "esp_log.h"

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "BladeDragEffect.hpp"
 #include "SmartLedTypes.hpp"
 #include "esp_random.h"

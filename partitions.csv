@@ -1,0 +1,10 @@
+# InertialSaber OS partition table, 8 MB flash (ESP32-S3).
+# See docs/wiki/sdkconfig_overrides.md section 13. Offsets are fixed on purpose:
+# they must not move between firmware versions once OTA updates exist.
+# Name,   Type, SubType,   Offset,   Size,     Flags
+nvs,      data, nvs,       0x9000,   0x6000,
+phy_init, data, phy,       0xf000,   0x1000,
+otadata,  data, ota,       0x10000,  0x2000,
+ota_0,    app,  ota_0,     0x20000,  0x300000,
+ota_1,    app,  ota_1,     0x320000, 0x300000,
+spare,    data, undefined, 0x620000, 0x1e0000,

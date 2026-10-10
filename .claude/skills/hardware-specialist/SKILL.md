@@ -28,4 +28,4 @@ This skill provides expertise in the physical layer of the project to prevent co
 - Use me to audit the `constexpr` GPIO mapping in your code against the specific chip's datasheet.
 
 ---
-*Always cross-reference with the specific target Datasheet in `.claude/docs/` before final assembly.*
+*Always cross-reference with the specific target Datasheet (links in `.claude/docs/README.md`) before final assembly.*

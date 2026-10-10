@@ -1,6 +1,7 @@
 # ESP-IDF specific
 build/
 build_release/
+build_metrics/
 sdkconfig
 sdkconfig.old
 managed_components/
@@ -20,3 +21,6 @@ __pycache__/
 CLAUDE.local.md
 .claude/docs/plans/*
 !.claude/docs/plans/README.md
+
+# Vendor datasheets: local copies only, links in .claude/docs/README.md
+.claude/docs/*.pdf

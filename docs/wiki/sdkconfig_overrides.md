@@ -74,7 +74,7 @@ The existing overrides (§1 FAT LFN, §2 PSRAM) still exist in v6.1 and apply un
 |---|---|---|---|
 | `CONFIG_ESPTOOLPY_FLASHSIZE_8MB` | `not set` (2 MB) | `y` | 2026-09-26 |
 
-**Reason**: The target board, the Seeed XIAO ESP32-S3 Sense, carries an 8 MB flash chip (plus 8 MB octal PSRAM). With the 2 MB default, the bootloader reports `Detected size(8192k) larger than the size in the binary image header(2048k)` and limits flash access to 2 MB. The 8 MB setting is also compatible with 16 MB boards such as the ESP32-S3-DevKitC-1 N16R8 prototype, which simply use the first 8 MB. The partition table is unchanged (default single 1 MB app partition).
+**Reason**: The target board, the Seeed XIAO ESP32-S3 Sense, carries an 8 MB flash chip (plus 8 MB octal PSRAM). With the 2 MB default, the bootloader reports `Detected size(8192k) larger than the size in the binary image header(2048k)` and limits flash access to 2 MB. The 8 MB setting is also compatible with 16 MB boards such as the ESP32-S3-DevKitC-1 N16R8 prototype, which simply use the first 8 MB. The 8 MB partition table built on this size is described in §13.
 
 > [!NOTE]
 > Target-specific: placed in `sdkconfig.defaults.esp32s3`.
@@ -132,7 +132,7 @@ idf.py -B build_release -D IDF_TARGET=esp32s3 -D SDKCONFIG=build_release/sdkconf
 | `CONFIG_SABER_METRICS` | `y` | `not set` (Kconfig `default n`; opt-in) | 2026-10-02 |
 | `CONFIG_HEAP_USE_HOOKS` | `not set` | `y` (selected by `CONFIG_SABER_METRICS`, metrics builds only) | 2026-09-27 |
 
-**Reason**: `CONFIG_SABER_METRICS` (menu "InertialSaber" in `main/Kconfig.projbuild`) enables the on-device metrics described in [Diagnostics](Diagnostics.md). It records bus cycle and effect `run()` timings, loop and IMU rates, event counters, heap allocations per CPU core, free heap and task stack high-water marks, and writes them to `/sdcard/metrics/session_NNN.csv` while the saber is retracted. The option defaulted to `y` until 2026-10-02. It now defaults to `n` (`default n` in `main/Kconfig.projbuild`), so metrics are opt-in and the default development build no longer produces the CSV. For a board test: enable the option with `idf.py menuconfig` → *InertialSaber* → *Record real-time metrics and write them to /sdcard/metrics*, flash, run the test, collect the CSV files, then disable the option again and rebuild.
+**Reason**: `CONFIG_SABER_METRICS` (menu "InertialSaber" in `main/Kconfig.projbuild`) enables the on-device metrics described in [Diagnostics](Diagnostics.md). It records bus cycle and effect `run()` timings, loop and IMU rates, event counters, heap allocations per CPU core, free heap and task stack high-water marks, and writes them to `/sdcard/metrics/session_NNN.csv` while the saber is retracted. The option defaulted to `y` until 2026-10-02. It now defaults to `n` (`default n` in `main/Kconfig.projbuild`), so metrics are opt-in and the default development build no longer produces the CSV. For a board test, build with the metrics overlay `sdkconfig.defaults.metrics` (§11) in its own build directory; the default build directory and its `sdkconfig` stay untouched. The option can still be toggled in a local `sdkconfig` with `idf.py menuconfig` → *InertialSaber* → *Record real-time metrics and write them to /sdcard/metrics*.
 
 `CONFIG_SABER_METRICS` uses `select HEAP_USE_HOOKS`, so one switch controls both options. `CONFIG_HEAP_USE_HOOKS` makes the heap call `esp_heap_trace_alloc_hook()` on every allocation. The project defines this hook in `main/system/metrics/MetricsAllocHook.cpp` (compiled only when both options are set) to count allocations per CPU core. No `sdkconfig.defaults*` entry is needed for `CONFIG_HEAP_USE_HOOKS`.
 
@@ -219,5 +219,77 @@ To change it: `idf.py menuconfig` → *InertialSaber* → *Audio compressor gain
 
 > [!NOTE]
 > This is a project-defined option. As a new symbol, its default applies to an existing local `sdkconfig` on the next build without a manual edit. No `sdkconfig.defaults*` entry is needed while the default is used.
+
+---
+
+### 11. Metrics Build Overlay (`sdkconfig.defaults.metrics`)
+
+| Key | Default | Override | Since |
+|---|---|---|---|
+| `CONFIG_SABER_METRICS` | `not set` (see §7) | `y` | 2026-10-10 |
+
+**Reason**: `sdkconfig.defaults.metrics` is an **optional overlay** for board tests, not part of the default build. It enables the on-device metrics (§7, [Diagnostics](Diagnostics.md)) without editing a local `sdkconfig`. `CONFIG_SABER_METRICS` selects `CONFIG_HEAP_USE_HOOKS`, so the overlay has no other line. It is layered on top of `sdkconfig.defaults` (and the target-specific `sdkconfig.defaults.esp32s3`, appended automatically):
+
+```bash
+idf.py -B build_metrics -D IDF_TARGET=esp32s3 -D SDKCONFIG=build_metrics/sdkconfig \
+  -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.metrics" build
+idf.py -B build_metrics -p <PORT> flash monitor
+```
+
+**Cost**: see §7.
+
+> [!NOTE]
+> This overlay is opt-in via the build command above; it never affects the default `idf.py build` invocation or the standard `sdkconfig`. CI builds it on every push (§12).
+
+---
+
+### 12. Build Configurations and CI Matrix
+
+No `CONFIG_*` value changes in this section. `.github/workflows/build_check.yml` builds three configurations on every push and on pull requests to `main`, with ESP-IDF v6.1 for the ESP32-S3:
+
+| CI entry | `SDKCONFIG_DEFAULTS` | Files applied, in order | Artifact |
+|---|---|---|---|
+| `default` | `sdkconfig.defaults` | `sdkconfig.defaults`, `sdkconfig.defaults.esp32s3` | `firmware-esp32s3-default` |
+| `metrics` | `sdkconfig.defaults;sdkconfig.defaults.metrics` | `sdkconfig.defaults`, `sdkconfig.defaults.esp32s3`, `sdkconfig.defaults.metrics` (§11) | `firmware-esp32s3-metrics` |
+| `release` | `sdkconfig.defaults;sdkconfig.defaults.release` | `sdkconfig.defaults`, `sdkconfig.defaults.esp32s3`, `sdkconfig.defaults.release` (§6) | `firmware-esp32s3-release` |
+
+**Reason**: ESP-IDF loads `<file>.esp32s3` right after every listed file that has one, so the target overlay is never listed in `SDKCONFIG_DEFAULTS`; listing it would load it twice. Building every overlay in CI catches a broken overlay before a board test.
+
+Each artifact contains `esp-idf-inertial-saber.bin`, `bootloader/bootloader.bin`, `partition_table/partition-table.bin`, `ota_data_initial.bin` and `flash_args`. To flash it, extract the archive and run from inside the extracted folder:
+
+```bash
+python -m esptool --chip esp32s3 write-flash @flash_args
+```
+
+The same workflow checks the formatting of every C++ file under `main/` with clang-format 21.1.3 (the `esp-clang` tool of ESP-IDF v6.1).
+
+---
+
+### 13. Partition Table (8 MB, two OTA slots)
+
+| Key | Default | Override | Since |
+|---|---|---|---|
+| `CONFIG_PARTITION_TABLE_CUSTOM` | `not set` (`CONFIG_PARTITION_TABLE_SINGLE_APP`) | `y` | 2026-10-10 |
+
+**Reason**: The ESP-IDF default table has one 1 MB factory app partition and leaves the rest of the flash unused, with no room for OTA updates. `partitions.csv` in the project root lays out the 8 MB flash (§4). The file name is the Kconfig default of `CONFIG_PARTITION_TABLE_CUSTOM_FILENAME` (`"partitions.csv"`), so `sdkconfig.defaults` needs only the line above.
+
+| Name | Type | SubType | Offset | Size | Use |
+|---|---|---|---|---|---|
+| `nvs` | data | nvs | `0x9000` | 24 KB | Reserved. Not used by the firmware in v1.0: the active profile is stored on the SD card. |
+| `phy_init` | data | phy | `0xF000` | 4 KB | Reserved (ESP-IDF standard partition; the radio is not used). |
+| `otadata` | data | ota | `0x10000` | 8 KB | Selects the app slot to boot. |
+| `ota_0` | app | ota_0 | `0x20000` | 3 MB | The firmware. `idf.py flash` writes the app here. |
+| `ota_1` | app | ota_1 | `0x320000` | 3 MB | Second slot for future OTA updates. Empty. |
+| `spare` | data | undefined | `0x620000` | 1920 KB | Unused. No filesystem; nothing mounts or formats it. |
+
+1. **Fixed offsets** — the offsets are written in the CSV so that they never move between firmware versions.
+2. **Alignment** — app partitions must start on a 64 KB boundary, so the 56 KB between `otadata` and `ota_0` (`0x12000`–`0x20000`) is left unused. `nvs` and `phy_init` keep the offsets and sizes of the previous default table.
+3. **No factory partition** — `idf.py flash` also writes a blank `otadata` (`ota_data_initial.bin`). With a blank `otadata` and no factory app, the bootloader logs `No factory image, trying OTA 0`, boots `ota_0`, and records it with `Set actual ota_seq=1 in otadata[0]` on the first boot. App rollback stays disabled (ESP-IDF default).
+4. **Size margin** — each 3 MB slot holds the app with a large margin (default build about 15 % used; the build prints the free space against `Smallest app partition is 0x300000 bytes`).
+
+**Flashing**: the table changes the app offset from `0x10000` to `0x20000`. `idf.py flash` and the CI `flash_args` (§12) already use the new offsets. An `idf.py erase-flash` before the first flash is recommended but not required.
+
+> [!NOTE]
+> Placed in `sdkconfig.defaults` (all targets). The table fills exactly 8 MB, so it depends on `CONFIG_ESPTOOLPY_FLASHSIZE_8MB` from `sdkconfig.defaults.esp32s3` (§4); with a smaller flash size the build stops with "does not fit in configured flash size". Existing local `sdkconfig` files switch to the custom table on the next build without a manual edit: their partition-table lines carry the ESP-IDF 6.1 `# default:` marker. If a local `sdkconfig` selected a table in `menuconfig`, choose *Partition Table* → *Custom partition table CSV* by hand.
 
 ---

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "InputAdapter.hpp"
 #include "system/board/Board.hpp"
 #include "system/hardware/HardwareConfig.hpp"

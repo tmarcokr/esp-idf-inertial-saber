@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "system/PsramAudioCache.hpp"
 #include "system/Raii.hpp"
 #include "diagnostics/Metrics.hpp"

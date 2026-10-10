@@ -1,0 +1,4 @@
+# InertialSaber OS — metrics profile (not applied to the default build)
+# Layer it on top of the base defaults, see docs/wiki/sdkconfig_overrides.md.
+# CONFIG_SABER_METRICS selects CONFIG_HEAP_USE_HOOKS, so no other option is needed.
+CONFIG_SABER_METRICS=y

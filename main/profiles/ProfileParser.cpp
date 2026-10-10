@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "profiles/ProfileParser.hpp"
 #include "profiles/SoundFont.hpp"
 #include "profiles/inertial/effects/AudioLevels.hpp"

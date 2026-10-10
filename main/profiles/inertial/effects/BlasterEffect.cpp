@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "BlasterEffect.hpp"
 #include "diagnostics/Metrics.hpp"
 #include "system/audio/AudioController.hpp"
