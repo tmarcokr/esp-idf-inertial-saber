@@ -1,0 +1,54 @@
+{
+    "name": "example",
+    "root_path": "profiles/example/",
+    "overload": {
+        "threshold_g": 1.0,
+        "charge_rate": 2.0,
+        "drain_rate": 0.5,
+        "burst_cooldown_ms": 1500.0
+    },
+    "sensor": {
+        "kinetic_deadband_g": 0.25,
+        "rotation_deadband_dps": 15.0
+    },
+    "swing": {
+        "idle_threshold_g": 0.15,
+        "max_threshold_g": 1.0,
+        "crossfade_low_g": 0.4,
+        "crossfade_high_g": 1.0,
+        "gravity_influence": 0.2,
+        "hum_base_volume": 8000,
+        "hum_max_ducking": 0.75,
+        "swap_cooldown_ms": 1000,
+        "swap_min_volume": 0.4,
+        "clash_threshold_g": 2.0
+    },
+    "font_counts": {
+        "swing_pair": 2,
+        "burst": 2,
+        "in": 1,
+        "out": 1,
+        "blaster": 2,
+        "clash": 2,
+        "drag": 1,
+        "drag_end": 1
+    },
+    "blade_timings": {
+        "ignition_duration_ms": 800,
+        "retraction_duration_ms": 500,
+        "blaster_duration_ms": 250,
+        "clash_duration_ms": 150
+    },
+    "blade_leds": {
+        "blaster_count": 3,
+        "drag_count": 8
+    },
+    "light": {
+        "blade_base_hue": 240,
+        "idle_base_freq": 1.0,
+        "idle_pulse_depth": 0.15,
+        "max_thermal_bleed": 0.8,
+        "flicker_intensity": 0.2,
+        "burst_duration_ms": 150
+    }
+}

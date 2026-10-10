@@ -31,4 +31,7 @@ Refactor the `main/system` module to correctly align the physical directory stru
 
 ### Step 4: Verification
 - Build the project to guarantee that all references and includes were successfully caught and updated.
-- **CRITICAL**: Do not run `idf.py build` directly if the environment is not sourced. Look at `.vscode/tasks.json` (specifically the "Build ESP-IDF" task) for the exact compilation command. The correct command is: `source ~/esp/esp-idf/export.sh && idf.py build`.
+
+> **Obsolete build instructions (historical).** The build instruction below refers to a local ESP-IDF path and a `.vscode/tasks.json` that are not part of this repository. Build with ESP-IDF v6.1 as described in the README instead.
+
+- **CRITICAL** (obsolete): Do not run `idf.py build` directly if the environment is not sourced. Look at `.vscode/tasks.json` (specifically the "Build ESP-IDF" task) for the exact compilation command. The correct command is: `source ~/esp/esp-idf/export.sh && idf.py build`.

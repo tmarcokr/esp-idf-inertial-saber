@@ -27,7 +27,7 @@ This document tracks all non-default `sdkconfig` modifications required by Inert
 **Heap vs Stack**: LFN buffers are allocated on the heap (`CONFIG_FATFS_LFN_HEAP`) rather than the stack to avoid increasing stack requirements for tasks that perform file I/O.
 
 > [!CAUTION]
-> This override is silently reset to `LFN_NONE` by `idf.py set-target` and `idf.py fullclean`. The failure mode is **silent** — no error logs, the saber simply does not ignite. Always verify after target changes.
+> `idf.py set-target` and `idf.py fullclean` regenerate `sdkconfig`. The LFN lines come back only because `sdkconfig.defaults` re-applies them; a build that does not load `sdkconfig.defaults` (for example a custom `SDKCONFIG_DEFAULTS` list without it), or a local `sdkconfig` where LFN was switched off in `menuconfig`, ends up with `LFN_NONE`. The firmware then finds no profile: the boot stops with `No valid profile on SD` in the log and a solid red status LED, and the saber does not ignite. Check the option after target changes.
 
 ---
 
@@ -44,7 +44,7 @@ This document tracks all non-default `sdkconfig` modifications required by Inert
 - **PSRAM Speed**: 80MHz (`CONFIG_SPIRAM_SPEED_80M`) ensures the memory bandwidth is maximized for the audio mixer.
 
 > [!NOTE]
-> These overrides are target-specific for ESP32-S3 and must be placed in `sdkconfig.defaults.esp32s3` to avoid target verification errors when building for the ESP32-C6.
+> Target-specific: placed in `sdkconfig.defaults.esp32s3`, which ESP-IDF loads only for the ESP32-S3 target (the only supported target).
 
 
 ### 3. ESP-IDF v6.1 Default Changes (No Override Required)
@@ -64,7 +64,7 @@ This document tracks all non-default `sdkconfig` modifications required by Inert
 The existing overrides (§1 FAT LFN, §2 PSRAM) still exist in v6.1 and apply unchanged.
 
 > [!NOTE]
-> Validated on the XIAO ESP32-S3 on 2026-09-26 (boot, SD, PSRAM preload, audio, IMU, LEDs, effects and profile cycle).
+> Validated on the reference board, an ESP32-S3-DevKitC-1 N16R8, on 2026-09-26 (boot, SD, PSRAM preload, audio, IMU, LEDs, effects and profile cycle).
 
 ---
 
@@ -74,7 +74,7 @@ The existing overrides (§1 FAT LFN, §2 PSRAM) still exist in v6.1 and apply un
 |---|---|---|---|
 | `CONFIG_ESPTOOLPY_FLASHSIZE_8MB` | `not set` (2 MB) | `y` | 2026-09-26 |
 
-**Reason**: The target board, the Seeed XIAO ESP32-S3 Sense, carries an 8 MB flash chip (plus 8 MB octal PSRAM). With the 2 MB default, the bootloader reports `Detected size(8192k) larger than the size in the binary image header(2048k)` and limits flash access to 2 MB. The 8 MB setting is also compatible with 16 MB boards such as the ESP32-S3-DevKitC-1 N16R8 prototype, which simply use the first 8 MB. The 8 MB partition table built on this size is described in §13.
+**Reason**: The validated v1.0 board is the ESP32-S3-DevKitC-1 **N16R8** (16 MB flash, 8 MB octal PSRAM). The image is built for 8 MB on purpose, so that the same image also fits 8 MB-flash boards such as the Seeed XIAO ESP32-S3 Sense, planned after v1.0. A 16 MB board simply uses the first 8 MB; the bootloader notice about the detected flash size being larger than the size in the image header is expected. With the 2 MB default, flash access would be limited to 2 MB. The 8 MB partition table built on this size is described in §13.
 
 > [!NOTE]
 > Target-specific: placed in `sdkconfig.defaults.esp32s3`.

@@ -11,7 +11,7 @@ Execute this workflow **BEFORE** assigning any GPIO pins, designing a custom PCB
 ## Process Steps
 
 1. **Information Gathering**:
-   - Identify the target ESP32 chip (e.g., ESP32, ESP32-S3, ESP32-C6).
+   - Confirm the target chip and module (ESP32-S3; the v1.0 board is the ESP32-S3-DevKitC-1 N16R8).
    - Identify the peripheral to be connected (e.g., I2C Sensor, SD Card, Motor Driver).
    - Peripheral / target provided by the user (if any): `$ARGUMENTS`
 

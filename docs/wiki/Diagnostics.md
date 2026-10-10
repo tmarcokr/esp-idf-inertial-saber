@@ -8,7 +8,7 @@ InertialSaber OS can measure its own real-time behaviour on the board and write 
 - heap allocations counted per CPU core, free heap and the largest free block;
 - stack high-water mark, priority and core of every task.
 
-Recording uses 32-bit atomics in internal RAM (under 1 KB). It never allocates heap, takes a lock or blocks, so it is safe on the bus task and the audio tasks. A low-priority reporter task (`metrics`, priority 1, core 1) aggregates the data and writes it to the SD card only while the saber is retracted and no audio file is open.
+Recording uses 32-bit atomics in internal RAM (about 0.8 KB of `.bss`; the full cost of a metrics build is listed in [sdkconfig Overrides](sdkconfig_overrides.md) §7). It never allocates heap, takes a lock or blocks, so it is safe on the bus task and the audio tasks. A low-priority reporter task (`metrics`, priority 1, core 1) aggregates the data and writes it to the SD card only while the saber is retracted and no audio file is open.
 
 | Part | Location | Role |
 | :--- | :--- | :--- |
@@ -262,8 +262,9 @@ The counts are an **upper bound**:
 **Accepted trigger-time allocations.** These happen once per trigger, never in the steady-state loop, and are visible as `run_*.allocs`:
 - SmartLed overlays (`pushOverlay()` takes a heap-allocated effect): blaster, clash, ignition and retraction sweeps, drag, Plasma Rupture flash;
 - the drag overlay's fade flag;
-- InertialLight activation (the base blade effect);
-- profile swaps (profile unload/load).
+- InertialLight activation (the base blade effect).
+
+A profile switch adds no allocation on the bus: the new effect set is built on the `profile_ctrl` task (core 1, metric `profile_build`, allocations expected there) and the bus commit (`profile_commit`) allocates nothing.
 
 ---
 

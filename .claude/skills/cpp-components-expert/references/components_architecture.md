@@ -22,7 +22,7 @@ This document provides a strictly technical overview of the C++ components locat
 ### Basic I/O (`gpio_button`, `sd_card`)
 - **Structure**: Hardware abstraction layers.
 - **gpio_button**: Manages hardware interrupts and software debouncing logic.
-- **sd_card**: Abstracts SPI/SDIO initialization and FAT filesystem mounting.
+- **sd_card**: Abstracts SDMMC (1/4-bit) or SPI initialization and FAT filesystem mounting.
 
 ## Structural Integration Rules
 1. **Dependency Injection**: Components should not tightly couple to each other unless explicitly designed to do so (e.g., `audio_channel` into `audio_engine`). Pass interfaces or pointers.

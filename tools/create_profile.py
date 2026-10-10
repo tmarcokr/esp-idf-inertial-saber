@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Build an InertialSaber OS SD card profile from a folder of raw WAV files."""
+import argparse
 import os
 import sys
 import shutil
 import json
 import wave
 import re
+
+MAX_ROOT_LENGTH = 96
+MAX_SWING_PAIRS = 19
+MAX_FONT_COUNT = 255
+MAX_DURATION_MS = 30000
 
 def print_err(msg):
     print(f"\033[91m[ERROR] {msg}\033[0m", file=sys.stderr)
@@ -24,6 +32,7 @@ def validate_wav(file_path):
     - Must be a valid RIFF WAVE PCM file.
     - Must be Mono (1 channel).
     - Must be 16-bit depth (2 bytes per sample).
+    - Must be 44100 Hz.
     Returns (duration_ms, sample_rate) if valid, or None if invalid.
     """
     try:
@@ -32,8 +41,7 @@ def validate_wav(file_path):
             samp_width = w.getsampwidth()
             framerate = w.getframerate()
             n_frames = w.getnframes()
-            
-            # Format validation
+
             if n_channels != 1:
                 print_err(f"File {os.path.basename(file_path)} has {n_channels} channels. ONLY Mono WAVs are supported.")
                 return None
@@ -41,7 +49,8 @@ def validate_wav(file_path):
                 print_err(f"File {os.path.basename(file_path)} has {samp_width*8}-bit sample depth. ONLY 16-bit WAVs are supported.")
                 return None
             if framerate != 44100:
-                print_warn(f"File {os.path.basename(file_path)} has sample rate {framerate}Hz. Recommended is 44100Hz.")
+                print_err(f"File {os.path.basename(file_path)} has sample rate {framerate}Hz. ONLY 44100Hz WAVs are supported.")
+                return None
                 
             duration_ms = int((n_frames / framerate) * 1000) if framerate > 0 else 0
             return duration_ms, framerate
@@ -89,8 +98,6 @@ def build_profile(src_dir, dest_root, profile_name, blade_hue):
         if not matched:
             print_warn(f"Ignored unknown WAV file: {filename}")
 
-    # Validation and statistics collection
-    stats = {}
     valid_files = {cat: [] for cat in categories}
     durations = {cat: [] for cat in categories}
     
@@ -106,7 +113,7 @@ def build_profile(src_dir, dest_root, profile_name, blade_hue):
             if val is None:
                 all_valid = False
             else:
-                duration, rate = val
+                duration, _ = val
                 valid_files[cat].append(path)
                 durations[cat].append(duration)
                 
@@ -115,23 +122,40 @@ def build_profile(src_dir, dest_root, profile_name, blade_hue):
         return False
 
     if not valid_files["hum"]:
-        print_warn("No hum.wav file found. Hum is critical for standard loops.")
+        print_err("No hum.wav file found. The hum loop is required for the blade to sound.")
+        return False
 
-    # Calculate count metadata
-    # swing_pair matches the minimum count between swingl and swingh
     swing_l_count = len(valid_files["swingl"])
     swing_h_count = len(valid_files["swingh"])
     swing_pair_count = min(swing_l_count, swing_h_count)
     if swing_l_count != swing_h_count:
         print_warn(f"Mismatched swing counts: swingl={swing_l_count}, swingh={swing_h_count}. Pairing count set to {swing_pair_count}.")
+    if swing_pair_count > MAX_SWING_PAIRS:
+        print_warn(f"{swing_pair_count} swing pairs found. Capped at {MAX_SWING_PAIRS} (firmware limit).")
+        swing_pair_count = MAX_SWING_PAIRS
 
-    # Calculate average timings (ms)
-    avg_ignite_ms = int(sum(durations["in"]) / len(durations["in"])) if valid_files["in"] else 800
-    avg_retract_ms = int(sum(durations["out"]) / len(durations["out"])) if valid_files["out"] else 500
-    
-    # Construct target directories
+    def clamp_duration(ms):
+        return max(1, min(MAX_DURATION_MS, ms))
+
+    avg_ignite_ms = clamp_duration(int(sum(durations["in"]) / len(durations["in"])) if valid_files["in"] else 800)
+    avg_retract_ms = clamp_duration(int(sum(durations["out"]) / len(durations["out"])) if valid_files["out"] else 500)
+
+    def capped_count(cat):
+        count = len(valid_files[cat])
+        if count > MAX_FONT_COUNT:
+            print_warn(f"{count} '{cat}' files found. Capped at {MAX_FONT_COUNT} (firmware limit).")
+            return MAX_FONT_COUNT
+        return count
+
     profile_dest = os.path.join(dest_root, profile_name)
     if os.path.exists(profile_dest):
+        real_dest = os.path.realpath(profile_dest)
+        if not os.path.isdir(profile_dest):
+            print_err(f"Destination '{profile_dest}' exists and is not a directory. Nothing was deleted.")
+            return False
+        if os.path.dirname(real_dest) != os.path.realpath(dest_root) or os.path.islink(profile_dest):
+            print_err(f"Refusing to delete '{profile_dest}': not a direct child of '{dest_root}'.")
+            return False
         print_warn(f"Destination '{profile_dest}' already exists. Overwriting content.")
         shutil.rmtree(profile_dest)
     os.makedirs(profile_dest, exist_ok=True)
@@ -147,7 +171,9 @@ def build_profile(src_dir, dest_root, profile_name, blade_hue):
         # For swing pairs, truncate to the minimum paired amount
         if cat in ["swingl", "swingh"]:
             paths = paths[:swing_pair_count]
-            
+        else:
+            paths = paths[:MAX_FONT_COUNT]
+
         for idx, src_path in enumerate(paths):
             if cat == "hum":
                 dest_name = "hum.wav"
@@ -169,6 +195,10 @@ def build_profile(src_dir, dest_root, profile_name, blade_hue):
             "drain_rate": 0.5,
             "burst_cooldown_ms": 1500.0
         },
+        "sensor": {
+            "kinetic_deadband_g": 0.25,
+            "rotation_deadband_dps": 15.0
+        },
         "swing": {
             "idle_threshold_g": 0.15,
             "max_threshold_g": 1.0,
@@ -182,15 +212,14 @@ def build_profile(src_dir, dest_root, profile_name, blade_hue):
             "clash_threshold_g": 2.0
         },
         "font_counts": {
-            "hum": 1 if valid_files["hum"] else 0,
             "swing_pair": swing_pair_count,
-            "burst": len(valid_files["burst"]),
-            "in": len(valid_files["in"]),
-            "out": len(valid_files["out"]),
-            "blaster": len(valid_files["blaster"]),
-            "clash": len(valid_files["clash"]),
-            "drag": len(valid_files["drag"]),
-            "drag_end": len(valid_files["drag_end"])
+            "burst": capped_count("burst"),
+            "in": capped_count("in"),
+            "out": capped_count("out"),
+            "blaster": capped_count("blaster"),
+            "clash": capped_count("clash"),
+            "drag": capped_count("drag"),
+            "drag_end": capped_count("drag_end")
         },
         "blade_timings": {
             "ignition_duration_ms": avg_ignite_ms,
@@ -215,25 +244,33 @@ def build_profile(src_dir, dest_root, profile_name, blade_hue):
     json_path = os.path.join(profile_dest, "profile.json")
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(profile_data, f, indent=4)
+        f.write("\n")
         
     print_ok(f"Created profile.json configuration file at: {json_path}")
     print_ok(f"Successfully generated profile '{profile_name}' folder at: {profile_dest}")
     print_info("Ready to copy to the SD card under the '/profiles/' path.")
     return True
 
+def main():
+    parser = argparse.ArgumentParser(
+        description="Validate raw WAV assets and build an InertialSaber OS profile folder.")
+    parser.add_argument("src_dir", help="directory containing the raw WAV files")
+    parser.add_argument("dest_root", help="directory where profiles are built (e.g. <SD>/profiles)")
+    parser.add_argument("profile_name", help="profile folder name and ID (e.g. sith_red)")
+    parser.add_argument("blade_hue", type=int, help="blade hue, 0 to 359 (red 0, green 120, blue 240)")
+    args = parser.parse_args()
+
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", args.profile_name):
+        print_err("profile_name must be a single component of letters, digits, '_' or '-'.")
+        return 1
+    if len(f"profiles/{args.profile_name}/") > MAX_ROOT_LENGTH:
+        print_err(f"root_path 'profiles/{args.profile_name}/' exceeds {MAX_ROOT_LENGTH} characters.")
+        return 1
+    if not 0 <= args.blade_hue <= 359:
+        print_err("blade_hue must be between 0 and 359.")
+        return 1
+    return 0 if build_profile(args.src_dir, args.dest_root, args.profile_name, args.blade_hue) else 1
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 5:
-        print("Usage: python3 create_profile.py <src_dir> <dest_root> <profile_name> <blade_hue>")
-        print("Example: python3 create_profile.py /path/to/raw_wavs /media/user/SDCARD/profiles sith_red 0")
-        sys.exit(1)
-        
-    src = sys.argv[1]
-    dest = sys.argv[2]
-    name = sys.argv[3]
-    try:
-        hue = int(sys.argv[4])
-    except ValueError:
-        hue = 240
-        
-    success = build_profile(src, dest, name, hue)
-    sys.exit(0 if success else 1)
+    sys.exit(main())
