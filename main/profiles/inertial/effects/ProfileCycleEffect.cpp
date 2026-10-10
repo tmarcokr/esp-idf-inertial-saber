@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "ProfileCycleEffect.hpp"
 #include "diagnostics/Metrics.hpp"
 #include "profiles/PowerStateMachine.hpp"

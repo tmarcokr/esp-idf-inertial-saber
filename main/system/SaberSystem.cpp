@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "SaberSystem.hpp"
 #include "profiles/ProfileParser.hpp"
 #include "diagnostics/Metrics.hpp"

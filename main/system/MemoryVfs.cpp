@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "system/MemoryVfs.hpp"
 #include "esp_log.h"
 #include "esp_vfs.h"

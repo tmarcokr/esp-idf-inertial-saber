@@ -12,3 +12,6 @@ CONFIG_FREERTOS_HZ=1000
 
 # Main task stack
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=4096
+
+# Partition table: partitions.csv (8 MB layout, flash size set in sdkconfig.defaults.esp32s3)
+CONFIG_PARTITION_TABLE_CUSTOM=y

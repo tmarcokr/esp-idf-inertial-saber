@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "system/metrics/MetricsReporter.hpp"
 
 #if CONFIG_SABER_METRICS

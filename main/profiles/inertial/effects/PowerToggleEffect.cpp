@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "PowerToggleEffect.hpp"
 #include "diagnostics/Metrics.hpp"
 #include "profiles/PowerStateMachine.hpp"

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "BladeBlasterBlock.hpp"
 #include "esp_random.h"
 #include <algorithm>

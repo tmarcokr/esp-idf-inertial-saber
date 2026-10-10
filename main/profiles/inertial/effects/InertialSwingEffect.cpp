@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "InertialSwingEffect.hpp"
 #include "diagnostics/Metrics.hpp"
 #include "AudioLevels.hpp"

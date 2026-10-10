@@ -17,7 +17,7 @@ Execute this workflow **BEFORE** assigning any GPIO pins, designing a custom PCB
 
 2. **Invoke the Specialist**:
    - Request: *"Perform a Hardware Validation for connecting [Peripheral] to [Target Chip]"*.
-   - The agent will activate the `hardware-specialist` skill (or delegate to the `hardware-reviewer` subagent) and consult the specific datasheet in `.claude/docs/`.
+   - The agent will activate the `hardware-specialist` skill (or delegate to the `hardware-reviewer` subagent) and consult the specific datasheet (links in `.claude/docs/README.md`).
 
 3. **Validation Checks**:
    - **Pin Conflicts**: Are the proposed pins safe? (Avoid strapping pins, internal JTAG, or input-only pins).

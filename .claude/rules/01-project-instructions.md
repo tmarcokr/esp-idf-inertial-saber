@@ -31,7 +31,7 @@ No code may be modified or proposed without the corresponding expertise loaded i
 
 ## 3. General Project Context
 - **Target Microcontroller**: ESP32-S3 exclusively (ESP-IDF v6.1, see `.github/workflows/build_check.yml`).
-- **Documentation**: Datasheets are located in `.claude/docs/`. Always consult them when dealing with hardware.
+- **Documentation**: Datasheet links are listed in `.claude/docs/README.md` (local PDF copies are git-ignored). Always consult the datasheet of the target chip when dealing with hardware.
 
 ## 4. Git Governance & Safety Protocols (Hard Rules)
 - **Main Branch Protection**: Direct commits to `main` or `master` are STRICTLY PROHIBITED. Every change MUST happen in a `feature/` branch followed by a Pull Request.
