@@ -132,7 +132,7 @@ idf.py -B build_release -D IDF_TARGET=esp32s3 -D SDKCONFIG=build_release/sdkconf
 | `CONFIG_SABER_METRICS` | `y` | `not set` (Kconfig `default n`; opt-in) | 2026-10-02 |
 | `CONFIG_HEAP_USE_HOOKS` | `not set` | `y` (selected by `CONFIG_SABER_METRICS`, metrics builds only) | 2026-09-27 |
 
-**Reason**: `CONFIG_SABER_METRICS` (menu "InertialSaber" in `main/Kconfig.projbuild`) enables the on-device metrics described in [Diagnostics](Diagnostics.md). It records bus cycle and effect `run()` timings, loop and IMU rates, event counters, heap allocations per CPU core, free heap and task stack high-water marks, and writes them to `/sdcard/metrics/session_NNN.csv` while the saber is retracted. The option defaulted to `y` until 2026-10-02. It now defaults to `n` (`default n` in `main/Kconfig.projbuild`), so metrics are opt-in and the default development build no longer produces the CSV. For a board test, build with the metrics overlay `sdkconfig.defaults.metrics` (§11) in its own build directory; the default build directory and its `sdkconfig` stay untouched. The option can still be toggled in a local `sdkconfig` with `idf.py menuconfig` → *InertialSaber* → *Record real-time metrics and write them to /sdcard/metrics*.
+**Reason**: `CONFIG_SABER_METRICS` (menu "InertialSaber" in `main/Kconfig.projbuild`) enables the on-device metrics described in [Diagnostics](Diagnostics). It records bus cycle and effect `run()` timings, loop and IMU rates, event counters, heap allocations per CPU core, free heap and task stack high-water marks, and writes them to `/sdcard/metrics/session_NNN.csv` while the saber is retracted. The option defaulted to `y` until 2026-10-02. It now defaults to `n` (`default n` in `main/Kconfig.projbuild`), so metrics are opt-in and the default development build no longer produces the CSV. For a board test, build with the metrics overlay `sdkconfig.defaults.metrics` (§11) in its own build directory; the default build directory and its `sdkconfig` stay untouched. The option can still be toggled in a local `sdkconfig` with `idf.py menuconfig` → *InertialSaber* → *Record real-time metrics and write them to /sdcard/metrics*.
 
 `CONFIG_SABER_METRICS` uses `select HEAP_USE_HOOKS`, so one switch controls both options. `CONFIG_HEAP_USE_HOOKS` makes the heap call `esp_heap_trace_alloc_hook()` on every allocation. The project defines this hook in `main/system/metrics/MetricsAllocHook.cpp` (compiled only when both options are set) to count allocations per CPU core. No `sdkconfig.defaults*` entry is needed for `CONFIG_HEAP_USE_HOOKS`.
 
@@ -165,14 +165,14 @@ nm build_release/esp-idf-inertial-saber.elf | grep -c InertialSaber11Diagnostics
 4. **Short component delays** — `pdMS_TO_TICKS(x)` with `x < 10` no longer rounds to 0. For example, the 2 ms delay in `Mpu6050::resetFifo()` was a plain yield and is now a real 2 ms wait.
 5. **Log timestamps** have 1 ms resolution.
 
-The bus packet timestamps no longer depend on the tick: they come from `esp_timer` (see [SaberAction](SaberAction.md) §2.1).
+The bus packet timestamps no longer depend on the tick: they come from `esp_timer` (see [SaberAction](SaberAction) §2.1).
 
 **Cost**: one tick interrupt per millisecond per core, about 0.3–0.5 % CPU, and finer time slicing between ready tasks of equal priority. 1000 Hz is the highest rate ESP-IDF supports.
 
 This entry also closes the earlier gap where the tick rate had no entry in this registry.
 
 > [!NOTE]
-> Placed in `sdkconfig.defaults` (all targets). The metrics boot block records the active value as `0,meta,tick_rate` (see [Diagnostics](Diagnostics.md)).
+> Placed in `sdkconfig.defaults` (all targets). The metrics boot block records the active value as `0,meta,tick_rate` (see [Diagnostics](Diagnostics)).
 
 ---
 
@@ -188,7 +188,7 @@ This entry also closes the earlier gap where the tick rate had no entry in this 
 **Cost**: boot only. `app_main` returns after start-up and the main task is deleted, which frees its stack.
 
 > [!NOTE]
-> **Measured on the board (2026-10-02).** The metrics boot block records the minimum free stack of the main task as `0,task,main,stack_free_min`. The board test measured 3356 B free on each of 3 boots against the 6656 B task stack (6144 + 512), so the boot sequence uses about 3.3 KB. With 4096 + 512 = 4608 B the expected headroom is about 1.3 KB, above the 1 KB `stack_margin_ge_1k` check in [Diagnostics](Diagnostics.md). Confirm it with `0,task,main,stack_free_min` at the next metrics board test.
+> **Measured on the board (2026-10-02).** The metrics boot block records the minimum free stack of the main task as `0,task,main,stack_free_min`. The board test measured 3356 B free on each of 3 boots against the 6656 B task stack (6144 + 512), so the boot sequence uses about 3.3 KB. With 4096 + 512 = 4608 B the expected headroom is about 1.3 KB, above the 1 KB `stack_margin_ge_1k` check in [Diagnostics](Diagnostics). Confirm it with `0,task,main,stack_free_min` at the next metrics board test.
 
 > [!IMPORTANT]
 > **Existing local `sdkconfig` keeps 6144.** The `CONFIG_ESP_MAIN_TASK_STACK_SIZE` line in a local `sdkconfig` created with the previous value has no `# default:` marker (it counts as user-set), so the new value from `sdkconfig.defaults` is not applied on the next build. Change it with `idf.py menuconfig` → *Component config* → *ESP System Settings* → *Main task stack size*, or edit the line to `CONFIG_ESP_MAIN_TASK_STACK_SIZE=4096`.
@@ -228,7 +228,7 @@ To change it: `idf.py menuconfig` → *InertialSaber* → *Audio compressor gain
 |---|---|---|---|
 | `CONFIG_SABER_METRICS` | `not set` (see §7) | `y` | 2026-10-10 |
 
-**Reason**: `sdkconfig.defaults.metrics` is an **optional overlay** for board tests, not part of the default build. It enables the on-device metrics (§7, [Diagnostics](Diagnostics.md)) without editing a local `sdkconfig`. `CONFIG_SABER_METRICS` selects `CONFIG_HEAP_USE_HOOKS`, so the overlay has no other line. It is layered on top of `sdkconfig.defaults` (and the target-specific `sdkconfig.defaults.esp32s3`, appended automatically):
+**Reason**: `sdkconfig.defaults.metrics` is an **optional overlay** for board tests, not part of the default build. It enables the on-device metrics (§7, [Diagnostics](Diagnostics)) without editing a local `sdkconfig`. `CONFIG_SABER_METRICS` selects `CONFIG_HEAP_USE_HOOKS`, so the overlay has no other line. It is layered on top of `sdkconfig.defaults` (and the target-specific `sdkconfig.defaults.esp32s3`, appended automatically):
 
 ```bash
 idf.py -B build_metrics -D IDF_TARGET=esp32s3 -D SDKCONFIG=build_metrics/sdkconfig \

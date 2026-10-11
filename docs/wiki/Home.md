@@ -23,29 +23,29 @@ The core of the system is the **Kinetic Parser**. It transforms raw IMU data int
 - **Inertial Overload (`inertialOverload`, 0.0 – 1.0):** Accumulates energy over time to trigger explosive bursts.
 - **Orientation Vector (`orientation`, −1.0 … +1.0):** Provides spatial context (down, horizontal, up).
 
-See [Kinetic Metrics](KineticMetrics.md) for the definitions.
+See [Kinetic Metrics](KineticMetrics) for the definitions.
 
 ## 3. The Core Engines
 
 ### InertialSwing (Audio)
 InertialSwing uses **Linear Kinetic Energy**. This allows the saber to react to thrusts, steps, and subtle movements that don't involve rotation.
-- *Key Document:* [InertialSwing Specification](InertialSwing.md)
+- *Key Document:* [InertialSwing Specification](InertialSwing)
 
 ### InertialLight (Visual)
 Calculates color in HSB space. It simulates a dynamic plasma blade that "heats up" (thermal bleed) and "ruptures" (burst) based on physical stress.
-- *Key Document:* [InertialLight Specification](InertialLight.md)
+- *Key Document:* [InertialLight Specification](InertialLight)
 
 ## 4. Event Management: The Action Bus
 While the engines handle continuous responses, the **SaberAction System** handles discrete events like impacts or button presses.
 - Each effect has a **priority** that sets its evaluation order in a bus cycle: lower first, and equal priorities keep their registration order. It is not an arbitration level.
 - It allows for **Modular Effects**, grouped in one effect set per profile.
-- *Key Document:* [SaberAction Specification](SaberAction.md)
+- *Key Document:* [SaberAction Specification](SaberAction)
 
 ### InertialHaptics (Tactile)
-Roadmap only: not implemented. See [InertialHaptics](InertialHaptics.md).
+Roadmap only: not implemented. See [InertialHaptics](InertialHaptics).
 
 ## 5. Profiles
-Profiles are **data-driven**: each one is a `profile.json` file plus a sound font on the SD card. They are parsed once at boot, and a triple click switches to the next one while the blade is retracted. See [Profiles](Profiles.md).
+Profiles are **data-driven**: each one is a `profile.json` file plus a sound font on the SD card. They are parsed once at boot, and a triple click switches to the next one while the blade is retracted. See [Profiles](Profiles).
 
 ## 6. Performance Focus
-JSON is parsed only at boot, never in the bus loop. A profile switch is prepared on another core and committed by the bus with a pointer swap. The bus loop itself allocates no heap memory (only some effect triggers allocate an LED overlay) and never blocks on audio or SD I/O; the longest bus cycle measured while ignited is 1.47 ms against a 2 ms budget (see [Diagnostics](Diagnostics.md)).
+JSON is parsed only at boot, never in the bus loop. A profile switch is prepared on another core and committed by the bus with a pointer swap. The bus loop itself allocates no heap memory (only some effect triggers allocate an LED overlay) and never blocks on audio or SD I/O; the longest bus cycle measured while ignited is 1.47 ms against a 2 ms budget (see [Diagnostics](Diagnostics)).

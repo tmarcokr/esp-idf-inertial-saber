@@ -4,7 +4,7 @@
 A **profile** defines the aesthetic, sonic and reactive identity of the saber: its sound font, its blade colour and the physics thresholds of its effects. Profiles are **data**, not code. Each profile is a folder on the SD card with a `profile.json` file and the WAV files of its sound font.
 
 - At boot, the firmware scans `/sdcard/profiles/*/profile.json`, parses every file once and keeps the result as an immutable profile definition (`ConfigurableProfile`).
-- The **active** profile is turned into a set of effects (`EffectSet`) that the [SaberAction Bus](SaberAction.md) evaluates every cycle.
+- The **active** profile is turned into a set of effects (`EffectSet`) that the [SaberAction Bus](SaberAction) evaluates every cycle.
 - Profiles are hot-swappable while the blade is retracted: a triple click switches to the next one (§5).
 - Nothing is compiled per profile. Adding, removing or editing a profile only needs the SD card.
 
@@ -45,7 +45,7 @@ A **profile** defines the aesthetic, sonic and reactive identity of the saber: i
 - The font folder is the one named by `root_path` (relative to `/sdcard/`). It is normally the profile folder itself (`"root_path": "profiles/<profile>/"`), but several profiles may share one font folder.
 - Files are numbered from `1`. The number of files per folder comes from the `font_counts` section of `profile.json` (§4.4); a sound is picked at random among `1 … count`. Swing pair `i` is `swingl/swingl<i>.wav` + `swingh/swingh<i>.wav`.
 - A missing or invalid file does not stop the profile: that sound does not play, an error is logged and the metrics counter `audio_play_failed` increases.
-- The SD card must be **FAT32 with long file names**. The firmware needs LFN support (`CONFIG_FATFS_LFN_HEAP`, see [sdkconfig Overrides](sdkconfig_overrides.md) §1) to open `profile.json` and folder names longer than 8 characters.
+- The SD card must be **FAT32 with long file names**. The firmware needs LFN support (`CONFIG_FATFS_LFN_HEAP`, see [sdkconfig Overrides](sdkconfig_overrides) §1) to open `profile.json` and folder names longer than 8 characters.
 
 An example profile is in `examples/sdcard/profiles/example/profile.json`. The `tools/create_profile.py` script builds the folder layout and a matching `profile.json` from a folder of WAV files.
 
@@ -80,7 +80,7 @@ Validation rules (`ProfileParser.cpp`):
 - Two pairs must be strictly increasing: `swing.max_threshold_g` > `swing.idle_threshold_g`, and `swing.crossfade_high_g` > `swing.crossfade_low_g`. Otherwise the higher key is raised to the lower one + 0.05 G, and a warning is logged.
 - Unknown keys are ignored.
 
-The G values are measured on the kinetic energy of the bus packet (see [Kinetic Metrics](KineticMetrics.md)). The accelerometer runs at ±2 g per axis, so thresholds near the top of the 16 G range are never reached. The defaults below are the tuned values of the current reference hardware; a calibration on an assembled hilt is planned after v1.0.
+The G values are measured on the kinetic energy of the bus packet (see [Kinetic Metrics](KineticMetrics)). The accelerometer runs at ±2 g per axis, so thresholds near the top of the 16 G range are never reached. The defaults below are the tuned values of the current reference hardware; a calibration on an assembled hilt is planned after v1.0.
 
 ### 4.1. Top-Level Keys
 
@@ -90,7 +90,7 @@ The G values are measured on the kinetic energy of the bus packet (see [Kinetic 
 | `root_path` | string | `"profiles/unnamed/"` | Font folder relative to `/sdcard/`. Normalised and limited to 96 characters (§2.2). |
 
 ### 4.2. `overload` — Inertial Overload Accumulator
-See [Inertial Overload](InertialOverload.md). These four keys are applied by the bus when the profile becomes active.
+See [Inertial Overload](InertialOverload). These four keys are applied by the bus when the profile becomes active.
 
 | Key | Type | Default | Unit | Range | Meaning |
 | :--- | :--- | ---: | :--- | :--- | :--- |
@@ -108,7 +108,7 @@ Applied by the bus to every packet before the effects see it.
 | `rotation_deadband_dps` | float | 15.0 | °/s | 0 – 2000 | Each gyroscope axis below this absolute value is reported as 0. |
 
 ### 4.4. `swing` — InertialSwing and Clash
-See [InertialSwing](InertialSwing.md) and [Kinetic Effects](KineticEffects.md) §2.1.
+See [InertialSwing](InertialSwing) and [Kinetic Effects](KineticEffects) §2.1.
 
 | Key | Type | Default | Unit | Range | Meaning |
 | :--- | :--- | ---: | :--- | :--- | :--- |
@@ -155,7 +155,7 @@ The single `hum.wav` and `font.wav` need no count. For every folder except `swng
 | `drag_count` | integer | 8 | LEDs | 1 – 65535 | Length of the drag glow at the blade tip (limited to the strip length). |
 
 ### 4.8. `light` — InertialLight
-See [InertialLight](InertialLight.md).
+See [InertialLight](InertialLight).
 
 | Key | Type | Default | Unit | Range | Meaning |
 | :--- | :--- | ---: | :--- | :--- | :--- |
@@ -189,7 +189,7 @@ A **triple click** while the saber is Retracted or Faulted switches to the next 
 
 Triple clicks are ignored while a switch is pending and while the new profile is Locked, so switches never overlap. The bus is never paused by a switch.
 
-**Switch time.** Building and committing the set take a few milliseconds; the switch time is dominated by the copy of the new `hum.wav`, so it grows with the hum size. The copy rate is reported by the loader's INFO log line (`Preload gen N complete: … kB/s`) and by the metrics rows `preload_copy` and `preload_kBps` ([Diagnostics](Diagnostics.md)). Measured values are pending board validation.
+**Switch time.** Building and committing the set take a few milliseconds; the switch time is dominated by the copy of the new `hum.wav`, so it grows with the hum size. The copy rate is reported by the loader's INFO log line (`Preload gen N complete: … kB/s`) and by the metrics rows `preload_copy` and `preload_kBps` ([Diagnostics](Diagnostics)). Measured values are pending board validation.
 
 ### 5.3. Audio Storage and the PSRAM Budget
 - **Only `hum.wav` is held in PSRAM**, as `/mem/hum.wav`. The hum loops for the whole time the blade is lit, so it is read from memory instead of the SD card.
@@ -210,17 +210,17 @@ Triple clicks are ignored while a switch is pending and while the new profile is
 ---
 
 ## 7. Effects of a Profile
-Every profile builds the same eight effects, each bound to that set's own power state machine (`PowerStateMachine`). Their evaluation order is listed in [SaberAction](SaberAction.md) §4.1.
+Every profile builds the same eight effects, each bound to that set's own power state machine (`PowerStateMachine`). Their evaluation order is listed in [SaberAction](SaberAction) §4.1.
 
 | Effect | Role |
 | :--- | :--- |
 | `PreloadWaitEffect` | Locked → Retracted (or Faulted) when the hum copy ends; plays `font.wav`. |
-| `InertialSwingEffect` | Hum and swing mixer ([InertialSwing](InertialSwing.md)). |
-| `InertialLightEffect` | Blade colour and brightness ([InertialLight](InertialLight.md)). |
+| `InertialSwingEffect` | Hum and swing mixer ([InertialSwing](InertialSwing)). |
+| `InertialLightEffect` | Blade colour and brightness ([InertialLight](InertialLight)). |
 | `PowerToggleEffect` | Ignition and retraction. |
 | `DragEffect` | Drag while the button is held. |
 | `ProfileCycleEffect` | Profile switch on a triple click. |
 | `BlasterEffect` | Blaster on a single click while ignited. |
 | `KineticImpactEffect` | Clash on a kinetic energy drop. |
 
-The button gestures are described in [SaberAction](SaberAction.md) §2.2 and the effect triggers in [Kinetic Effects](KineticEffects.md).
+The button gestures are described in [SaberAction](SaberAction) §2.2 and the effect triggers in [Kinetic Effects](KineticEffects).

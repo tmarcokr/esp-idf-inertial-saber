@@ -3,12 +3,12 @@
 ## 1. System Overview
 The **InertialLight Engine** is the visual counterpart to the *InertialSwing*. Its goal is to translate the kinetic forces and energy accumulation of the saber into organic light responses using the **HSB (Hue, Saturation, Brightness)** color space.
 
-Visual behavior is no longer static or dependent on pre-recorded animations; it is a real-time response to the kinetic metrics of the bus packet (see [Kinetic Metrics](KineticMetrics.md)):
+Visual behavior is no longer static or dependent on pre-recorded animations; it is a real-time response to the kinetic metrics of the bus packet (see [Kinetic Metrics](KineticMetrics)):
 *   `kineticEnergy` (Instantaneous G-Force, in G).
 *   `inertialOverload` (Inertia accumulator from 0.0 to 1.0) and `inertialBurst`.
 *   `orientation` (Blade inclination, −1.0 straight down … +1.0 straight up).
 
-It is implemented by `InertialLightEffect` (`main/profiles/inertial/effects/`), a flow modulator evaluated on every bus cycle while the blade is ignited. It writes the blade colour into a base LED effect (`InertialBladeEffect`) that the SmartLed engine renders at 100 frames per second; the Plasma Rupture is pushed as an overlay. Every parameter in §4 is a per-profile key of the `light` section of `profile.json` ([Profiles](Profiles.md) §4.8).
+It is implemented by `InertialLightEffect` (`main/profiles/inertial/effects/`), a flow modulator evaluated on every bus cycle while the blade is ignited. It writes the blade colour into a base LED effect (`InertialBladeEffect`) that the SmartLed engine renders at 100 frames per second; the Plasma Rupture is pushed as an overlay. Every parameter in §4 is a per-profile key of the `light` section of `profile.json` ([Profiles](Profiles) §4.8).
 
 ---
 
@@ -58,7 +58,7 @@ The violent release of energy produces a visual overload for a short time (`burs
 3.  **Super-Brightness:** Maximum luminosity.
     `FinalBrightness = 1.0`
 
-*Visual Note:* The flash is an overlay on top of the blade and ends after `burst_duration_ms`. During the burst cooldown (`overload.burst_cooldown_ms`, default 1500 ms, applied by the bus, see [Inertial Overload](InertialOverload.md)) the accumulator stays at 0, so no new burst can fire and the saturation returns to the base color.
+*Visual Note:* The flash is an overlay on top of the blade and ends after `burst_duration_ms`. During the burst cooldown (`overload.burst_cooldown_ms`, default 1500 ms, applied by the bus, see [Inertial Overload](InertialOverload)) the accumulator stays at 0, so no new burst can fire and the saturation returns to the base color.
 
 ---
 

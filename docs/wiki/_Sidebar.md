@@ -1,17 +1,17 @@
 # Wiki Navigation
 
-*   [System Overview](Home.md)
+*   [System Overview](Home)
 *   **Core Engines:**
-    *   [InertialSwing Engine](InertialSwing.md)
-    *   [InertialLight Engine](InertialLight.md)
-    *   [SaberAction Bus](SaberAction.md)
+    *   [InertialSwing Engine](InertialSwing)
+    *   [InertialLight Engine](InertialLight)
+    *   [SaberAction Bus](SaberAction)
 *   **Architecture:**
-    *   [Profile System](Profiles.md)
-    *   [Kinetic Metrics](KineticMetrics.md)
-    *   [Inertial Overload Accumulator](InertialOverload.md)
-    *   [Kinetic Effects](KineticEffects.md)
-    *   [Kinetic Gestures](KineticGestures.md)
+    *   [Profile System](Profiles)
+    *   [Kinetic Metrics](KineticMetrics)
+    *   [Inertial Overload Accumulator](InertialOverload)
+    *   [Kinetic Effects](KineticEffects)
+    *   [Kinetic Gestures](KineticGestures)
 *   **Diagnostics:**
-    *   [On-Device Metrics](Diagnostics.md)
+    *   [On-Device Metrics](Diagnostics)
 *   **Roadmap:**
-    *   [InertialHaptics Engine (Future)](InertialHaptics.md)
+    *   [InertialHaptics Engine (Future)](InertialHaptics)

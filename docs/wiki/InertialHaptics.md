@@ -39,7 +39,7 @@ Using a dedicated **Kinetic Transducer (Exciter)** instead of a standard vibrati
 - **Amplitude (Gain):** `(kineticEnergy / MaxG) * HapticGain`
 
 ### Priority System Integration:
-On the Action Bus a priority only sets the **evaluation order** (lower first; equal priorities keep their registration order), not an arbitration level (see [SaberAction](SaberAction.md) §4). A haptic engine would have to arbitrate itself, so that a "Kinetic Kick" overrides the "Plasma Resonance".
+On the Action Bus a priority only sets the **evaluation order** (lower first; equal priorities keep their registration order), not an arbitration level (see [SaberAction](SaberAction) §4). A haptic engine would have to arbitrate itself, so that a "Kinetic Kick" overrides the "Plasma Resonance".
 
 ## 5. Synergy with Other Engines
 The InertialHaptics Engine works in perfect phase with the **InertialSwing Engine**. When a sound is generated, the haptic engine produces the corresponding "mechanical weight" of that sound, creating a unified sensory experience.

@@ -1,6 +1,6 @@
 # Kinetic Gestures: Touchless Operation
 
-> **🚧 Future Roadmap:** None of the gestures below is implemented yet. The saber is controlled with the button ([SaberAction](SaberAction.md) §2.2).
+> **🚧 Future Roadmap:** None of the gestures below is implemented yet. The saber is controlled with the button ([SaberAction](SaberAction) §2.2).
 
 **Kinetic Gestures** allow the user to control the InertialSaber OS through physical movement patterns recognized by the IMU. This reduces reliance on physical buttons and enhances the "mystical" experience.
 
@@ -28,9 +28,9 @@ Gestures are defined as **Sequential Actions** (pattern detectors) within the `S
 ### 2.3. Gravity Retrieval (Profile Cycle)
 - **Concept:** Pointing the saber straight up and twisting.
 - **Trigger:**
-    - `orientation > 0.94` (≈ 85°, pointing up; `orientation` is −1.0 … +1.0, see [Kinetic Metrics](KineticMetrics.md) §3).
+    - `orientation > 0.94` (≈ 85°, pointing up; `orientation` is −1.0 … +1.0, see [Kinetic Metrics](KineticMetrics) §3).
     - AND `Axis Twist` gesture detected.
-- **Action:** Cycles to the next **profile** (same switch as the triple click, see [Profiles](Profiles.md) §5.2).
+- **Action:** Cycles to the next **profile** (same switch as the triple click, see [Profiles](Profiles) §5.2).
 
 ### 2.4. Force Push (Audio Modifier)
 - **Concept:** A lateral shove of the hilt.

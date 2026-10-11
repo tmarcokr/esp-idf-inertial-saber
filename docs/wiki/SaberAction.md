@@ -18,7 +18,7 @@ The bus and the IMU adapter run on core 0. The audio pipeline (mixer, readers, `
 The bus distributes a unified data packet in each update cycle. This packet contains the instantaneous state of all physical and interface descriptors of the saber. Every `InertialEffect` evaluated in the same cycle receives an **identical snapshot**, guaranteeing deterministic evaluation order.
 
 ### 2.1. Motion Descriptors (Kinetic Data)
-See [Kinetic Metrics](KineticMetrics.md) for the definitions and the start-up behaviour.
+See [Kinetic Metrics](KineticMetrics) for the definitions and the start-up behaviour.
 
 | Attribute | Type | Description |
 | :--- | :--- | :--- |
@@ -183,10 +183,10 @@ The bus task uses a **hybrid event-driven model** with timeout fallback to balan
 | **Timeout (10 ms)** | FreeRTOS notification timeout (fallback) | Ensures continuous evaluation for Flow Modulators during calm periods |
 
 > [!NOTE]
-> **Measured on the reference board (debug build, 2026-10-02):** IMU sample rate 100 Hz (99–101 Hz per 1 s window); bus rate about 155 Hz on average (151–171 Hz per session, 128–185 Hz per 1 s window), with about 35–40 % of the cycles woken by the timeout; bus cycle 70–240 µs on average, max 1.47 ms while ignited (budget 2 ms); motion age about 3.3–3.9 ms on average, max about 10.9 ms; one-shot audio latency 12–18 ms on average, max 25.5 ms. At 100 Hz the 15 ms clash window spans 1–2 IMU samples. See [Diagnostics](Diagnostics.md).
+> **Measured on the reference board (debug build, 2026-10-02):** IMU sample rate 100 Hz (99–101 Hz per 1 s window); bus rate about 155 Hz on average (151–171 Hz per session, 128–185 Hz per 1 s window), with about 35–40 % of the cycles woken by the timeout; bus cycle 70–240 µs on average, max 1.47 ms while ignited (budget 2 ms); motion age about 3.3–3.9 ms on average, max about 10.9 ms; one-shot audio latency 12–18 ms on average, max 25.5 ms. At 100 Hz the 15 ms clash window spans 1–2 IMU samples. See [Diagnostics](Diagnostics).
 
 ### 5.3. Core Affinity and Task Map
-Stack size, priority and core of every task are defined in one table, `TaskTable` in `main/system/hardware/HardwareConfig.hpp`. Tasks owned by `main/` are created from it with `xTaskCreatePinnedToCore`. Tasks created by components or by ESP-IDF with fixed parameters are listed as **reference only**: the table documents them and feeds the metrics report ([Diagnostics](Diagnostics.md)), but does not apply them.
+Stack size, priority and core of every task are defined in one table, `TaskTable` in `main/system/hardware/HardwareConfig.hpp`. Tasks owned by `main/` are created from it with `xTaskCreatePinnedToCore`. Tasks created by components or by ESP-IDF with fixed parameters are listed as **reference only**: the table documents them and feeds the metrics report ([Diagnostics](Diagnostics)), but does not apply them.
 
 | Task | Owner | Stack (B) | Priority | Core | Applied from the table |
 | :--- | :--- | ---: | ---: | :---: | :--- |
@@ -235,9 +235,9 @@ The system swaps the active list of actions at runtime without pausing or loadin
 2. **Build** (`profile_ctrl`, core 1): the next profile's effect set is built with a fresh state machine in `Locked`, and the copy of its `hum.wav` is requested. The set is handed to the bus with `stageEffects()` (one atomic slot).
 3. **Commit** (bus): at the top of the next cycle the bus swaps the staged set in with a pointer exchange (O(1), no allocation; metric `profile_commit`), applies its physics (`overload` and `sensor` sections) and publishes the old set as retired.
 4. **Cleanup** (`profile_ctrl`): the old set is taken back and destroyed off the bus. No effect is ever destroyed on the bus task.
-5. **Unlock** (bus): the new set's `PreloadWaitEffect` unlocks ignition when its hum copy completes, as at boot. The active index is saved about 1.5 s later, never while the blade is lit (see [Profiles](Profiles.md) §6).
+5. **Unlock** (bus): the new set's `PreloadWaitEffect` unlocks ignition when its hum copy completes, as at boot. The active index is saved about 1.5 s later, never while the blade is lit (see [Profiles](Profiles) §6).
 
-Further triple clicks are ignored while a switch is pending. The full boot and switch sequence, the PSRAM budget and the persistence rules are in [Profiles](Profiles.md) §5–§6.
+Further triple clicks are ignored while a switch is pending. The full boot and switch sequence, the PSRAM budget and the persistence rules are in [Profiles](Profiles) §5–§6.
 
 ---
 
@@ -324,7 +324,7 @@ The IMU Adapter is a dedicated FreeRTOS task that reads DMP-processed data from 
 | Raw gyroscope (x, y, z) | Direct passthrough (°/s) | `axisRotation[3]` |
 | Quaternion → Euler **roll** | Radians → degrees; the bus clamps to ±90° and divides by 90 | `orientation` (−1.0 … +1.0) |
 
-**Start-up fallback.** Until the DMP gravity estimate has converged, the adapter publishes values derived from the raw accelerometer instead: kinetic energy = `| |a| − 1 g |` and roll from the accelerometer tilt. The switch to the DMP values happens once, on a quasi-static sample after the DMP gravity has matched the accelerometer within 4° for 200 ms (20 samples), with a 20 s ceiling. Details in [Kinetic Metrics](KineticMetrics.md) §5.
+**Start-up fallback.** Until the DMP gravity estimate has converged, the adapter publishes values derived from the raw accelerometer instead: kinetic energy = `| |a| − 1 g |` and roll from the accelerometer tilt. The switch to the DMP values happens once, on a quasi-static sample after the DMP gravity has matched the accelerometer within 4° for 200 ms (20 samples), with a 20 s ceiling. Details in [Kinetic Metrics](KineticMetrics) §5.
 
 The adapter runs at a priority **above** the bus task to guarantee that fresh motion data is always available before the bus evaluates its effects. The IMU interrupt (data ready) wakes it; without an interrupt it polls every 20 ms. When new data is processed, the adapter calls `updateMotion()`, which stages the values and wakes the bus via FreeRTOS task notification.
 
