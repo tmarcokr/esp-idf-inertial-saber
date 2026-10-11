@@ -202,16 +202,16 @@ This entry also closes the earlier gap where the tick rate had no entry in this 
 
 | Key | Default | Override | Since |
 |---|---|---|---|
-| `CONFIG_SABER_AUDIO_COMPRESSOR_THRESHOLD` | _(new option)_ | `1000` (Kconfig `default 1000`, range 600–2000) | 2026-10-02 |
+| `CONFIG_SABER_AUDIO_COMPRESSOR_THRESHOLD` | _(new option)_ | `1200` (Kconfig `default 1200`, range 600–2000) | 2026-10-11 |
 
-**Reason**: `CONFIG_SABER_AUDIO_COMPRESSOR_THRESHOLD` (menu "InertialSaber" in `main/Kconfig.projbuild`) sets the baseline threshold of the dynamic range compressor in the audio mixer. It is read into `HardwareConfig::kAudioCompressorThreshold` (`main/system/hardware/HardwareConfig.hpp`) and passed to the audio engine as `AudioEngine::Config::compressor_gain_threshold`. The default keeps the previous hard-coded value (1000), so the default build sounds the same. The option allows loudness tuning by ear without code edits (planned trial: 1000 → 1100 → 1200) and tuning for other amplifiers than the MAX98357A.
+**Reason**: `CONFIG_SABER_AUDIO_COMPRESSOR_THRESHOLD` (menu "InertialSaber" in `main/Kconfig.projbuild`) sets the baseline threshold of the dynamic range compressor in the audio mixer. It is read into `HardwareConfig::kAudioCompressorThreshold` (`main/system/hardware/HardwareConfig.hpp`) and passed to the audio engine as `AudioEngine::Config::compressor_gain_threshold`. The default is 1200, chosen by ear on the reference board (it replaces the earlier hard-coded 1000 and sounds louder, with no audible distortion). The option allows loudness tuning by ear without code edits and tuning for other amplifiers than the MAX98357A.
 
 **Semantics**: the compressor tracks the mean absolute level of the mixed signal (time constant about 256 samples, ≈5.8 ms) and applies gain = threshold / (√envelope + 100), capped at 1, where the envelope is a leaky sum of about 256 × the mean |sample|. Compression therefore starts when the mean |sample| exceeds (threshold − 100)² / 256:
 
 | Threshold | Compression starts at mean \|sample\| | Approx. mean level |
 |---|---|---|
-| 1000 (default) | ≈3160 | ≈−20 dBFS |
-| 1200 | ≈4730 | ≈−17 dBFS |
+| 1000 | ≈3160 | ≈−20 dBFS |
+| 1200 (default) | ≈4730 | ≈−17 dBFS |
 
 A higher value gives a louder output and starts compression later, at the cost of more risk of hard clipping at the int16 output clamp. The threshold is scaled by the mixer global volume; at the project's full global volume (`kAudioGlobalVolume = 16384`) it applies as configured.
 

@@ -24,7 +24,7 @@ menu "InertialSaber"
 
     config SABER_AUDIO_COMPRESSOR_THRESHOLD
         int "Audio compressor gain threshold"
-        default 1000
+        default 1200
         range 600 2000
         help
             Baseline threshold of the dynamic range compressor in the audio mixer
