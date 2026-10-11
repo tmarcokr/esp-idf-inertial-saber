@@ -8,7 +8,7 @@ InertialSaber OS can measure its own real-time behaviour on the board and write 
 - heap allocations counted per CPU core, free heap and the largest free block;
 - stack high-water mark, priority and core of every task.
 
-Recording uses 32-bit atomics in internal RAM (about 0.8 KB of `.bss`; the full cost of a metrics build is listed in [sdkconfig Overrides](sdkconfig_overrides.md) §7). It never allocates heap, takes a lock or blocks, so it is safe on the bus task and the audio tasks. A low-priority reporter task (`metrics`, priority 1, core 1) aggregates the data and writes it to the SD card only while the saber is retracted and no audio file is open.
+Recording uses 32-bit atomics in internal RAM (about 0.8 KB of `.bss`; the full cost of a metrics build is listed in [sdkconfig Overrides](sdkconfig_overrides) §7). It never allocates heap, takes a lock or blocks, so it is safe on the bus task and the audio tasks. A low-priority reporter task (`metrics`, priority 1, core 1) aggregates the data and writes it to the SD card only while the saber is retracted and no audio file is open.
 
 | Part | Location | Role |
 | :--- | :--- | :--- |
@@ -19,7 +19,7 @@ Recording uses 32-bit atomics in internal RAM (about 0.8 KB of `.bss`; the full 
 ---
 
 ## 2. Enabling and Disabling
-Metrics are controlled by one Kconfig option, `CONFIG_SABER_METRICS` (menu "InertialSaber"). See [sdkconfig Overrides](sdkconfig_overrides.md) §7.
+Metrics are controlled by one Kconfig option, `CONFIG_SABER_METRICS` (menu "InertialSaber"). See [sdkconfig Overrides](sdkconfig_overrides) §7.
 
 | Build | `CONFIG_SABER_METRICS` | Result |
 | :--- | :--- | :--- |
@@ -27,12 +27,12 @@ Metrics are controlled by one Kconfig option, `CONFIG_SABER_METRICS` (menu "Iner
 | Metrics overlay (`sdkconfig.defaults.metrics`) or `menuconfig` | `y` | Metrics recorded and written to the SD card. Also selects `CONFIG_HEAP_USE_HOOKS`. |
 | Release overlay (`sdkconfig.defaults.release`) | `not set` (explicit) | Same as the default build. |
 
-Metrics are opt-in. For a board test, build with the metrics overlay (see [sdkconfig Overrides](sdkconfig_overrides.md) §11). To toggle them in a local build instead, use `idf.py menuconfig` → *InertialSaber* → *Record real-time metrics and write them to /sdcard/metrics*.
+Metrics are opt-in. For a board test, build with the metrics overlay (see [sdkconfig Overrides](sdkconfig_overrides) §11). To toggle them in a local build instead, use `idf.py menuconfig` → *InertialSaber* → *Record real-time metrics and write them to /sdcard/metrics*.
 
 For a board test: build with the overlay, flash, run the test, then collect the CSV files from the SD card. The default build is unaffected and needs no rebuild afterwards.
 
 > [!NOTE]
-> With ESP-IDF 6.1, an existing local `sdkconfig` created while the default was `y` keeps `CONFIG_SABER_METRICS=y` through its `# default:` value tracking. Run `idf.py refresh-config --policy kconfig` once, or switch the option off in `menuconfig`. See [sdkconfig Overrides](sdkconfig_overrides.md) §7.
+> With ESP-IDF 6.1, an existing local `sdkconfig` created while the default was `y` keeps `CONFIG_SABER_METRICS=y` through its `# default:` value tracking. Run `idf.py refresh-config --policy kconfig` once, or switch the option off in `menuconfig`. See [sdkconfig Overrides](sdkconfig_overrides) §7.
 
 To confirm that a build carries no metrics code:
 

@@ -25,7 +25,7 @@ In terms of user experience:
     `inertialOverload -= drain_rate * dtSec`
 - **Output Bounds**: The accumulator is strictly clamped between `0.0f` (Rest) and `1.0f` (Full).
 - **Burst**: when the level reaches `1.0f`, `inertialBurst` is true for that one bus cycle, the level is reset to `0.0f`, and the cooldown starts. During `burst_cooldown_ms` the level stays at `0.0f` and does not charge.
-- **Output**: `SaberDataPacket::inertialOverload` and `SaberDataPacket::inertialBurst` (see [SaberAction](SaberAction.md) §2.1).
+- **Output**: `SaberDataPacket::inertialOverload` and `SaberDataPacket::inertialBurst` (see [SaberAction](SaberAction) §2.1).
 
 ### 3.1. Visual Flow Representation
 
@@ -43,7 +43,7 @@ In terms of user experience:
 ```
 
 ### 3.2. Profile Parameters (`profile.json` → `"overload"`)
-These parameters control the "feel" of the accumulation. They are set per profile in the `"overload"` section of `profile.json` and applied by the bus when the profile becomes active (full schema in [Profiles](Profiles.md) §4.2).
+These parameters control the "feel" of the accumulation. They are set per profile in the `"overload"` section of `profile.json` and applied by the bus when the profile becomes active (full schema in [Profiles](Profiles) §4.2).
 
 | Key | Default | Range | Description |
 | :--- | :--- | :--- | :--- |

@@ -10,7 +10,7 @@ InertialSaber OS defines "Effects" as discrete events triggered by specific sens
 | Plasma Stabilization (Lockup) | — | — | — | Roadmap (not implemented) |
 | Thrust Piercing (Stab) | — | — | — | Roadmap (not implemented) |
 
-The priority only sets the evaluation order on the bus ([SaberAction](SaberAction.md) §4). All three implemented effects run only while the blade is **Ignited**. Sounds are picked at random among the files of their folder ([Profiles](Profiles.md) §2) and played at full volume. The durations and LED counts are per-profile keys ([Profiles](Profiles.md) §4).
+The priority only sets the evaluation order on the bus ([SaberAction](SaberAction) §4). All three implemented effects run only while the blade is **Ignited**. Sounds are picked at random among the files of their folder ([Profiles](Profiles) §2) and played at full volume. The durations and LED counts are per-profile keys ([Profiles](Profiles) §4).
 
 ## 1. Effect Philosophy: Reactive HSB
 Unlike systems with fixed colors, effects in InertialSaber OS are **Relative** where it matters. They derive their colour from the profile's `BaseHue` (`light.blade_base_hue`) to ensure visual consistency.
@@ -29,11 +29,11 @@ Unlike systems with fixed colors, effects in InertialSaber OS are **Relative** w
   - **Debounce:** at most one clash every **500 ms**.
 - **Visual:** **Complementary Burst** (`BladeClashFlash`). The whole blade is blended with `Hue + 180°` at full saturation and brightness, fading back to the base color over `blade_timings.clash_duration_ms` (default 150 ms).
 - **Audio:** A random `clsh/` one-shot.
-- **Haptic:** Not implemented (see [InertialHaptics](InertialHaptics.md), roadmap).
-- **Metrics:** `count,clash_detections` and `count,clash_retrigger_lt_1s` ([Diagnostics](Diagnostics.md)).
+- **Haptic:** Not implemented (see [InertialHaptics](InertialHaptics), roadmap).
+- **Metrics:** `count,clash_detections` and `count,clash_retrigger_lt_1s` ([Diagnostics](Diagnostics)).
 
 ### 2.2. Deflection Burst (Blaster)
-- **Trigger:** A **single click** while ignited (`Click` with `pressCount == 1`). The click resolves 400 ms after the press, or at the release for a press held between 400 and 500 ms; a press held 500 ms or longer is a drag, never a blaster. Two presses less than 400 ms apart are a double click, which retracts the blade, so consecutive blasters must be pressed more than 400 ms apart ([SaberAction](SaberAction.md) §2.2).
+- **Trigger:** A **single click** while ignited (`Click` with `pressCount == 1`). The click resolves 400 ms after the press, or at the release for a press held between 400 and 500 ms; a press held 500 ms or longer is a drag, never a blaster. Two presses less than 400 ms apart are a double click, which retracts the blade, so consecutive blasters must be pressed more than 400 ms apart ([SaberAction](SaberAction) §2.2).
   - A motion-triggered blaster (energy pulse) is not implemented.
 - **Visual:** **Localized Saturation Drop** (`BladeBlasterBlock`). A block of `blade_leds.blaster_count` LEDs (default 3) at a random position turns white for `blade_timings.blaster_duration_ms` (default 250 ms).
 - **Audio:** A random `blst/` one-shot.
