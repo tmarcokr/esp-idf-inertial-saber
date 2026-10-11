@@ -48,7 +48,7 @@ The orientation of the blade (`orientation`, −1.0 … +1.0) acts as an equaliz
 ---
 
 ## 4. File Management (Zero-Volume Swing Pair Swapper)
-Only one pair of swing files (`swingl<i>.wav` / `swingh<i>.wav`) plays at a time. Both files of a pair are looped and **streamed from the SD card**; only `hum.wav` is held in PSRAM (`/mem/hum.wav`, see [Profiles](Profiles) §5.3). The pair is changed in the "Invisible Moment", while the swing volume is zero.
+Only one pair of swing files (`swingl<i>.wav` / `swingh<i>.wav`) plays at a time. Both files of a pair are looped and **streamed from the SD card**; only `hum.wav` is held in PSRAM (`/mem/hum.wav`, see [Profiles](Profiles) §5.3). The two files of a pair start together, sample-aligned (linked start). The pair is changed in the "Invisible Moment", while the swing volume is zero.
 
 - **Start:** on ignition, the hum starts and a random pair is started at volume 0.
 - **Linked start:** the two files of a pair are prepared and started together by one `AudioEngine::playLinked()` call (queued to the `audio_ctrl` task), so they begin in the same mixer cycle and stay sample-aligned. If one of them runs short of buffered data, the mixer holds both (metrics counter `audio_group_holds`).
@@ -76,9 +76,6 @@ Only one pair of swing files (`swingl<i>.wav` / `swingh<i>.wav`) plays at a time
       ▲                                            │
       └───────────( Volume == 0.0 )────────────────┘
 ```
-
-> [!NOTE]
-> **Swing pair source and phase.** Since the SD streaming change, the swing pairs are no longer cached in PSRAM. The pair is started sample-aligned by the linked start described above. The by-ear comparison of SD-streamed and PSRAM-cached swing pairs (A/B listening test) is **pending board validation**.
 
 ---
 
