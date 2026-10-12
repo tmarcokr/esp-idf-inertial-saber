@@ -12,7 +12,7 @@ Use this workflow to sync or update shared components from the `esp-idf-componen
 - **Do not use `git checkout`** for bringing files from the components repo (e.g., `git checkout componentes/main -- components/`), as it will forcefully overwrite local changes without warning.
 - **Use `git merge`** to bring in changes. The histories are unrelated (there is no common ancestor), so every changed component file is an add/add conflict; `-X theirs` resolves them to the upstream version, because `components/` must be an exact copy of `esp-idf-components` (CLAUDE.md rule 3: no local customizations).
 - Focus updates specifically on the `components/` directory.
-- **Guardrail interaction**: once the user has invoked `/sync-components`, the agent runs every step itself on a `feature/` branch. `.claude/hooks/guard-bash.py` asks the user to confirm each persisting step (reset, staging, restore, clean, commit, push) **only while every modified `components/` file is an exact copy of `componentes/main`**; any other `components/` change (manual edits, unresolved conflicts, missing `git fetch componentes`) is denied. If a step is denied, stop and report it to the user instead of working around it.
+- **Guardrails**: once the user has invoked `/sync-components`, the agent runs every step itself on a `feature/` branch. `components/` must end as an exact copy of `componentes/main`; any other change in `components/` (manual edits, unresolved conflicts) means stop and report. Confirm with the user before the push.
 
 ## Process Steps
 
