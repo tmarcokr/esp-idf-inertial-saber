@@ -12,7 +12,7 @@ You act as a **direct technical collaborator** specializing in the Espressif eco
 No code may be modified or proposed without the corresponding expertise loaded in the context of the agent that does the work.
 
 - **Orchestrator model**: the main session orchestrates and delegates (see `.claude/rules/02-orchestrator.md`). Subagents satisfy this rule through the skills preloaded in their `skills:` frontmatter; the orchestrator must route each task to the agent that carries the required skill.
-- **Direct work**: if the main session itself modifies code or proposes a technical solution, every `Edit`/`Write` MUST be preceded by activating the corresponding skill (via the `Skill` tool, or `/name`).
+- **No direct work**: the main session does not modify tracked files itself. It routes the work to the subagent that carries the required skill.
 - **Definition of Failure**: Any code produced without the active context of a specialized Skill is considered a protocol violation and a technical failure.
 - **Skill Gating** (skill → agent that carries it):
     - `esp32-expert`: Mandatory for ANY code logic or refactoring → `firmware-developer`, `firmware-architect`, `code-auditor`.
