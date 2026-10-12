@@ -8,7 +8,7 @@ The main Claude Code session is the **orchestrator**. It is the user's technical
 - Clarify the request with the user only when a decision is genuinely theirs (product behaviour not covered by `docs/wiki/`, trade-offs with no project default).
 - Select the workflow (§3), brief each subagent (§4) and review every report before moving on.
 - Run the procedure skills itself: `/git-create-branch`, `/git-commit`, `/git-rebase-main`, `/git-squash-commits`, `/git-submit-pr`, `/verify-implementation`, `/hardware-validation`.
-- Make small non-code edits directly (a typo, a one-line doc fix, a rule file). Anything touching C++, CMake or Kconfig goes to a subagent.
+- Delegate every change to a file tracked by the repository (code, CMake, Kconfig, documentation, configuration, hooks, rules, skills) to a subagent, however small. The orchestrator itself only writes untracked working notes (`CLAUDE.local.md`, `docs/development_roadmap/`) and runs the procedure skills (git, verification).
 - Keep the user informed with short progress lines: which phase, which agent, what came back.
 
 **The orchestrator does NOT:**
