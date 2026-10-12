@@ -220,7 +220,7 @@ Explore the technical depth of InertialSaber OS:
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) and the [Code of Conduct](./CODE_OF_CONDUCT.md). Changes are listed in [CHANGELOG.md](./CHANGELOG.md). InertialSaber OS is licensed under the GPL-3.0-or-later ([LICENSE.txt](./LICENSE.txt)).
 
-**Optional AI tooling.** `.claude/` and `CLAUDE.md` configure Claude Code for contributors who use it: an orchestrator protocol, specialised subagents (architecture, implementation, audit, hardware review, documentation), procedure skills and guardrail hooks. They are not needed to build, flash or contribute, and some files they mention exist only in the maintainer's checkout.
+**Optional AI tooling.** `.claude/` and `CLAUDE.md` configure Claude Code for contributors who use it: an orchestrator protocol, specialised subagents (architecture, implementation, audit, hardware review, documentation), procedure skills and a few guardrail hooks. They are not needed to build, flash or contribute, and some files they mention exist only in the maintainer's checkout.
 
 ---
 
