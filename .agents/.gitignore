@@ -1,0 +1,19 @@
+# Publish only approved skills; other skills remain local.
+/skills/*
+!/skills/cpp-components-expert/
+!/skills/create-effect/
+!/skills/esp32-expert/
+!/skills/fresh-start/
+!/skills/git-commit/
+!/skills/git-create-branch/
+!/skills/git-rebase-main/
+!/skills/git-squash-commits/
+!/skills/git-submit-pr/
+!/skills/hardware-specialist/
+!/skills/hardware-validation/
+!/skills/profile-create/
+!/skills/quality-auditor/
+!/skills/sync-components/
+!/skills/verify-implementation/
+__pycache__/
+*.pyc

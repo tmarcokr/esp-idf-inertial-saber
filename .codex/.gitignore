@@ -1,0 +1,16 @@
+# Publish only approved roles; other roles remain local.
+/agents/*
+!/agents/code-auditor.toml
+!/agents/docs-maintainer.toml
+!/agents/firmware-architect.toml
+!/agents/firmware-developer.toml
+!/agents/hardware-reviewer.toml
+/rules/00-*
+/local-notes.md
+/config.local.toml
+/docs/plans/*
+!/docs/plans/README.md
+/docs/**/*.pdf
+/docs/*.pdf
+__pycache__/
+*.pyc

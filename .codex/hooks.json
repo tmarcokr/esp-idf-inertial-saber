@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "project_root=\"$(git rev-parse --show-toplevel)\" || exit $?; exec python3 \"$project_root/.codex/hooks/guard-edit.py\"",
+            "timeout": 10,
+            "statusMessage": "Protecting immutable components"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "project_root=\"$(git rev-parse --show-toplevel)\" || exit $?; exec python3 \"$project_root/.codex/hooks/sdkconfig-reminder.py\"",
+            "timeout": 10,
+            "statusMessage": "Checking sdkconfig documentation"
+          }
+        ]
+      }
+    ]
+  }
+}
