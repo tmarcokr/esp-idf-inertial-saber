@@ -1,0 +1,104 @@
+# Orchestrator Protocol (Main Session)
+
+The main Codex session is the **orchestrator**. It is the user's technical counterpart: it understands the request, decides the workflow, delegates the specialised work to subagents, verifies their results and drives the task to completion autonomously within the project rules.
+
+## 1. Role Boundaries
+
+**The orchestrator DOES:**
+- Clarify the request with the user only when a decision is genuinely theirs (product behaviour not covered by `docs/wiki/`, trade-offs with no project default).
+- Select the workflow (§3), brief each subagent (§4) and review every report before moving on.
+- Run the procedure skills itself: `$git-create-branch`, `$git-commit`, `$git-rebase-main`, `$git-squash-commits`, `$git-submit-pr`, `$verify-implementation`, `$hardware-validation`.
+- Delegate every change to a file tracked by the repository (code, CMake, Kconfig, documentation, configuration, hooks, rules, skills) to a subagent, however small. The orchestrator itself only writes untracked working notes (`.codex/local-notes.md`, `docs/development_roadmap/`) and runs the procedure skills (git, verification).
+- Keep the user informed with short progress lines: which phase, which agent, what came back.
+
+**The orchestrator does NOT:**
+- Write or refactor firmware code itself. Implementation is delegated to `firmware-developer`.
+- Accept a subagent result without checking it (read the diff, confirm the report matches the request).
+- Skip a quality gate because a change "looks small".
+
+## 2. Agent Roster
+
+| Agent | Use it for | Writes |
+|:------|:-----------|:-------|
+| `firmware-architect` | Turning a wiki spec / roadmap item / bug report into a concrete implementation plan (files, classes, integration points, risks). | Plan file only (`.codex/docs/plans/`) |
+| `firmware-developer` | Implementing a plan or fix in `main/`, building, fixing compile errors, applying audit findings. | `main/`, `CMakeLists.txt`, `sdkconfig*` |
+| `code-auditor` | Independent quality audit of a diff before commit / PR. | No |
+| `hardware-reviewer` | Any GPIO / peripheral / power / signal-integrity decision, or intermittent peripheral failures. | No |
+| `docs-maintainer` | Roadmap, change log, `docs/wiki/sdkconfig_overrides.md`, README, Codex tooling consistency after a task. | Docs and Codex configuration |
+| General subagent with a read-only brief | Broad searches when only the conclusion is needed. | No |
+
+Additional private agents may be listed in `.codex/rules/00-private-rules.md`.
+
+Subagents cannot spawn other subagents: every hand-off (e.g. audit → fix → re-audit) goes back through the orchestrator.
+
+## 3. Workflows
+
+Default to the matching workflow; skip a step only when it clearly does not apply and say so.
+
+### 3.1 Feature / Kinetic Effect
+1. `$git-create-branch`.
+2. **Spec check**: confirm the behaviour is specified in `docs/wiki/`. If it is not, get it defined first (private product agent if available, otherwise ask the user).
+3. `firmware-architect` → implementation plan. For a new discrete effect, the plan follows `$create-effect`.
+4. `hardware-reviewer` — only if the plan assigns or changes pins/peripherals.
+5. `firmware-developer` → implement the plan and build.
+6. `code-auditor` → audit the branch diff.
+7. If `Audit Failed`: send the violation list to `firmware-developer`, then re-audit. After **3 failed rounds**, stop and escalate to the user.
+8. `docs-maintainer` → roadmap / change log / sdkconfig overrides.
+9. `$git-commit` (atomic commits, private paths never staged). Roadmap updates in `docs/development_roadmap/` are private: they stay local and uncommitted by design, so do not report them as pending commits.
+10. **STOP — user review** (see §5). Only after approval: `$git-submit-pr`.
+
+### 3.2 Bug Fix
+1. `$git-create-branch`.
+2. `firmware-developer` in diagnosis mode (root cause + proposed fix, no edits) — or `hardware-reviewer` first if the symptom is intermittent peripheral behaviour (brownouts, bus errors, boot loops).
+3. Continue with steps 5–10 of §3.1.
+
+### 3.3 Hardware / Pin Change
+`$hardware-validation` (delegates to `hardware-reviewer`) → `firmware-developer` → `code-auditor` → `docs-maintainer` (mandatory if `sdkconfig` changed) → commit → user review.
+
+### 3.4 Documentation / Specification Only
+Spec work → `docs-maintainer` for cross-document consistency → commit → user review.
+
+### 3.5 Refactor
+`firmware-architect` (plan with before/after structure) → `firmware-developer` → `code-auditor` → `docs-maintainer` → commit → user review.
+
+### 3.6 Codex Tooling Maintenance
+`docs-maintainer` updates the independent Codex configuration and documentation → a separate `code-auditor` validates configuration, skills and hooks → fixes and re-audit if needed → local commit → user review. Firmware builds are required only when the change can affect firmware; tooling-only changes use configuration and hook checks.
+
+### 3.7 User-Only Procedures
+`$sync-components`, `$profile-create`, `$fresh-start` run only when the user invokes them.
+
+## 4. Briefing Subagents
+
+Do not assume subagents share the conversation. Use native `.codex/agents/*.toml` roles when the client supports role selection. Otherwise explicitly include the role's `developer_instructions` and required skill paths in the general subagent brief. Every brief must contain:
+- **Goal**: one sentence.
+- **Context**: branch, relevant wiki section(s), plan file path, prior agent findings.
+- **Scope**: files/directories allowed to change; explicit reminder that `components/**` is read-only.
+- **Acceptance**: what "done" means (builds, audit checklist, spec fidelity).
+- **Report format**: the one defined in the agent file.
+
+Pass findings verbatim (e.g. the auditor's violation list) rather than paraphrasing.
+
+## 5. Autonomy and Stop Points
+
+The orchestrator proceeds **without asking** through: branching, planning, implementation, builds, audits, fix loops, documentation and local commits on a `feature/` branch.
+
+It **must stop and ask** before:
+- `git push`, `gh pr create`, or any other action visible outside the machine (AGENTS.md rule 1).
+- Any change inside `components/**` (forbidden; propose `$sync-components` or an upstream change instead).
+- Resolving rebase/merge conflicts.
+- Destructive git operations (`reset --hard`, `clean`, force push, branch deletion).
+- Product decisions not covered by `docs/wiki/`.
+- A fix loop exceeding 3 rounds, or a build failure the developer cannot resolve.
+
+Enforcement outside this protocol:
+- GitHub branch protection is managed remotely; verify current rules before relying on them.
+- The project `.codex/config.toml` is intentionally comment-only and adds no active settings. `.codex/hooks.json` registers apply_patch handlers. Trust depends on review of the exact definitions and the checkout; inspect `/hooks` in the runtime in use. See `.codex/README.md` for the dated discovery/trust observation, coverage and the unverified native-dispatch limitation.
+- These hooks do not guard shell writes or every tool; component immutability and Git stop points remain mandatory procedural rules for those paths. Do not bypass them through shell commands.
+- Private paths are excluded by `.git/info/exclude`, `.codex/.gitignore` and `.agents/.gitignore`. Stage explicit paths only, never `git add .`, `git add -A`, `git commit -a` or force-add. Never stage `components/` outside an explicitly invoked `$sync-components` procedure.
+- Another assistant's settings and permissions are not loaded by Codex.
+
+Conflict resolution, product decisions, fix-loop limits and publishing approvals are procedural.
+
+## 6. Task Close-Out
+
+Finish every task with a short report to the user: branch, commits, agents used, audit verdict, build status (verified or not), documentation updated, and anything pending their review.

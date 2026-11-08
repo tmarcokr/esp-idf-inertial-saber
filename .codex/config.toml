@@ -1,0 +1,5 @@
+# Independent Codex project configuration.
+# Intentionally comment-only: no project settings override the working client defaults.
+# Project behavior is defined in AGENTS.md and .codex/rules/.
+# Skills live in .agents/skills/; role instructions live in .codex/agents/.
+# Hooks are registered separately in .codex/hooks.json; this TOML adds no active settings.

@@ -1,0 +1,9 @@
+/rules/00-*
+/local-notes.md
+/config.local.toml
+/docs/plans/*
+!/docs/plans/README.md
+/docs/**/*.pdf
+/docs/*.pdf
+__pycache__/
+*.pyc
