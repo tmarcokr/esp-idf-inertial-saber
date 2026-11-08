@@ -53,6 +53,7 @@ dispatch has not been separately demonstrated. These handlers cover
 
 ## Privacy and maintenance
 
-Directory ignore files allow only approved public roles and skills. Additional
-local material remains ignored. Stage explicit paths only and inspect the staged
-diff before committing. Maintain these independent copies separately.
+Shared ignore files cover generated and local artifacts. Private skill and agent
+exclusions belong in `.git/info/exclude`; new skills and agents are not ignored
+by default. Stage explicit paths only and inspect the staged diff before
+committing. Maintain these independent copies separately.
